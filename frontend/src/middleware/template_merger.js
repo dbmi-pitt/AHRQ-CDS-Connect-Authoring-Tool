@@ -43,12 +43,7 @@ function mergeInParentTemplate(entry, entryMap) {
    */
   _.merge(entry, _.merge(_.omit(_.cloneDeep(parent), ['suppress']), entry));
 
-  // merge parameters
-  entry.parameters.forEach((parameter) => {
-    const matchingParameter = _.find(parent.parameters, { id: parameter.id });
-    _.merge(parameter, matchingParameter);
-  });
-
-  const missing = _.differenceBy(parent.parameters, entry.parameters, 'id');
-  entry.parameters = missing.concat(entry.parameters); // eslint-disable-line no-param-reassign
+  // Merge fields separately
+  // _.merge does not merge arrays of objects as expected. Used above to merge objects, but fields need to be updated
+  entry.fields = _.uniqBy(parent.fields.concat(entry.fields), 'id');
 }

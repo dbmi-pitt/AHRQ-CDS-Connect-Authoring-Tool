@@ -6,12 +6,13 @@ import pluralize from 'pluralize';
 import classNames from 'classnames';
 import { UncontrolledTooltip } from 'reactstrap';
 import { findValueAtPath } from '../../utils/find';
-import { doesBaseElementInstanceNeedWarning, hasDuplicateName, hasGroupNestedWarning } from '../../utils/warnings';
-import { getReturnType } from '../../utils/instances';
+import { doesBaseElementInstanceNeedWarning, hasDuplicateName, hasGroupNestedWarning, hasInvalidListWarning }
+  from '../../utils/warnings';
+import { getReturnType, getFieldWithId } from '../../utils/instances';
 
 import ConjunctionGroup from './ConjunctionGroup';
 import ExpressionPhrase from './modifiers/ExpressionPhrase';
-import StringParameter from './parameters/types/StringParameter';
+import StringField from './fields/StringField';
 
 const listTypes = [
   'list_of_observations',
@@ -71,7 +72,8 @@ export default class ListGroup extends Component {
     const newBaseElementLists = _.cloneDeep(this.props.artifact.baseElements);
     const baseElementIndex = this.props.artifact.baseElements.findIndex(baseElement =>
       baseElement.uniqueId === uniqueId);
-    newBaseElementLists[baseElementIndex].parameters[0].value = name;
+    const nameField = getFieldWithId(newBaseElementLists[baseElementIndex].fields, 'element_name');
+    nameField.value = name;
 
     this.props.updateBaseElementLists(newBaseElementLists, 'baseElements');
   }
@@ -187,8 +189,8 @@ export default class ListGroup extends Component {
     this.props.addInstance(name, template, path, baseElement.uniqueId, undefined, null, newReturnType);
   }
 
-  editInstance = (treeName, params, path, editingConjunction, baseElement) => {
-    this.props.editInstance(treeName, params, path, editingConjunction, baseElement.uniqueId);
+  editInstance = (treeName, fields, path, editingConjunction, baseElement) => {
+    this.props.editInstance(treeName, fields, path, editingConjunction, baseElement.uniqueId);
   }
 
   deleteInstance = (treeName, path, toAdd, baseElement, isAndOrElement) => {
@@ -248,6 +250,11 @@ export default class ListGroup extends Component {
     return (
       <div className="card-element__body">
         <div>
+          {isAndOrElement && hasInvalidListWarning(instance.returnType) &&
+            <div className="warning">
+              Warning: Elements in groups combined with and/or must all have return type 'boolean'.
+            </div>}
+
           <ExpressionPhrase
             class="expression expression__group"
             instance={instance}
@@ -275,8 +282,8 @@ export default class ListGroup extends Component {
           loadValueSets={this.props.loadValueSets}
           instance={this.props.instance}
           addInstance={(name, template, path) => this.addInstance(name, template, path, instance, isAndOrElement)}
-          editInstance={(treeName, params, path, editingConjunction) =>
-            this.editInstance(treeName, params, path, editingConjunction, instance)}
+          editInstance={(treeName, fields, path, editingConjunction) =>
+            this.editInstance(treeName, fields, path, editingConjunction, instance)}
           deleteInstance={(treeName, path, toAdd) =>
             this.deleteInstance(treeName, path, toAdd, instance, isAndOrElement)}
           getAllInstances={this.getAllInstances}
@@ -285,6 +292,8 @@ export default class ListGroup extends Component {
             this.updateInstanceModifiers(t, modifiers, path, index, isAndOrElement)}
           parameters={this.props.parameters}
           baseElements={this.props.baseElements}
+          externalCqlList={this.props.externalCqlList}
+          loadExternalCqlList={this.props.loadExternalCqlList}
           conversionFunctions={this.props.conversionFunctions}
           instanceNames={this.props.instanceNames}
           scrollToElement={this.props.scrollToElement}
@@ -319,7 +328,7 @@ export default class ListGroup extends Component {
   renderList = () => {
     const { instance } = this.props;
     const { isExpanded } = this.state;
-    const name = instance.parameters[0].value;
+    const name = getFieldWithId(instance.fields, 'element_name').value;
     const allInstancesInAllTrees = this.props.getAllInstancesInAllTrees();
     const { instanceNames, baseElements, parameters } = this.props;
     const needsDuplicateNameWarning
@@ -335,7 +344,7 @@ export default class ListGroup extends Component {
           <div className={headerTopClass}>
             {isExpanded ?
               <div className="card-element__heading">
-                <StringParameter
+                <StringField
                   id={'base_element_name'}
                   name={'Group'}
                   uniqueId={instance.uniqueId}
@@ -345,7 +354,7 @@ export default class ListGroup extends Component {
                   value={name}
                 />
                 {needsDuplicateNameWarning && !needsBaseElementWarning
-                  && <div className='warning'>Warning: Name already in use. Choose another name.</div>}
+                  && <div className="warning">Warning: Name already in use. Choose another name.</div>}
                 {needsBaseElementWarning &&
                   <div className="warning">
                     Warning: One or more uses of this Base Element have changed. Choose another name.
@@ -353,14 +362,14 @@ export default class ListGroup extends Component {
                 {instance.returnType === 'list_of_any'
                   && instance.name === 'Intersect'
                   && instance.childInstances.length > 0
-                  && <div className='warning'>
+                  && <div className="warning">
                     Warning: Intersecting different types will always result in an empty list
                   </div>}
               </div>
               :
               <div className="card-element__heading">
                 <div className="heading-name">
-                  {instance.parameters[0].value}:
+                  {name}:
                   {(needsDuplicateNameWarning
                     || needsBaseElementWarning
                     || this.hasNestedWarnings(instance.childInstances))
@@ -430,6 +439,8 @@ ListGroup.propTypes = {
   updateBaseElementLists: PropTypes.func.isRequired,
   parameters: PropTypes.array.isRequired,
   baseElements: PropTypes.array.isRequired,
+  externalCqlList: PropTypes.array.isRequired,
+  loadExternalCqlList: PropTypes.func.isRequired,
   conversionFunctions: PropTypes.array,
   instanceNames: PropTypes.array.isRequired,
   loginVSACUser: PropTypes.func.isRequired,

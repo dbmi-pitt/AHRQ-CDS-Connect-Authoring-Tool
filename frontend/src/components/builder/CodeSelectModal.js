@@ -1,9 +1,11 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import FontAwesome from 'react-fontawesome';
-import Select from 'react-select';
 import _ from 'lodash';
 import Modal from 'react-modal';
+
+import StyledSelect from '../elements/StyledSelect';
+import { getFieldWithId, getFieldWithType } from '../../utils/instances';
 
 export default class CodeSelectModal extends Component {
   constructor(props) {
@@ -53,7 +55,9 @@ export default class CodeSelectModal extends Component {
   }
 
   onCodeSystemSelected = (selectedCS) => {
-    if (selectedCS.value === 'Other') {
+    if (!selectedCS) {
+      this.setState({ selectedCS: null, displayOtherInput: false });
+    } else if (selectedCS.value === 'Other') {
       this.setState({ selectedCS, displayOtherInput: true });
     } else {
       this.setState({ selectedCS, displayOtherInput: false });
@@ -91,6 +95,7 @@ export default class CodeSelectModal extends Component {
 
     // If adding to a parameter, add it
     if (this.props.addToParameter) {
+      if (this.state.selectedCS === null) return;
       this.props.addToParameter({
         system: this.state.selectedCS.value,
         uri: this.state.selectedCS.id || this.state.codeSystemText,
@@ -106,7 +111,8 @@ export default class CodeSelectModal extends Component {
     if (selectedTemplate === undefined) return;
 
     // Push the newly selected code
-    let codesToAdd = selectedTemplate.parameters[1].codes;
+    const vsacField = getFieldWithType(selectedTemplate.fields, '_vsac');
+    let codesToAdd = vsacField.codes;
     if (codesToAdd === undefined) codesToAdd = [];
     if (this.state.selectedCS === null) return;
 
@@ -118,31 +124,37 @@ export default class CodeSelectModal extends Component {
     if (this.state.selectedCS.value === 'Other') newCode.codeSystem.id = this.state.codeSystemText;
     codesToAdd.push(newCode);
 
-    const nameParameter = selectedTemplate.parameters[0];
+    const nameField = getFieldWithId(selectedTemplate.fields, 'element_name');
     const lastCodeIndex = codesToAdd.length - 1;
 
     // Adding a new element and editing an existing element use different functions that take different parameters
     if (this.props.onElementSelected) {
       // Set the template's values initially to add it to the workspace.
-      if (nameParameter.value === undefined || nameParameter.value === '') {
-        selectedTemplate.parameters[0].value =
-          `${codesToAdd[lastCodeIndex].codeSystem.name} ${codesToAdd[lastCodeIndex].code}`; // TODO: Best name for element
+      if (nameField.value === undefined || nameField.value === '') {
+        if (this.props.codeData && this.props.codeData.display && this.props.codeData.display.length < 60) {
+          nameField.value = this.props.codeData.display;
+        } else {
+          nameField.value = `${codesToAdd[lastCodeIndex].codeSystem.name} ${codesToAdd[lastCodeIndex].code}`;
+        }
       }
-      selectedTemplate.parameters[1].codes = codesToAdd;
-      selectedTemplate.parameters[1].static = true;
+      vsacField.codes = codesToAdd;
+      vsacField.static = true;
       this.props.onElementSelected(selectedTemplate);
     } else if (this.props.updateElement) {
       // Update an existing element in the workspace
-      // Create array of which parameter to update, the new value to set, and the attribute to update (value is default)
+      // Create array of which field to update, the new value to set, and the attribute to update (value is default)
       const arrayToUpdate = [
-        { [selectedTemplate.parameters[1].id]: codesToAdd, attributeToEdit: 'codes' },
-        { [selectedTemplate.parameters[1].id]: true, attributeToEdit: 'static' }
+        { [vsacField.id]: codesToAdd, attributeToEdit: 'codes' },
+        { [vsacField.id]: true, attributeToEdit: 'static' }
       ];
-      if (nameParameter.value === undefined || nameParameter.value === '') {
-        arrayToUpdate.push({
-          [selectedTemplate.parameters[0].id]:
-            `${codesToAdd[lastCodeIndex].codeSystem.name} ${codesToAdd[lastCodeIndex].code}`
-        });
+      if (nameField.value === undefined || nameField.value === '') {
+        let newName;
+        if (this.props.codeData && this.props.codeData.display && this.props.codeData.display.length < 60) {
+          newName = this.props.codeData.display;
+        } else {
+          newName = `${codesToAdd[lastCodeIndex].codeSystem.name} ${codesToAdd[lastCodeIndex].code}`;
+        }
+        arrayToUpdate.push({ [nameField.id]: newName });
       }
       this.props.updateElement(arrayToUpdate);
     }
@@ -205,8 +217,8 @@ export default class CodeSelectModal extends Component {
     ];
 
     return (
-      <span className="code-select-modal element-select__modal element-modal">
-        <button className="primary-button" onClick={this.openCodeSelectModal}>
+      <span className="element-select__modal element-modal">
+        <button type="button" className="primary-button" onClick={this.openCodeSelectModal}>
           <FontAwesome name="medkit" />{' '}{buttonLabels.openButtonText}
         </button>
 
@@ -215,7 +227,7 @@ export default class CodeSelectModal extends Component {
           onRequestClose={this.closeCodeSelectModal}
           shouldCloseOnOverlayClick={ true }
           contentLabel="Choose code"
-          className="modal-style modal-style__light modal-style--full-height element-modal"
+          className="modal-style modal-style__light modal-style--full-height code-select-modal element-modal"
           overlayClassName='modal-overlay modal-overlay__dark'>
           <div className="element-modal__container">
             <header className="modal__header">
@@ -243,14 +255,14 @@ export default class CodeSelectModal extends Component {
                 />
 
                 <div>
-                  <Select
+                  <StyledSelect
                     className="element-modal__search-system"
                     placeholder={'Select code system'}
                     aria-label={'Select code system'}
-                    clearable={false}
                     value={this.state.selectedCS}
                     options={codeSystemOptions}
                     onChange={this.onCodeSystemSelected}
+                    classNamePrefix="search-system-select"
                   />
 
                   {this.state.displayOtherInput &&
@@ -281,7 +293,14 @@ export default class CodeSelectModal extends Component {
 
               <button className="secondary-button" onClick={this.closeCodeSelectModal}>Cancel</button>
 
-              <button className="primary-button element-modal__search-button" onClick={this.chooseCode}>
+              <button
+                className="primary-button element-modal__search-button"
+                disabled={
+                  !this.state.selectedCS
+                  || !this.state.codeText
+                  || (this.state.displayOtherInput && !this.state.codeSystemText)
+                }
+                onClick={this.chooseCode}>
                 Select
               </button>
             </footer>
@@ -303,9 +322,9 @@ CodeSelectModal.propTypes = {
   labels: PropTypes.object,
   updateModifier: PropTypes.func,
   addToParameter: PropTypes.func,
-  isValidatingCode: PropTypes.bool.isRequired,
+  isValidatingCode: PropTypes.bool,
   isValidCode: PropTypes.bool,
   codeData: PropTypes.object,
-  validateCode: PropTypes.func.isRequired,
-  resetCodeValidation: PropTypes.func.isRequired
+  validateCode: PropTypes.func,
+  resetCodeValidation: PropTypes.func
 };

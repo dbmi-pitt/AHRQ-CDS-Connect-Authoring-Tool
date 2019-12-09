@@ -10,11 +10,11 @@ import ElementModal from './ElementModal';
 import CodeSelectModal from './CodeSelectModal';
 
 // Try to keep these ordered same as in folder (i.e. alphabetically)
-import NumberParameter from './parameters/types/NumberParameter';
-import StaticParameter from './parameters/types/StaticParameter';
-import StringParameter from './parameters/types/StringParameter';
-import TextAreaParameter from './parameters/types/TextAreaParameter';
-import ValueSetParameter from './parameters/types/ValueSetParameter';
+import NumberField from './fields/NumberField';
+import StaticField from './fields/StaticField';
+import StringField from './fields/StringField';
+import TextAreaField from './fields/TextAreaField';
+import ValueSetField from './fields/ValueSetField';
 
 import ValueSetTemplate from './templates/ValueSetTemplate';
 
@@ -39,10 +39,11 @@ import Qualifier from './modifiers/Qualifier';
 import { hasDuplicateName, doesBaseElementUseNeedWarning, doesBaseElementInstanceNeedWarning,
   doesParameterUseNeedWarning, validateElement, hasGroupNestedWarning } from '../../utils/warnings';
 import { getOriginalBaseElement } from '../../utils/baseElements';
-import { getReturnType, validateModifier, allModifiersValid } from '../../utils/instances';
+import { getReturnType, validateModifier, allModifiersValid, getFieldWithType, getFieldWithId }
+  from '../../utils/instances';
 
 function getInstanceName(instance) {
-  return (instance.parameters.find(p => p.id === 'element_name') || {}).value;
+  return (getFieldWithId(instance.fields, 'element_name') || {}).value;
 }
 
 export default class TemplateInstance extends Component {
@@ -67,9 +68,9 @@ export default class TemplateInstance extends Component {
     };
   }
 
-  componentWillMount() {
-    this.props.templateInstance.parameters.forEach((param) => {
-      this.setState({ [param.id]: param.value });
+  UNSAFE_componentWillMount() { // eslint-disable-line camelcase
+    this.props.templateInstance.fields.forEach((field) => {
+      this.setState({ [field.id]: field.value });
     });
   }
 
@@ -77,7 +78,7 @@ export default class TemplateInstance extends Component {
     this.setAppliedModifiers(this.props.templateInstance.modifiers || []);
   }
 
-  componentWillReceiveProps(nextProps) {
+  UNSAFE_componentWillReceiveProps(nextProps) { // eslint-disable-line camelcase
     const otherInstances = this.getOtherInstances(nextProps);
     this.setState({ otherInstances });
 
@@ -343,7 +344,7 @@ export default class TemplateInstance extends Component {
               role="button"
               id={`modifier-delete-${this.props.templateInstance.uniqueId}`}
               className={`modifier__deletebutton secondary-button ${canModifierBeRemoved ? '' : 'disabled'}`}
-              aria-label={'remove last expression'}
+              aria-label="remove last expression"
               onClick={() => this.removeLastModifier(canModifierBeRemoved)}
               tabIndex="0"
               onKeyPress={(e) => {
@@ -443,13 +444,14 @@ export default class TemplateInstance extends Component {
 
   deleteCode = (codeToDelete) => {
     const templateInstanceClone = _.cloneDeep(this.props.templateInstance);
-    if (templateInstanceClone.parameters[1] && templateInstanceClone.parameters[1].codes) {
-      const updatedCodes = templateInstanceClone.parameters[1].codes;
+    const vsacField = getFieldWithType(templateInstanceClone.fields, '_vsac');
+    if (vsacField && vsacField.codes) {
+      const updatedCodes = [...vsacField.codes];
       const indexOfCodeToRemove = updatedCodes.findIndex(code =>
         (code.code === codeToDelete.code && _.isEqual(code.codeSystem, codeToDelete.codeSystem)));
       updatedCodes.splice(indexOfCodeToRemove, 1);
       const arrayToUpdate = [
-        { [templateInstanceClone.parameters[1].id]: updatedCodes, attributeToEdit: 'codes' }
+        { [vsacField.id]: updatedCodes, attributeToEdit: 'codes' }
       ];
       this.updateInstance(arrayToUpdate);
     }
@@ -466,7 +468,7 @@ export default class TemplateInstance extends Component {
             <button
               onClick={() => this.setState({ showModifiers: !this.state.showModifiers })}
               className="modifier__addbutton secondary-button"
-              aria-label={'add expression'}
+              aria-label="add expression"
               disabled={!allModifiersValid(this.props.templateInstance.modifiers)}>
               Add Expression
             </button>
@@ -475,9 +477,12 @@ export default class TemplateInstance extends Component {
               this.state.relevantModifiers
                 .filter(modifier => !baseElementIsInUse || modifier.returnType === this.state.returnType)
                 .map(modifier =>
-                  <button key={modifier.id}
+                  <button
+                    key={modifier.id}
                     value={modifier.id}
-                    onClick={this.handleModifierSelected} className="modifier__button secondary-button">
+                    onClick={this.handleModifierSelected}
+                    className="modifier__button secondary-button"
+                    aria-label={modifier.name}>
                     {modifier.name}
                   </button>)
             }
@@ -496,44 +501,74 @@ export default class TemplateInstance extends Component {
     return null;
   }
 
-  renderBaseElementOrParameterInfo = (referenceParameter) => {
+  renderReferenceInfo = (referenceField) => {
     let referenceName;
-    if (referenceParameter) {
-      const elementToReference = this.props.instanceNames.find(name => name.id === referenceParameter.value.id);
-      if (elementToReference) {
-        referenceName = elementToReference.name;
+    if (referenceField) {
+      if (referenceField.id === 'externalCqlReference') {
+        referenceName = referenceField.value.id;
+      } else {
+        const elementToReference = this.props.instanceNames.find(name => name.id === referenceField.value.id);
+        if (elementToReference) {
+          referenceName = elementToReference.name;
+        }
       }
     }
+    const scrollElementId = referenceField.value.id;
+    const scrollReferenceType = referenceField.id;
 
-    let label = 'Element:';
-    if (referenceParameter.id === 'baseElementReference') {
-      label = 'Base Element:';
-    } else if (referenceParameter.id === 'parameterReference') {
-      label = 'Parameter:';
+    let baseUseTab;
+    if (referenceField.id === 'baseElementUse') {
+      const { allInstancesInAllTrees } = this.props;
+      const element = allInstancesInAllTrees.filter(instance => instance.uniqueId === referenceField.value.id)[0];
+      baseUseTab = element ? element.tab : null;
     }
 
+    let tabIndex;
+    if (baseUseTab === 'expTreeInclude') tabIndex = 0;
+    if (baseUseTab === 'expTreeExclude') tabIndex = 1;
+    if (baseUseTab === 'subpopulations') tabIndex = 2;
+    if (baseUseTab === 'baseElements') tabIndex = 3;
+
+    let label = 'Element:';
+    if (referenceField.id === 'baseElementReference') label = 'Base Element:';
+    if (referenceField.id === 'parameterReference') label = 'Parameter:';
+    if (referenceField.id === 'externalCqlReference') label = 'External CQL Element:';
+    if (referenceField.id === 'baseElementUse') label = 'Element Use:';
+
+    let tabLabel = '';
+    if (baseUseTab === 'expTreeInclude') tabLabel = 'Inclusions';
+    if (baseUseTab === 'expTreeExclude') tabLabel = 'Exclusions';
+    if (baseUseTab === 'subpopulations') tabLabel = 'Subpopulations';
+    if (baseUseTab === 'baseElements') tabLabel = 'Base Element';
+
+
     return (
-      <div className="modifier__return__type" id="base-element-list">
+      <div className="modifier__return__type" id="base-element-list" key={referenceField.value.id}>
         <div className="code-info">
           <div className="bold align-right code-info__label">{label}</div>
           <div className="code-info__info">
-            <div className="code-info__text">{referenceName}</div>
+            <div className="code-info__text">
+              <span>{referenceName}</span>
+              {referenceField.id === 'baseElementUse' && <span> &#8594; {tabLabel}</span>}
+            </div>
+
+            {(referenceField.id !== 'externalCqlReference') &&
             <div className="code-info__buttons align-right">
               <span
                 role="button"
                 id={`definition-${this.props.templateInstance.uniqueId}`}
-                className={'element__linkbutton'}
-                aria-label={'see element definition'}
-                onClick={() => this.props.scrollToElement(referenceParameter.value.id, referenceParameter.id) }
+                className="element__linkbutton"
+                aria-label="see element definition"
+                onClick={() => this.props.scrollToElement(scrollElementId, scrollReferenceType, tabIndex)}
                 tabIndex="0"
                 onKeyPress={(e) => {
                   e.which = e.which || e.keyCode;
-                  if (e.which === 13) this.props.scrollToElement(referenceParameter.value.id, referenceParameter.id);
+                  if (e.which === 13) this.props.scrollToElement(scrollElementId, scrollReferenceType, tabIndex);
                 }}>
 
                 <FontAwesome name="link" className="delete-valueset-button" />
               </span>
-            </div>
+            </div>}
           </div>
         </div>
       </div>
@@ -541,17 +576,17 @@ export default class TemplateInstance extends Component {
   }
 
   renderVSInfo = () => {
-    if (this.props.templateInstance.parameters.length > 1) {
-      // All generic VSAC elements save the VS information on this parameter on the valueSets property.
-      const vsacParameter = this.props.templateInstance.parameters[1];
-      if (vsacParameter.valueSets) {
+    if (this.props.templateInstance.fields.length > 1) {
+      // All generic VSAC elements save the VS information on this field on the valueSets property.
+      const vsacField = getFieldWithType(this.props.templateInstance.fields, '_vsac');
+      if (vsacField && vsacField.valueSets) {
         return (
           <div className="modifier__return__type" id="valueset-list">
-            {vsacParameter.valueSets.map((vs, i) => (
+            {vsacField.valueSets.map((vs, i) => (
               <div key={`selected-valueset-${i}`}>
                 <ValueSetTemplate
                   index={i}
-                  vsacParameter={vsacParameter}
+                  vsacField={vsacField}
                   valueSet={vs}
                   updateInstance={this.updateInstance}
                   searchVSACByKeyword={this.props.searchVSACByKeyword}
@@ -574,16 +609,16 @@ export default class TemplateInstance extends Component {
   }
 
   renderCodeInfo = () => {
-    if (this.props.templateInstance.parameters.length > 1) {
-      // All generic VSAC elements save the VS information on this parameter on the codes property.
-      const vsacParameter = this.props.templateInstance.parameters[1];
-      if (vsacParameter.codes) {
+    if (this.props.templateInstance.fields.length > 1) {
+      // All generic VSAC elements save the VS information on this field on the codes property.
+      const vsacField = getFieldWithType(this.props.templateInstance.fields, '_vsac');
+      if (vsacField && vsacField.codes) {
         return (
           <div className="modifier__return__type" id="code-list">
-            {vsacParameter.codes.map((code, i) => (
+            {vsacField.codes.map((code, i) => (
               <div key={`selected-code-${i}`} className="code-info">
                 <div className="bold align-right code-info__label">
-                  Code{vsacParameter.codes.length > 1 ? ` ${i + 1}` : ''}:
+                  Code{vsacField.codes.length > 1 ? ` ${i + 1}` : ''}:
                 </div>
 
                 {/* Code name will come with validation */}
@@ -666,38 +701,37 @@ export default class TemplateInstance extends Component {
     );
   }
 
-  selectTemplate = (param) => {
-    if (param.static) {
+  selectTemplate = (field) => {
+    if (field.static) {
       return (
-        <StaticParameter
-          key={param.id}
-          param={param}
+        <StaticField
+          key={field.id}
           updateInstance={this.updateInstance} />
       );
     }
 
-    switch (param.type) {
+    switch (field.type) {
       case 'number':
         return (
-          <NumberParameter
-            key={param.id}
-            param={param}
-            value={this.state[param.id]}
-            typeOfNumber={param.typeOfNumber}
+          <NumberField
+            key={field.id}
+            field={field}
+            value={this.state[field.id]}
+            typeOfNumber={field.typeOfNumber}
             updateInstance={this.updateInstance} />
         );
       case 'string':
         return (
-          <StringParameter
-            key={param.id}
-            {...param}
+          <StringField
+            key={field.id}
+            {...field}
             updateInstance={this.updateInstance} />
         );
       case 'textarea':
         return (
-          <TextAreaParameter
-            key={param.id}
-            {...param}
+          <TextAreaField
+            key={field.id}
+            {...field}
             updateInstance={this.updateInstance} />
         );
       case 'observation_vsac':
@@ -708,16 +742,16 @@ export default class TemplateInstance extends Component {
       case 'encounter_vsac':
       case 'allergyIntolerance_vsac':
         return (
-          <StringParameter
-            key={param.id}
-            {...param}
+          <StringField
+            key={field.id}
+            {...field}
             updateInstance={this.updateInstance} />
         );
       case 'valueset':
         return (
-          <ValueSetParameter
-            key={param.id}
-            param={param}
+          <ValueSetField
+            key={field.id}
+            field={field}
             valueSets={this.props.valueSets}
             loadValueSets={this.props.loadValueSets}
             updateInstance={this.updateInstance}/>
@@ -733,14 +767,23 @@ export default class TemplateInstance extends Component {
 
   getPath = () => this.props.getPath(this.props.templateInstance.uniqueId)
 
+  hasBaseElementLinks = () => {
+    const { baseElements, templateInstance } = this.props;
+    const thisBaseElement = baseElements.find(baseElement => baseElement.uniqueId === templateInstance.uniqueId);
+    if (!thisBaseElement) return false;
+    const thisBaseElementUsedBy = thisBaseElement.usedBy;
+    if (!thisBaseElementUsedBy || thisBaseElementUsedBy.length === 0) return false;
+    return true;
+  }
+
   renderBody() {
     const { templateInstance, validateReturnType } = this.props;
     const { returnType } = this.state;
-    const referenceParameter = templateInstance.parameters.find(param => param.type === 'reference');
+    const referenceField = getFieldWithType(templateInstance.fields, 'reference');
     const validationError = validateElement(this.props.templateInstance, this.state);
     const returnError = (!(validateReturnType !== false) || returnType === 'boolean') ? null
       : "Element must have return type 'boolean'. Add expression(s) to change the return type.";
-    const commentParameter = templateInstance.parameters.find(param => param.id === 'comment');
+    const commentField = getFieldWithId(templateInstance.fields, 'comment');
 
     return (
       <div className="card-element__body">
@@ -753,17 +796,16 @@ export default class TemplateInstance extends Component {
           baseElements={this.props.baseElements}
         />
 
-        {commentParameter &&
-          <TextAreaParameter
-            key={commentParameter.id}
-            {...commentParameter}
+        {commentField &&
+          <TextAreaField
+            key={commentField.id}
+            {...commentField}
             updateInstance={this.updateInstance} />
         }
 
-        {templateInstance.parameters.map((param, index) => {
-          // TODO: each parameter type should probably have its own component
-          if (param.id !== 'element_name' && param.id !== 'comment') {
-            return this.selectTemplate(param);
+        {templateInstance.fields.map((field, index) => {
+          if (field.id !== 'element_name' && field.id !== 'comment') {
+            return this.selectTemplate(field);
           }
           return null;
         })}
@@ -774,9 +816,21 @@ export default class TemplateInstance extends Component {
             {this.renderCodeInfo()}
           </div>
         }
-        { (referenceParameter) &&
+
+        {referenceField &&
           <div className="vsac-info">
-            {this.renderBaseElementOrParameterInfo(referenceParameter)}
+            {this.renderReferenceInfo(referenceField)}
+          </div>
+        }
+
+        {this.hasBaseElementLinks() &&
+          <div className="base-element-links">
+            {this.props.baseElements.find(baseElement => baseElement.uniqueId === templateInstance.uniqueId)
+              .usedBy.map((link) => {
+                const reference = { id: 'baseElementUse', value: { id: link } };
+                return this.renderReferenceInfo(reference);
+              })
+            }
           </div>
         }
 
@@ -813,16 +867,16 @@ export default class TemplateInstance extends Component {
     );
   }
 
-  renderHeading = (elementNameParameter) => {
+  renderHeading = (elementNameField) => {
     const { templateInstance, instanceNames, baseElements, parameters, allInstancesInAllTrees } = this.props;
 
-    if (elementNameParameter) {
+    if (elementNameField) {
       let elementType = (templateInstance.type === 'parameter') ? 'Parameter' : templateInstance.name;
 
 
-      const referenceParameter = templateInstance.parameters.find(param => param.type === 'reference');
+      const referenceField = getFieldWithType(templateInstance.fields, 'reference');
 
-      if (referenceParameter && (referenceParameter.id === 'baseElementReference')) {
+      if (referenceField && (referenceField.id === 'baseElementReference')) {
         // Element type to display in header will be the reference type for Base Elements.
         const originalBaseElement = getOriginalBaseElement(templateInstance, baseElements);
         elementType = (originalBaseElement.type === 'parameter') ? 'Parameter' : originalBaseElement.name;
@@ -837,9 +891,9 @@ export default class TemplateInstance extends Component {
 
       return (
         <div className="card-element__heading">
-          <StringParameter
-            key={elementNameParameter.id}
-            {...elementNameParameter}
+          <StringField
+            key={elementNameField.id}
+            {...elementNameField}
             updateInstance={this.updateInstance}
             name={elementType}
             uniqueId={templateInstance.uniqueId}
@@ -865,14 +919,14 @@ export default class TemplateInstance extends Component {
       );
     }
 
-    // Handles the case for old parameters, which did not have an 'element_name' parameter.
+    // Handles the case for old parameters, which did not have an 'element_name' field.
     return <span className="label">{templateInstance.name}</span>;
   }
 
   renderHeader = () => {
     const { templateInstance, renderIndentButtons } = this.props;
     const { showElement } = this.state;
-    const elementNameParameter = templateInstance.parameters.find(param => param.id === 'element_name');
+    const elementNameField = getFieldWithId(templateInstance.fields, 'element_name');
     const headerClass = classNames('card-element__header', { collapsed: !showElement });
     const headerTopClass = classNames('card-element__header-top', { collapsed: !showElement });
 
@@ -885,10 +939,10 @@ export default class TemplateInstance extends Component {
         <div className={headerTopClass}>
           <div className="card-element__heading">
             {showElement ?
-              this.renderHeading(elementNameParameter)
+              this.renderHeading(elementNameField)
             :
               <div className="heading-name">
-                {elementNameParameter.value}: {this.hasWarnings() &&
+                {elementNameField.value}: {this.hasWarnings() &&
                   <div className="warning"><FontAwesome name="exclamation-circle" /> Has warnings</div>
                 }
               </div>
@@ -953,40 +1007,41 @@ export default class TemplateInstance extends Component {
 }
 
 TemplateInstance.propTypes = {
-  valueSets: PropTypes.array,
-  loadValueSets: PropTypes.func.isRequired,
-  getPath: PropTypes.func.isRequired,
-  treeName: PropTypes.string.isRequired,
-  templateInstance: PropTypes.object.isRequired,
-  otherInstances: PropTypes.array.isRequired,
   allInstancesInAllTrees: PropTypes.array.isRequired,
-  editInstance: PropTypes.func.isRequired,
-  updateInstanceModifiers: PropTypes.func.isRequired,
-  deleteInstance: PropTypes.func.isRequired,
-  instanceNames: PropTypes.array.isRequired,
-  subpopulationIndex: PropTypes.number,
-  renderIndentButtons: PropTypes.func.isRequired,
-  loginVSACUser: PropTypes.func.isRequired,
-  setVSACAuthStatus: PropTypes.func.isRequired,
-  vsacStatus: PropTypes.string,
-  vsacStatusText: PropTypes.string,
-  searchVSACByKeyword: PropTypes.func.isRequired,
-  isSearchingVSAC: PropTypes.bool.isRequired,
-  vsacSearchResults: PropTypes.array.isRequired,
-  vsacSearchCount: PropTypes.number.isRequired,
-  getVSDetails: PropTypes.func.isRequired,
-  isRetrievingDetails: PropTypes.bool.isRequired,
-  vsacDetailsCodes: PropTypes.array.isRequired,
-  vsacDetailsCodesError: PropTypes.string.isRequired,
-  validateReturnType: PropTypes.bool,
-  isValidatingCode: PropTypes.bool.isRequired,
-  isValidCode: PropTypes.bool,
+  baseElements: PropTypes.array.isRequired,
   codeData: PropTypes.object,
-  validateCode: PropTypes.func.isRequired,
-  resetCodeValidation: PropTypes.func.isRequired,
+  deleteInstance: PropTypes.func.isRequired,
   disableElement: PropTypes.bool,
   disableIndent: PropTypes.bool,
+  editInstance: PropTypes.func.isRequired,
+  getPath: PropTypes.func.isRequired,
+  getVSDetails: PropTypes.func.isRequired,
+  instanceNames: PropTypes.array.isRequired,
+  isRetrievingDetails: PropTypes.bool.isRequired,
+  isSearchingVSAC: PropTypes.bool.isRequired,
+  isValidatingCode: PropTypes.bool,
+  isValidCode: PropTypes.bool,
+  loadValueSets: PropTypes.func.isRequired,
+  loginVSACUser: PropTypes.func.isRequired,
+  otherInstances: PropTypes.array.isRequired,
+  parameters: PropTypes.array,
+  renderIndentButtons: PropTypes.func.isRequired,
+  resetCodeValidation: PropTypes.func,
   scrollToElement: PropTypes.func.isRequired,
-  baseElements: PropTypes.array.isRequired,
-  parameters: PropTypes.array.isRequired
+  searchVSACByKeyword: PropTypes.func.isRequired,
+  setVSACAuthStatus: PropTypes.func.isRequired,
+  subpopulationIndex: PropTypes.number,
+  templateInstance: PropTypes.object.isRequired,
+  treeName: PropTypes.string.isRequired,
+  updateInstanceModifiers: PropTypes.func.isRequired,
+  validateCode: PropTypes.func,
+  validateReturnType: PropTypes.bool,
+  valueSets: PropTypes.array,
+  vsacDetailsCodes: PropTypes.array.isRequired,
+  vsacDetailsCodesError: PropTypes.string,
+  vsacFHIRCredentials: PropTypes.object.isRequired,
+  vsacSearchCount: PropTypes.number.isRequired,
+  vsacSearchResults: PropTypes.array.isRequired,
+  vsacStatus: PropTypes.string,
+  vsacStatusText: PropTypes.string,
 };

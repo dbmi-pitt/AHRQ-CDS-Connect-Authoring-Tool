@@ -8,14 +8,20 @@ import { Jumbotron, Breadcrumb } from 'reactstrap';
 import _ from 'lodash';
 
 import { loadPatients, addPatient, deletePatient } from '../actions/testing';
-import { loadArtifacts, clearArtifactValidationWarnings, executeCQLArtifact } from '../actions/artifacts';
-import { loginVSACUser, setVSACAuthStatus } from '../actions/vsac';
+import {
+  loadArtifacts,
+  clearArtifactValidationWarnings,
+  clearExecutionResults,
+  executeCQLArtifact
+} from '../actions/artifacts';
+import { loginVSACUser, setVSACAuthStatus, validateCode, resetCodeValidation } from '../actions/vsac';
 
 import patientProps from '../prop-types/patient';
 import artifactProps from '../prop-types/artifact';
 
 import PatientTable from '../components/testing/PatientTable';
 import PatientVersionModal from '../components/testing/PatientVersionModal';
+import ResultsDataSection from '../components/testing/ResultsDataSection';
 import ELMErrorModal from '../components/builder/ELMErrorModal';
 
 class Testing extends Component {
@@ -31,13 +37,15 @@ class Testing extends Component {
     };
   }
 
-  componentWillMount() {
+  UNSAFE_componentWillMount() { // eslint-disable-line camelcase
     this.props.loadPatients();
     this.props.loadArtifacts();
   }
 
-  componentWillReceiveProps(newProps) {
-    this.setState({ showELMErrorModal: newProps.downloadedArtifact.elmErrors.length > 0 });
+  UNSAFE_componentWillReceiveProps(newProps) { // eslint-disable-line camelcase
+    this.setState({
+      showELMErrorModal: (newProps.executeStatus != null) && (newProps.downloadedArtifact.elmErrors.length > 0)
+    });
   }
 
   addPatient = (patient) => {
@@ -91,6 +99,7 @@ class Testing extends Component {
 
   closeELMErrorModal = () => {
     this.setState({ showELMErrorModal: false });
+    this.props.clearExecutionResults();
     this.props.clearArtifactValidationWarnings();
   }
 
@@ -110,96 +119,77 @@ class Testing extends Component {
       });
   }
 
-  renderBoolean = (bool) => {
-    if (bool) return <FontAwesome name="check" className="boolean-check" />;
-    return <FontAwesome name="close" className="boolean-x" />;
-  }
-
-  // TODO support results for more than one patient
-  renderResultsTable = () => {
-    const { results, artifactExecuted, patientExecuted, isExecuting } = this.props;
+  renderResults = () => {
+    const { results, artifactExecuted, patientsExecuted, isExecuting } = this.props;
 
     if (results) {
-      const patientResults = results.patientResults[Object.keys(results.patientResults)[0]];
-      const patientResource = _.chain(patientExecuted)
-        .get('entry')
-        .find({ resource: { resourceType: 'Patient' } })
-        .get('resource')
-        .value();
-      const patientNameGiven = _.get(patientResource, 'name[0].given[0]', 'given_placeholder');
-      const patientNameFamily = _.get(patientResource, 'name[0].family', 'family_placeholder');
+      const resultsArray = Object.values(results.patientResults);
+      const resultsCount = resultsArray.length;
+      const resultsIncludedCount = resultsArray.filter(r => r.MeetsInclusionCriteria).length;
+      const resultsExcludedCount = resultsArray.filter(r => r.MeetsExclusionCriteria).length;
 
       return (
         <Jumbotron className="patient-table">
           <div className="patient-table__title">CQL Execution Results</div>
 
           <div className="patient-table__meta">
-            <div className="patient-table__meta-patient">
-              <span className="meta-label">Patient:</span> {patientNameGiven} {patientNameFamily}
-            </div>
-
-            <div className="patient-table__meta-artifact">
-              <span className="meta-label">Artifact:</span> {artifactExecuted.name}
-            </div>
+            <div className="meta-label">Artifact:</div>
+            <div>{artifactExecuted.name}</div>
           </div>
 
-          <table className="patients__table">
-            <tbody>
-              <tr>
-                <th scope="col" className="patients__tablecell-wide">MeetsInclusionCriteria</th>
-                <td>{
-                  patientResults.MeetsInclusionCriteria != null
-                  ? this.renderBoolean(patientResults.MeetsInclusionCriteria)
-                  : 'No Value'}
-                </td>
-              </tr>
-              <tr>
-                <th scope="col" className="patients__tablecell-wide">MeetsExclusionCriteria</th>
-                <td>{
-                  patientResults.MeetsExclusionCriteria != null
-                  ? this.renderBoolean(patientResults.MeetsExclusionCriteria)
-                  : 'No Value'}
-                </td>
-              </tr>
-              <tr>
-                <th scope="col" className="patients__tablecell-wide">Recommendation</th>
-                <td>{
-                  patientResults.Recommendation != null
-                  ? patientResults.Recommendation.toString()
-                  : 'No Value'}
-                </td>
-              </tr>
-              <tr>
-                <th scope="col" className="patients__tablecell-wide">Rationale</th>
-                <td>{
-                  patientResults.Rationale != null
-                  ? patientResults.Rationale.toString()
-                  : 'No Value'}
-                </td>
-              </tr>
-              <tr>
-                <th scope="col" className="patients__tablecell-wide">Errors</th>
-                <td>{
-                  patientResults.Errors != null
-                  ? patientResults.Errors.toString()
-                  : 'No Value'}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="patient-table__meta">
+            <div className="meta-label">Meets Inclusion Criteria:</div>
+            <div>{resultsIncludedCount} of {resultsCount} patients</div>
+          </div>
+
+          <div className="patient-table__meta">
+            <div className="meta-label">Meets Exclusion Criteria:</div>
+            <div>{resultsExcludedCount} of {resultsCount} patients</div>
+          </div>
+
+          <div className="patients__table">
+            {patientsExecuted.map(p => this.renderResultsDataSection(p))}
+          </div>
         </Jumbotron>
       );
     } else if (isExecuting) {
       return <div className="execution-loading"><FontAwesome name="spinner" spin size="4x" /></div>;
     } else if (this.props.vsacFHIRCredentials.username == null) {
-      return <Breadcrumb className="execution-message">Log in to VSAC to execute CQL for a patient below.</Breadcrumb>;
+      return (
+        <Breadcrumb className="execution-message">
+          Log in to VSAC to execute CQL.
+        </Breadcrumb>
+      );
     }
 
-    return <Breadcrumb className="execution-message">
-      {this.props.errorMessage
-        && <div className="warning">{this.props.errorMessage}</div>}
-      <div>Execute CQL for a patient below.</div>
-    </Breadcrumb>;
+    return (
+      <Breadcrumb className="execution-message">
+        {this.props.errorMessage && <div className="warning">{this.props.errorMessage}</div>}
+        <div>Select one or more patients below and execute CQL.</div>
+      </Breadcrumb>
+    );
+  }
+
+  renderResultsDataSection = (patientExecuted) => {
+    const { results } = this.props;
+
+    const patientResource = _.chain(patientExecuted)
+      .get('entry')
+      .find({ resource: { resourceType: 'Patient' } })
+      .get('resource')
+      .value();
+    const patientId = patientResource.id;
+    const patientNameGiven = _.get(patientResource, 'name[0].given[0]', 'given_placeholder');
+    const patientNameFamily = _.get(patientResource, 'name[0].family', 'family_placeholder');
+
+    const patientResults = results.patientResults[patientId];
+
+    return (
+      <ResultsDataSection
+        key={patientId}
+        title={`${patientNameGiven} ${patientNameFamily}`}
+        results={patientResults} />
+    );
   }
 
   renderPatientsTable() {
@@ -215,7 +205,12 @@ class Testing extends Component {
           setVSACAuthStatus={this.props.setVSACAuthStatus}
           vsacStatus={this.props.vsacStatus}
           vsacStatusText={this.props.vsacStatusText}
-          vsacIsAuthenticating={this.props.vsacIsAuthenticating} />
+          vsacIsAuthenticating={this.props.vsacIsAuthenticating}
+          isValidatingCode={this.props.isValidatingCode}
+          isValidCode={this.props.isValidCode}
+          codeData={this.props.codeData}
+          validateCode={this.props.validateCode}
+          resetCodeValidation={this.props.resetCodeValidation} />
       );
     }
 
@@ -230,43 +225,44 @@ class Testing extends Component {
   render() {
     return (
       <div className="testing" id="maincontent">
-        <Dropzone
-          className="patient-dropzone"
-          onDrop={this.addPatient.bind(this)}
-          accept="application/json" multiple={false}>
-          {this.renderDropzoneIcon()}
-
-          {this.state.uploadError &&
-            <div className="warning">Invalid file type. Only valid JSON FHIR STU3 or DSTU2 Bundles are accepted.</div>
-          }
-
-          <p className="patient-dropzone__instructions">
-            Drop a valid JSON FHIR STU3 or DSTU2 bundle containing a synthetic patient here, or click to browse.
-          </p>
-
-          <p className="patient-dropzone__warning">
-            Do not upload any Personally Identifiable Information (PII) or Protected Health Information (PHI) to this
-            server. Upload synthetic data only.
-          </p>
-        </Dropzone>
-
         <div className="testing-wrapper">
-          {this.renderResultsTable()}
-          {this.renderPatientsTable()}
+          <Dropzone
+            className="dropzone"
+            onDrop={this.addPatient.bind(this)}
+            accept="application/json" multiple={false}>
+            {this.renderDropzoneIcon()}
+
+            {this.state.uploadError &&
+              <div className="warning">Invalid file type. Only valid JSON FHIR STU3 or DSTU2 Bundles are accepted.</div>
+            }
+
+            <p className="dropzone__instructions">
+              Drop a valid JSON FHIR STU3 or DSTU2 bundle containing a synthetic patient here, or click to browse.
+            </p>
+
+            <p className="dropzone__warning">
+              Do not upload any Personally Identifiable Information (PII) or Protected Health Information (PHI). Upload
+              synthetic data only.
+            </p>
+          </Dropzone>
+
+          <div className="testing-wrapper">
+            {this.renderResults()}
+            {this.renderPatientsTable()}
+          </div>
+
+          <ELMErrorModal
+            isOpen={this.state.showELMErrorModal}
+            closeModal={this.closeELMErrorModal}
+            errors={this.props.downloadedArtifact.elmErrors}/>
+
+          <PatientVersionModal
+            isOpen={this.state.showPatientVersionModal}
+            closeModal={this.closePatientVersionModal}
+            patientData={this.state.patientData}
+            selectStu3={this.selectStu3}
+            selectDstu2={this.selectDstu2}/>
         </div>
-
-        <ELMErrorModal
-          isOpen={this.state.showELMErrorModal}
-          closeModal={this.closeELMErrorModal}
-          errors={this.props.downloadedArtifact.elmErrors}
-          isForTesting={true}/>
-
-        <PatientVersionModal
-          isOpen={this.state.showPatientVersionModal}
-          closeModal={this.closePatientVersionModal}
-          patientData={this.state.patientData}
-          selectStu3={this.selectStu3}
-          selectDstu2={this.selectDstu2}/>
       </div>
     );
   }
@@ -276,10 +272,11 @@ Testing.propTypes = {
   patients: PropTypes.arrayOf(patientProps).isRequired,
   artifacts: PropTypes.arrayOf(artifactProps).isRequired,
   results: PropTypes.object,
+  executeStatus: PropTypes.string,
   isExecuting: PropTypes.bool.isRequired,
   isAdding: PropTypes.bool.isRequired,
   artifactExecuted: artifactProps,
-  patientExecuted: patientProps,
+  patientsExecuted: PropTypes.arrayOf(patientProps),
   loadPatients: PropTypes.func.isRequired,
   addPatient: PropTypes.func.isRequired,
   deletePatient: PropTypes.func.isRequired,
@@ -290,6 +287,11 @@ Testing.propTypes = {
   setVSACAuthStatus: PropTypes.func.isRequired,
   vsacStatus: PropTypes.string,
   vsacStatusText: PropTypes.string,
+  validateCode: PropTypes.func.isRequired,
+  resetCodeValidation: PropTypes.func.isRequired,
+  isValidatingCode: PropTypes.bool.isRequired,
+  isValidCode: PropTypes.bool,
+  codeData: PropTypes.object,
   vsacIsAuthenticating: PropTypes.bool.isRequired
 };
 
@@ -301,9 +303,12 @@ function mapDispatchToProps(dispatch) {
     deletePatient,
     loadArtifacts,
     clearArtifactValidationWarnings,
+    clearExecutionResults,
     executeCQLArtifact,
     loginVSACUser,
-    setVSACAuthStatus
+    setVSACAuthStatus,
+    validateCode,
+    resetCodeValidation
   }, dispatch);
 }
 
@@ -314,15 +319,19 @@ function mapStateToProps(state) {
     artifacts: state.artifacts.artifacts,
     downloadedArtifact: state.artifacts.downloadArtifact,
     results: state.artifacts.executeArtifact.results,
+    executeStatus: state.artifacts.executeArtifact.executeStatus,
     errorMessage: state.artifacts.executeArtifact.errorMessage,
     isExecuting: state.artifacts.executeArtifact.isExecuting,
     isAdding: state.testing.addPatient.isAdding,
     artifactExecuted: state.artifacts.executeArtifact.artifactExecuted,
-    patientExecuted: state.artifacts.executeArtifact.patientExecuted,
+    patientsExecuted: state.artifacts.executeArtifact.patientsExecuted,
     vsacStatus: state.vsac.authStatus,
     vsacStatusText: state.vsac.authStatusText,
     vsacIsAuthenticating: state.vsac.isAuthenticating,
-    vsacFHIRCredentials: { username: state.vsac.username, password: state.vsac.password }
+    vsacFHIRCredentials: { username: state.vsac.username, password: state.vsac.password },
+    isValidatingCode: state.vsac.isValidatingCode,
+    isValidCode: state.vsac.isValidCode,
+    codeData: state.vsac.codeData,
   };
 }
 

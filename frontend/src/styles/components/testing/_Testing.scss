@@ -24,28 +24,19 @@
     text-align: center;
     margin: 40px 0;
   }
-
-  .patient-dropzone {
-    margin: auto;
-    width: 55%;
-    padding: 2em 1em;
-    text-align: center;
-    border-width: 0.25em;
-    border-color: $gray;
-    border-style: dashed;
-    border-radius: 1em;
-
-    &__warning {
-      font-size: 0.9em;
-      color: $brand-danger;
-      font-style: italic;
-      margin: 0 60px;
-    }
-  }
 }
 
 .patient-table {
   margin-top: 40px;
+
+  &__buttons {
+    display: flex;
+    align-items: center;
+
+    button {
+      margin-right: 20px;
+    }
+  }
 
   &__title {
     text-align: center;
@@ -55,12 +46,13 @@
   }
 
   &__meta {
-    margin-bottom: 40px;
+    display: flex;
+    margin-bottom: 10px;
 
     .meta-label {
       display: inline-block;
       font-weight: bold;
-      min-width: 100px;
+      min-width: 300px;
     }
   }
 
@@ -78,7 +70,8 @@
     padding-bottom: 0.5em;
   }
 
-  td {
+  td,
+  th {
     padding: 0.25em;
   }
 
@@ -109,7 +102,15 @@
   width: 6em;
 }
 
+tbody td.patients__tablecell-tiny {
+  padding-right: 0;
+}
+
 .patient-info {
   font-size: 0.9em;
   color: $gray;
+}
+
+.select-label {
+  margin-bottom: 5px;
 }

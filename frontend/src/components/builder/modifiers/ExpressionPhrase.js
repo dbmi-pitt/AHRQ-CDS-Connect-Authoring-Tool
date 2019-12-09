@@ -7,7 +7,7 @@ import { UncontrolledTooltip } from 'reactstrap';
 
 import convertToExpression from '../../../utils/artifacts/convertToExpression';
 import { getOriginalBaseElement, getAllModifiersOnBaseElementUse } from '../../../utils/baseElements';
-import { getReturnType } from '../../../utils/instances';
+import { getReturnType, getFieldWithId, getFieldWithType } from '../../../utils/instances';
 
 export default class ExpressionPhrase extends Component {
   getExpressionPhrase = (instance) => {
@@ -20,8 +20,8 @@ export default class ExpressionPhrase extends Component {
     let phraseTemplateInstance = instance;
     let phraseTemplateInstanceIsConjunction = false;
     if (instance.type === 'baseElement') {
-      const referenceParameter = instance.parameters.find(param => param.type === 'reference');
-      if (referenceParameter) {
+      const referenceField = getFieldWithType(instance.fields, 'reference');
+      if (referenceField) {
         // Use the original base element as a base, but include all modifiers from derivative uses.
         const originalBaseElement = _.cloneDeep(getOriginalBaseElement(instance, baseElements));
         const modifiers = getAllModifiersOnBaseElementUse(instance, baseElements, []);
@@ -40,31 +40,32 @@ export default class ExpressionPhrase extends Component {
       const baseElementModifiers = instance.modifiers || [];
       modifiers = modifiers.concat(baseElementModifiers);
     }
-    let type = phraseTemplateInstance.type === 'parameter' ?
+    let type = (phraseTemplateInstance.type === 'parameter' || phraseTemplateInstance.type === 'externalCqlElement') ?
       phraseTemplateInstance.type : phraseTemplateInstance.name;
     if (phraseTemplateInstance.subpopulationName && type === '') { // Subpopulation type not selected yet
       type = phraseTemplateInstance.id;
     }
 
     let valueSets = [];
-    if (phraseTemplateInstance.parameters[1] && phraseTemplateInstance.parameters[1].valueSets) {
-      valueSets = phraseTemplateInstance.parameters[1].valueSets;
+    const phraseTemplateInstanceVsacField = getFieldWithType(phraseTemplateInstance.fields, '_vsac');
+    if (phraseTemplateInstanceVsacField && phraseTemplateInstanceVsacField.valueSets) {
+      valueSets = phraseTemplateInstanceVsacField.valueSets;
     }
 
     let codes = [];
-    if (phraseTemplateInstance.parameters[1] && phraseTemplateInstance.parameters[1].codes) {
-      codes = phraseTemplateInstance.parameters[1].codes;
+    if (phraseTemplateInstanceVsacField && phraseTemplateInstanceVsacField.codes) {
+      codes = phraseTemplateInstanceVsacField.codes;
     }
 
-    const otherParameters = phraseTemplateInstance.parameters.filter(param =>
-      param.type === 'number' || param.type === 'valueset');
+    const otherFields = phraseTemplateInstance.fields.filter(field =>
+      field.type === 'number' || field.type === 'valueset');
 
     if (phraseTemplateInstanceIsConjunction) {
       phraseTemplateInstance.childInstances.forEach((child) => {
         let secondPhraseExpressions = [];
         if (child.childInstances && phraseTemplateInstance.usedBy) {
           // Groups expression phrases list the names of the elements within the group. They only go one level deep.
-          const childNames = child.childInstances.map(c => ({ name: c.parameters[0].value }));
+          const childNames = child.childInstances.map(c => ({ name: getFieldWithId(c.fields, 'element_name').value }));
           secondPhraseExpressions = convertToExpression([], child.name, [], [], child.returnType, [], childNames);
         } else {
           // Individual elements give the full expression phrase in the tooltip
@@ -73,14 +74,20 @@ export default class ExpressionPhrase extends Component {
         const phraseArrayAsSentence = secondPhraseExpressions.reduce((acc, currentValue) =>
           `${acc}${currentValue.expressionText === ',' ? '' : ' '}
           ${currentValue.isName ? '"' : ''}${currentValue.expressionText}${currentValue.isName ? '"' : ''}`, '');
-        elementNamesInPhrase.push({ name: child.parameters[0].value, tooltipText: phraseArrayAsSentence });
+        const nameField = getFieldWithId(child.fields, 'element_name');
+        elementNamesInPhrase.push({ name: nameField.value, tooltipText: phraseArrayAsSentence });
       });
     }
 
     const isBaseElementAndOr = phraseTemplateInstanceIsConjunction && instance.type === 'baseElement' &&
       (phraseTemplateInstance.name === 'And' || phraseTemplateInstance.name === 'Or');
 
-    const parameterName = (type === 'parameter') ? phraseTemplateInstance.name : null;
+    let referenceElementName = null;
+    if (type === 'parameter') {
+      referenceElementName = phraseTemplateInstance.name;
+    } else if (type === 'externalCqlElement') {
+      referenceElementName = getFieldWithId(phraseTemplateInstance.fields, 'externalCqlReference').value.element;
+    }
 
     const expressions = convertToExpression(
       modifiers,
@@ -88,10 +95,10 @@ export default class ExpressionPhrase extends Component {
       valueSets,
       codes,
       returnType,
-      otherParameters,
+      otherFields,
       elementNamesInPhrase,
       isBaseElementAndOr,
-      parameterName
+      referenceElementName
     );
 
     return expressions;

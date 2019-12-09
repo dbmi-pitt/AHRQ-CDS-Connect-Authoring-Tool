@@ -27,11 +27,12 @@ const defaultState = {
     executeStatus: null,
     results: null,
     artifactExecuted: null,
-    patientExecuted: null,
+    patientsExecuted: null,
     errorMessage: null
   },
   artifactSaved: true,
-  publishEnabled: false
+  publishEnabled: false,
+  librariesInUse: []
 };
 
 export default function auth(state = defaultState, action) {
@@ -46,7 +47,8 @@ export default function auth(state = defaultState, action) {
         ...state,
         artifact: action.artifact,
         names: action.names,
-        artifactSaved: false
+        artifactSaved: false,
+        librariesInUse: action.librariesInUse
       };
     case types.INITIALIZE_ARTIFACT:
       return {
@@ -80,6 +82,7 @@ export default function auth(state = defaultState, action) {
         ...state,
         artifact: action.artifact,
         names: action.names,
+        librariesInUse: action.librariesInUse,
         loadArtifact: { isLoading: false, loadStatus: 'success' }
       };
     case types.LOAD_ARTIFACT_FAILURE:
@@ -150,7 +153,7 @@ export default function auth(state = defaultState, action) {
           executeStatus: null,
           results: null,
           artifactExecuted: null,
-          patientExecuted: null
+          patientsExecuted: null
         }
       };
     case types.EXECUTE_ARTIFACT_SUCCESS:
@@ -161,7 +164,7 @@ export default function auth(state = defaultState, action) {
           executeStatus: 'success',
           results: action.data,
           artifactExecuted: action.artifact,
-          patientExecuted: action.patient,
+          patientsExecuted: action.patients,
           errorMessage: null
         }
       };
@@ -178,6 +181,18 @@ export default function auth(state = defaultState, action) {
       return {
         ...state,
         downloadArtifact: { isDownloading: false, downloadStatus: null, elmFiles: [], elmErrors: [] }
+      };
+    case types.CLEAR_EXECUTION_RESULTS:
+      return {
+        ...state,
+        executeArtifact: {
+          isExecuting: false,
+          executeStatus: null,
+          results: null,
+          artifactExecuted: null,
+          patientsExecuted: null,
+          errorMessage: null
+        }
       };
     case types.PUBLISH_ARTIFACT_REQUEST:
       return {

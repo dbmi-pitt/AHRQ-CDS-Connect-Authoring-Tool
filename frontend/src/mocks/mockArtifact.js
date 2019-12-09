@@ -2,6 +2,7 @@ const mockArtifact = {
   _id: null,
   name: 'Untitled Artifact',
   version: '1',
+  fhirVersion: '',
   uniqueIdCounter: 0,
   expTreeInclude: {
     id: 'And',
@@ -11,7 +12,7 @@ const mockArtifact = {
     returnType: 'boolean',
     path: '',
     childInstances: [],
-    parameters: []
+    fields: [{ id: 'element_name', value: 'AND' }]
   },
   expTreeExclude: {
     id: 'Or',
@@ -21,7 +22,7 @@ const mockArtifact = {
     returnType: 'boolean',
     path: '',
     childInstances: [],
-    parameters: []
+    fields: [{ id: 'element_name', value: 'OR' }]
   },
   recommendations: [],
   baseElements: [],
@@ -44,7 +45,7 @@ const mockArtifact = {
       expanded: true,
       id: 'And',
       name: '',
-      parameters: [],
+      fields: [],
       path: '',
       returnType: 'boolean',
       subpopulationName: 'Subpopulation 1',

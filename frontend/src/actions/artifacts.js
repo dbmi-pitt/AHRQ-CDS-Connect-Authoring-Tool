@@ -2,6 +2,7 @@ import axios from 'axios';
 import Promise from 'promise';
 import moment from 'moment';
 import FileSaver from 'file-saver';
+import slug from 'slug';
 import _ from 'lodash';
 
 import cql from 'cql-execution';
@@ -9,6 +10,7 @@ import cqlfhir from 'cql-exec-fhir';
 
 import changeToCase from '../utils/strings';
 import createTemplateInstance from '../utils/templates';
+import { getFieldWithType, getFieldWithId } from '../utils/instances';
 import loadTemplates from './templates';
 import * as types from './types';
 
@@ -32,46 +34,52 @@ export function setStatusMessage(statusType) {
 
 // ------------------------- UPDATE ARTIFACT ------------------------------- //
 
-function parseTree(element, names, baseElementsInUse, parametersInUse) {
-  parseConjunction(element.childInstances, names, baseElementsInUse, parametersInUse);
+function parseTree(element, names, baseElementsInUse, parametersInUse, librariesInUse) {
+  parseConjunction(element.childInstances, names, baseElementsInUse, parametersInUse, librariesInUse);
   const children = element.childInstances;
   children.forEach((child) => {
     if ('childInstances' in child) {
-      parseTree(child, names, baseElementsInUse, parametersInUse);
+      parseTree(child, names, baseElementsInUse, parametersInUse, librariesInUse);
     }
   });
 }
 
-function parseConjunction(childInstances, names, baseElementsInUse, parametersInUse) {
+function parseConjunction(childInstances, names, baseElementsInUse, parametersInUse, librariesInUse) {
   childInstances.forEach((child) => {
     // Add name of child to array
     const index = names.findIndex(name => name.id === child.uniqueId);
     if (index === -1) {
-      let name = child.parameters[0].value;
+      let name = getFieldWithId(child.fields, 'element_name').value;
       if (name === undefined) name = '';
       names.push({ name, id: child.uniqueId });
     }
 
     // Add uniqueId of base elements and parameters that are currently used
-    const referenceParameter = child.parameters.find(param => param.type === 'reference');
-    if (referenceParameter) {
-      if (referenceParameter.id === 'baseElementReference') {
-        const baseElementAlreadyInUse = baseElementsInUse.find(s => s.baseElementId === referenceParameter.value.id);
+    const referenceField = getFieldWithType(child.fields, 'reference');
+    if (referenceField) {
+      if (referenceField.id === 'baseElementReference') {
+        const baseElementAlreadyInUse = baseElementsInUse.find(s => s.baseElementId === referenceField.value.id);
         if (baseElementAlreadyInUse === undefined) {
           // Add the base element id and begin the list of other instances using the base element
-          baseElementsInUse.push({ baseElementId: referenceParameter.value.id, usedBy: [child.uniqueId] });
+          baseElementsInUse.push({ baseElementId: referenceField.value.id, usedBy: [child.uniqueId] });
         } else {
           // If the base element is already used elsewhere, just add to the list of instances using it
           baseElementAlreadyInUse.usedBy.push(child.uniqueId);
         }
-      } else if (referenceParameter.id === 'parameterReference') {
-        const parameterAlreadyInUse = parametersInUse.find(p => p.parameterId === referenceParameter.value.id);
+      } else if (referenceField.id === 'parameterReference') {
+        const parameterAlreadyInUse = parametersInUse.find(p => p.parameterId === referenceField.value.id);
         if (parameterAlreadyInUse === undefined) {
-          // Add the parameter id and begin the list of other instances using the base element
-          parametersInUse.push({ parameterId: referenceParameter.value.id, usedBy: [child.uniqueId] });
+          // Add the parameter id and begin the list of other instances using the parameter
+          parametersInUse.push({ parameterId: referenceField.value.id, usedBy: [child.uniqueId] });
         } else {
           // If the parameter is already used elsewhere, just add to the list of instances using it
           parameterAlreadyInUse.usedBy.push(child.uniqueId);
+        }
+      } else if (referenceField.id === 'externalCqlReference') {
+        const libraryAlreadyInUse = librariesInUse.find(l => l === referenceField.value.library);
+        if (libraryAlreadyInUse === undefined) {
+          // Add the library name
+          librariesInUse.push(referenceField.value.library);
         }
       }
     }
@@ -86,33 +94,37 @@ function parseForDuplicateNamesAndUsed(artifact) {
   const names = [];
   const baseElementsInUse = [];
   const parametersInUse = [];
+  const librariesInUse = [];
   if (artifact.expTreeInclude.childInstances.length) {
-    parseTree(artifact.expTreeInclude, names, baseElementsInUse, parametersInUse);
+    parseTree(artifact.expTreeInclude, names, baseElementsInUse, parametersInUse, librariesInUse);
   }
   if (artifact.expTreeExclude.childInstances.length) {
-    parseTree(artifact.expTreeExclude, names, baseElementsInUse, parametersInUse);
+    parseTree(artifact.expTreeExclude, names, baseElementsInUse, parametersInUse, librariesInUse);
   }
   artifact.subpopulations.forEach((subpopulation) => {
     names.push({ name: subpopulation.subpopulationName, id: subpopulation.uniqueId });
     if (!subpopulation.special) { // `Doesn't Meet Inclusion Criteria` and `Meets Exclusion Criteria` are special
-      if (subpopulation.childInstances.length) { parseTree(subpopulation, names, baseElementsInUse, parametersInUse); }
+      if (subpopulation.childInstances.length) {
+        parseTree(subpopulation, names, baseElementsInUse, parametersInUse, librariesInUse);
+      }
     }
   });
   artifact.baseElements.forEach((baseElement) => {
-    if (baseElement.parameters && baseElement.parameters[0]) {
-      names.push({ name: baseElement.parameters[0].value, id: baseElement.uniqueId });
+    const nameField = getFieldWithId(baseElement.fields, 'element_name');
+    if (nameField) {
+      names.push({ name: nameField.value, id: baseElement.uniqueId });
     }
     if (baseElement.childInstances && baseElement.childInstances.length) {
-      parseTree(baseElement, names, baseElementsInUse, parametersInUse);
+      parseTree(baseElement, names, baseElementsInUse, parametersInUse, librariesInUse);
     } else {
       // Parse single base element directly for it's uses
-      parseConjunction([baseElement], names, baseElementsInUse, parametersInUse);
+      parseConjunction([baseElement], names, baseElementsInUse, parametersInUse, librariesInUse);
     }
   });
   artifact.parameters.forEach((parameter) => {
     names.push({ name: parameter.name, id: parameter.uniqueId });
   });
-  return { names, baseElementsInUse, parametersInUse };
+  return { names, baseElementsInUse, parametersInUse, librariesInUse };
 }
 
 export function updateArtifact(artifactToUpdate, props) {
@@ -121,7 +133,7 @@ export function updateArtifact(artifactToUpdate, props) {
       ...artifactToUpdate,
       ...props
     };
-    const { names, baseElementsInUse, parametersInUse } = parseForDuplicateNamesAndUsed(artifact);
+    const { names, baseElementsInUse, parametersInUse, librariesInUse } = parseForDuplicateNamesAndUsed(artifact);
 
     // Add uniqueId to list on base element to mark where it is used.
     artifact.baseElements.forEach((element) => {
@@ -138,7 +150,8 @@ export function updateArtifact(artifactToUpdate, props) {
     return dispatch({
       type: types.UPDATE_ARTIFACT,
       artifact,
-      names
+      names,
+      librariesInUse
     });
   };
 }
@@ -165,13 +178,13 @@ function initializeTrees(andTemplate, orTemplate) {
 
   const newExpTreeInclude = createTemplateInstance(andTemplate);
   newExpTreeInclude.path = '';
-  const newExpTreeIncludeNameParam = newExpTreeInclude.parameters.find(param => param.id === 'element_name');
-  if (newExpTreeIncludeNameParam) newExpTreeIncludeNameParam.value = 'MeetsInclusionCriteria';
+  const newExpTreeIncludeNameField = getFieldWithId(newExpTreeInclude.fields, 'element_name');
+  if (newExpTreeIncludeNameField) newExpTreeIncludeNameField.value = 'MeetsInclusionCriteria';
 
   const newExpTreeExclude = createTemplateInstance(orTemplate);
   newExpTreeExclude.path = '';
-  const newExpTreeExcludeNameParam = newExpTreeExclude.parameters.find(param => param.id === 'element_name');
-  if (newExpTreeExcludeNameParam) newExpTreeExcludeNameParam.value = 'MeetsExclusionCriteria';
+  const newExpTreeExcludeNameField = getFieldWithId(newExpTreeExclude.fields, 'element_name');
+  if (newExpTreeExcludeNameField) newExpTreeExcludeNameField.value = 'MeetsExclusionCriteria';
 
   return {
     newSubpopulation,
@@ -187,6 +200,7 @@ export function initializeArtifact(andTemplate, orTemplate) {
     _id: null,
     name: 'Untitled Artifact',
     version: '1',
+    fhirVersion: '',
     expTreeInclude: newTrees.newExpTreeInclude,
     expTreeExclude: newTrees.newExpTreeExclude,
     recommendations: [],
@@ -268,11 +282,12 @@ function requestArtifact(id) {
 }
 
 function loadArtifactSuccess(artifact) {
-  const { names } = parseForDuplicateNamesAndUsed(artifact);
+  const { names, librariesInUse } = parseForDuplicateNamesAndUsed(artifact);
   return {
     type: types.LOAD_ARTIFACT_SUCCESS,
     artifact,
-    names
+    names,
+    librariesInUse
   };
 }
 
@@ -407,6 +422,12 @@ export function clearArtifactValidationWarnings() {
   };
 }
 
+export function clearExecutionResults() {
+  return {
+    type: types.CLEAR_EXECUTION_RESULTS
+  };
+}
+
 function sendValidateArtifactRequest(artifact) {
   return axios.post(`${API_BASE}/cql/validate`, artifact);
 }
@@ -443,12 +464,12 @@ function requestExecuteArtifact() {
   };
 }
 
-function executeArtifactSuccess(data, artifact, patient) {
+function executeArtifactSuccess(data, artifact, patients) {
   return {
     type: types.EXECUTE_ARTIFACT_SUCCESS,
     data,
     artifact,
-    patient
+    patients
   };
 }
 
@@ -465,7 +486,7 @@ function executeArtifactFailure(error) {
   };
 }
 
-function performExecuteArtifact(elmFiles, artifactName, patient, vsacCredentials, codeService, dataModel) {
+function performExecuteArtifact(elmFiles, artifactName, params, patients, vsacCredentials, codeService, dataModel) {
   // Set up the library
   const elmFile = JSON.parse(_.find(elmFiles, f =>
     f.name.replace(/[\s-\\/]/g, '') === artifactName.replace(/[\s-\\/]/g, '')).content);
@@ -473,13 +494,16 @@ function performExecuteArtifact(elmFiles, artifactName, patient, vsacCredentials
     f.name.replace(/[\s-\\/]/g, '') !== artifactName.replace(/[\s-\\/]/g, '')).map(f => JSON.parse(f.content));
   const library = new cql.Library(elmFile, new cql.Repository(libraries));
 
+  // Set up the parameters
+  const cqlExecParams = convertParameters(params);
+
   // Create the patient source
   const patientSource = (dataModel.version === '3.0.0')
     ? cqlfhir.PatientSource.FHIRv300()
     : cqlfhir.PatientSource.FHIRv102();
 
   // Load the patient source with the patient
-  patientSource.loadBundles([patient]);
+  patientSource.loadBundles(patients);
 
   // Extract the value sets from the ELM
   let valueSets = [];
@@ -491,14 +515,94 @@ function performExecuteArtifact(elmFiles, artifactName, patient, vsacCredentials
   return codeService.ensureValueSets(valueSets, vsacCredentials.username, vsacCredentials.password)
     .then(() => {
       // Value sets are loaded, so execute!
-      const executor = new cql.Executor(library, codeService);
+      const executor = new cql.Executor(library, codeService, cqlExecParams);
       const results = executor.exec(patientSource);
       return results;
     });
 }
 
-export function executeCQLArtifact(artifact, patient, vsacCredentials, codeService, dataModel) {
+function convertParameters(params = []) {
+  const paramsObj = {};
+  params.forEach((p) => {
+    // Handle the null case first so we don't have to guard against it later
+    if (p.value == null) {
+      paramsObj[p.name] = null;
+      return;
+    }
+    switch (p.type) {
+      case 'boolean':
+        paramsObj[p.name] = p.value === 'true';
+        break;
+      case 'datetime':
+        paramsObj[p.name] = cql.DateTime.parse(p.value.str.slice(1));
+        break;
+      case 'decimal':
+        paramsObj[p.name] = p.value.decimal;
+        break;
+      case 'integer':
+        paramsObj[p.name] = p.value;
+        break;
+      case 'interval_of_datetime': {
+        let d1 = null;
+        let d2 = null;
+        if (p.value.firstDate) {
+          const str = p.value.firstTime ? `${p.value.firstDate}T${p.value.firstTime}` : p.value.firstDate;
+          d1 = cql.DateTime.parse(str);
+        }
+        if (p.value.secondDate) {
+          const str = p.value.secondTime ? `${p.value.secondDate}T${p.value.secondTime}` : p.value.secondDate;
+          d2 = cql.DateTime.parse(str);
+        }
+        paramsObj[p.name] = new cql.Interval(d1, d2);
+        break;
+      }
+      case 'interval_of_decimal':
+        paramsObj[p.name] = new cql.Interval(p.value.firstDecimal, p.value.secondDecimal);
+        break;
+      case 'interval_of_integer':
+        paramsObj[p.name] = new cql.Interval(p.value.firstInteger, p.value.secondInteger);
+        break;
+      case 'interval_of_quantity': {
+        const q1 = p.value.firstQuantity != null ? new cql.Quantity({
+          value: p.value.firstQuantity,
+          unit: p.value.unit
+        }) : null;
+        const q2 = p.value.secondQuantity != null ? new cql.Quantity({
+          value: p.value.secondQuantity,
+          unit: p.value.unit
+        }) : null;
+        paramsObj[p.name] = new cql.Interval(q1, q2);
+        break;
+      }
+      case 'string':
+        // Remove the leading and trailing single-quotes
+        paramsObj[p.name] = p.value.replace(/^'(.*)'$/, '$1');
+        break;
+      case 'system_code':
+        paramsObj[p.name] = new cql.Code(p.value.code, p.value.uri);
+        break;
+      case 'system_concept':
+        paramsObj[p.name] = new cql.Concept([new cql.Code(p.value.code, p.value.uri)]);
+        break;
+      case 'system_quantity':
+        paramsObj[p.name] = new cql.Quantity({
+          value: p.value.quantity,
+          unit: p.value.unit
+        });
+        break;
+      case 'time':
+        // CQL exec doesn't expose a Time class, so we must construct a DT and then get the Time
+        paramsObj[p.name] = cql.DateTime.parse(`@0000-01-01${p.value.slice(1)}`).getTime();
+        break;
+      default: // do nothing
+    }
+  });
+  return paramsObj;
+}
+
+export function executeCQLArtifact(artifact, params, patients, vsacCredentials, codeService, dataModel) {
   artifact.dataModel = dataModel;
+  const artifactName = `${slug(artifact.name ? artifact.name : 'untitled')}-v${artifact.version}`;
 
   return (dispatch) => {
     dispatch(requestExecuteArtifact());
@@ -516,13 +620,14 @@ export function executeCQLArtifact(artifact, patient, vsacCredentials, codeServi
         });
     }).then(res => performExecuteArtifact(
       res.data.elmFiles,
-      artifact.name,
-      patient,
+      artifactName,
+      params,
+      patients,
       vsacCredentials,
       codeService,
       dataModel
     ))
-      .then(r => dispatch(executeArtifactSuccess(r, artifact, patient)))
+      .then(r => dispatch(executeArtifactSuccess(r, artifact, patients)))
       .catch(error => dispatch(executeArtifactFailure(error)));
   };
 }

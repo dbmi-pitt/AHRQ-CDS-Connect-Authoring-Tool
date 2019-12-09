@@ -4,6 +4,8 @@ import Modal from 'react-modal';
 import FontAwesome from 'react-fontawesome';
 import _ from 'lodash';
 
+import { getFieldWithId, getFieldWithType } from '../../utils/instances';
+
 export default class ElementModal extends Component {
   constructor(props) {
     super(props);
@@ -52,33 +54,35 @@ export default class ElementModal extends Component {
 
     if (selectedTemplate === undefined) return;
 
-    let valuesetsToAdd = selectedTemplate.parameters[1].valueSets;
+    const vsacField = getFieldWithType(selectedTemplate.fields, '_vsac');
+
+    let valuesetsToAdd = vsacField.valueSets;
     if (valuesetsToAdd === undefined) {
       valuesetsToAdd = [];
     }
     valuesetsToAdd.push({ name: element.name, oid: element.oid });
-    const nameParameter = selectedTemplate.parameters[0];
+    const nameField = getFieldWithId(selectedTemplate.fields, 'element_name');
 
-    // Adding a new element and editing an exisitng element use different functions that take different parameters
+    // Adding a new element and editing an existing element use different functions that take different parameters
     if (this.props.onElementSelected) {
       // Set the template's values based on value set selection initially to add it to the workspace.
-      if (!nameParameter.value) {
+      if (!nameField.value) {
         // Only set name of element if there isn't one already.
-        selectedTemplate.parameters[0].value = element.name;
+        nameField.value = element.name;
       }
-      selectedTemplate.parameters[1].valueSets = valuesetsToAdd;
-      selectedTemplate.parameters[1].static = true;
+      vsacField.valueSets = valuesetsToAdd;
+      vsacField.static = true;
       this.props.onElementSelected(selectedTemplate);
     } else if (this.props.updateElement) {
       // Update an existing element in the workspace
-      // Create array of which parameter to update, the new value to set, and the attribute to update (value is default)
+      // Create array of which field to update, the new value to set, and the attribute to update (value is default)
       const arrayToUpdate = [
-        { [selectedTemplate.parameters[1].id]: valuesetsToAdd, attributeToEdit: 'valueSets' },
-        { [selectedTemplate.parameters[1].id]: true, attributeToEdit: 'static' }
+        { [vsacField.id]: valuesetsToAdd, attributeToEdit: 'valueSets' },
+        { [vsacField.id]: true, attributeToEdit: 'static' }
       ];
-      if (!nameParameter.value) {
+      if (!nameField.value) {
         // Only set name of element if there isn't one already.
-        arrayToUpdate.push({ [selectedTemplate.parameters[0].id]: element.name });
+        arrayToUpdate.push({ [nameField.id]: element.name });
       }
       this.props.updateElement(arrayToUpdate);
     }
@@ -248,7 +252,8 @@ export default class ElementModal extends Component {
           role="button"
           tabIndex="0"
           onClick={this.openModal}
-          onKeyDown={e => this.enterKeyCheck(this.openModal, null, e)}>
+          onKeyDown={e => this.enterKeyCheck(this.openModal, null, e)}
+          aria-label={buttonLabels.openButtonText}>
           <FontAwesome name={this.props.iconForButton}/>
         </span>
       );
@@ -258,7 +263,8 @@ export default class ElementModal extends Component {
       <button
         className="primary-button"
         onClick={this.openModal}
-        onKeyDown={e => this.enterKeyCheck(this.openModal, null, e)}>
+        onKeyDown={e => this.enterKeyCheck(this.openModal, null, e)}
+        aria-label={buttonLabels.openButtonText}>
         <FontAwesome name="th-list" />{' '}{buttonLabels.openButtonText}
       </button>
     );
@@ -350,20 +356,20 @@ export default class ElementModal extends Component {
 }
 
 ElementModal.propTypes = {
-  updateElement: PropTypes.func,
+  getVSDetails: PropTypes.func.isRequired,
+  iconForButton: PropTypes.string,
+  isRetrievingDetails: PropTypes.bool.isRequired,
+  isSearchingVSAC: PropTypes.bool.isRequired,
+  labels: PropTypes.object,
   onElementSelected: PropTypes.func,
   searchVSACByKeyword: PropTypes.func.isRequired,
-  isSearchingVSAC: PropTypes.bool.isRequired,
-  vsacSearchResults: PropTypes.array.isRequired,
-  vsacSearchCount: PropTypes.number.isRequired,
-  template: PropTypes.object,
-  getVSDetails: PropTypes.func.isRequired,
-  isRetrievingDetails: PropTypes.bool.isRequired,
-  vsacDetailsCodes: PropTypes.array.isRequired,
-  vsacDetailsCodesError: PropTypes.string.isRequired,
   selectedElement: PropTypes.shape({ name: PropTypes.string.isRequired, oid: PropTypes.string.isRequired }),
-  labels: PropTypes.object,
+  template: PropTypes.object,
+  updateElement: PropTypes.func,
   useIconButton: PropTypes.bool,
-  iconForButton: PropTypes.string,
-  viewOnly: PropTypes.bool
+  viewOnly: PropTypes.bool,
+  vsacDetailsCodes: PropTypes.array.isRequired,
+  vsacDetailsCodesError: PropTypes.string,
+  vsacSearchCount: PropTypes.number.isRequired,
+  vsacSearchResults: PropTypes.array.isRequired,
 };

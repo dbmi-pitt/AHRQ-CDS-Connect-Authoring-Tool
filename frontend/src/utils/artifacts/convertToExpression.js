@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import Validators from '../validators';
+import { getFieldWithId } from '../../utils/instances';
 
 function getOperation(operator) {
   switch (operator) {
@@ -73,6 +74,7 @@ function getExpressionSentenceValue(modifier) {
     LookBackMedicationOrder: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
     LookBackMedicationStatement: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
     LookBackProcedure: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
+    Count: { modifierText: 'count', leadingText: 'with a', type: 'Count' },
     BooleanExists: { modifierText: 'exists', leadingText: 'that', type: 'BooleanExists' },
     BooleanComparison: { modifierText: 'is true', leadingText: 'which', type: 'post' },
     CheckExistence: { modifierText: 'is null', leadingText: '', type: 'post' },
@@ -227,18 +229,30 @@ function getExpressionSentenceValue(modifier) {
       }
       default: break;
     }
-    return expressionSentenceValues[modifier.id];
+    const expressionSentenceValue = Object.assign({ ...expressionSentenceValues[modifier.id] }, { id: modifier.id });
+    return expressionSentenceValue;
   }
 
   // If the modifier is not listed in the object, return just the name of the modifier to be placed at the end.
-  return { modifierText: _.lowerCase(modifier.name), leadingText: '', type: 'post' };
+  return { modifierText: _.lowerCase(modifier.name), leadingText: '', type: 'post', id: modifier.id };
+}
+
+// Some expressions need specific leading text for the Count expression since it changes the subject of the expression
+function updateExpressionsForCountExpression(expressionArray) {
+  return expressionArray.map((expression) => {
+    if (expression.id === 'ValueComparisonNumber') {
+      expression.leadingText = '';
+    }
+    return expression;
+  });
 }
 
 function addVSandCodeText(expressionArray, valueSets, codes) {
   // If there is more than one value set/code, add the rest to a tooltip.
   let tooltipText = '';
   const valueSetValues = valueSets.map(vs => vs.name);
-  const codeValues = codes.map(code => (code.display ? code.display : `${code.code} (${code.codeSystem.name})`));
+  const codeValues = codes.map(code =>
+    ((code.display && code.display.length < 110) ? code.display : `${code.code} (${code.codeSystem.name})`));
   const allValues = valueSetValues.concat(codeValues);
 
   if (allValues.length > 0) {
@@ -310,7 +324,7 @@ function addElementNames(expressionArray, elementNames, type, isBaseElementAndOr
 
 function addExpressionText(expressionArray, expression, type = null) {
   // Add any text needed ahead of the modifier
-  if (expression.leadingText && (type !== 'parameter')) {
+  if (expression.leadingText && !(type === 'parameter' || type === 'externalCqlElement')) {
     expressionArray.push({ expressionText: expression.leadingText, isExpression: false });
   }
   // Add the modifier text
@@ -318,35 +332,39 @@ function addExpressionText(expressionArray, expression, type = null) {
   return expressionArray;
 }
 
-function getOrderedExpressionSentenceArrayForAgeRange(expressionArray, ageParameters) {
+function getOrderedExpressionSentenceArrayForAgeRange(expressionArray, ageFields) {
   let orderedExpressionArray = [];
   orderedExpressionArray.push({ expressionText: 'The patient\'s', isExpression: false });
   orderedExpressionArray.push({ expressionText: 'age', isExpression: false, isType: true });
   orderedExpressionArray.push({ expressionText: 'is', isExpression: false });
 
-  const ageUnitString = `${(ageParameters[2] && ageParameters[2].value) ? ageParameters[2].value.name : ''}`;
+  const minAgeField = getFieldWithId(ageFields, 'min_age');
+  const maxAgeField = getFieldWithId(ageFields, 'max_age');
+  const unitField = getFieldWithId(ageFields, 'unit_of_time');
 
-  if (ageParameters[0].value && ageParameters[1].value) { // The minimum age and the maximum age are both added
+  const ageUnitString = `${(unitField && unitField.value) ? unitField.value.name : ''}`;
+
+  if (minAgeField.value && maxAgeField.value) { // The minimum age and the maximum age are both added
     orderedExpressionArray.push({ expressionText: 'between', isExpression: false });
     orderedExpressionArray.push({
-      expressionText: `${ageParameters[0].value} ${ageUnitString}`,
+      expressionText: `${minAgeField.value} ${ageUnitString}`,
       isExpression: true
     });
     orderedExpressionArray.push({ expressionText: 'and', isExpression: false });
     orderedExpressionArray.push({
-      expressionText: `${ageParameters[1].value} ${ageUnitString}`,
+      expressionText: `${maxAgeField.value} ${ageUnitString}`,
       isExpression: true
     });
-  } else if (ageParameters[0].value) { // Only a minimum age is added
+  } else if (minAgeField.value) { // Only a minimum age is added
     orderedExpressionArray.push({ expressionText: 'at least', isExpression: false });
     orderedExpressionArray.push({
-      expressionText: `${ageParameters[0].value} ${ageUnitString}`,
+      expressionText: `${minAgeField.value} ${ageUnitString}`,
       isExpression: true
     });
-  } else if (ageParameters[1].value) { // Only a maximum age is added
+  } else if (maxAgeField.value) { // Only a maximum age is added
     orderedExpressionArray.push({ expressionText: 'at most', isExpression: false });
     orderedExpressionArray.push({
-      expressionText: `${ageParameters[1].value} ${ageUnitString}`,
+      expressionText: `${maxAgeField.value} ${ageUnitString}`,
       isExpression: true
     });
   }
@@ -358,14 +376,15 @@ function getOrderedExpressionSentenceArrayForAgeRange(expressionArray, ageParame
   return orderedExpressionArray;
 }
 
-function getOrderedExpressionSentenceArrayForGender(genderParameter) {
+function getOrderedExpressionSentenceArrayForGender(genderFields) {
   const orderedExpressionArray = [];
   orderedExpressionArray.push({ expressionText: 'The patient\'s', isExpression: false });
   orderedExpressionArray.push({ expressionText: 'gender', isExpression: false, isType: true });
   orderedExpressionArray.push({ expressionText: 'is', isExpression: false });
 
-  if (genderParameter[0].value) {
-    orderedExpressionArray.push({ expressionText: genderParameter[0].value.name, isExpression: true });
+  const genderField = getFieldWithId(genderFields, 'gender');
+  if (genderField.value) {
+    orderedExpressionArray.push({ expressionText: genderField.value.name, isExpression: true });
   }
 
   return orderedExpressionArray;
@@ -378,18 +397,18 @@ function orderExpressionSentenceArray(
   valueSets,
   codes,
   returnType,
-  otherParameters,
+  otherFields,
   elementNames,
   isBaseElementAndOr,
-  parameterName
+  referenceElementName
 ) {
   // Specific cases for Age Range, Gender, and Parameters since they do not follow the same pattern as VSAC elements.
   if (type === 'Age Range') {
-    return getOrderedExpressionSentenceArrayForAgeRange(expressionArray, otherParameters);
+    return getOrderedExpressionSentenceArrayForAgeRange(expressionArray, otherFields);
   }
   if (type === 'Gender') {
     // No modifiers can be applied to gender elements
-    return getOrderedExpressionSentenceArrayForGender(otherParameters);
+    return getOrderedExpressionSentenceArrayForGender(otherFields);
   }
 
   if ((type === 'And' || type === 'Or') && !isBaseElementAndOr) {
@@ -398,8 +417,7 @@ function orderExpressionSentenceArray(
   }
 
   let orderedExpressionArray = [];
-  const returnsPlural = returnType.includes('list_of_');
-  const returnsBoolean = returnType === 'boolean';
+  const countExpression = expressionArray.find(expression => expression.type === 'Count');
   const notExpression = expressionArray.find(expression => expression.type === 'not');
   const existsExpression = expressionArray.find(expression => expression.type === 'BooleanExists');
   const descriptorExpression = expressionArray.find(expression => expression.type === 'descriptor');
@@ -409,11 +427,19 @@ function orderExpressionSentenceArray(
     const nulls = ['is null', 'is not null'];
     return nulls.indexOf(expression.modifierText) !== -1;
   });
-  const otherExpressions = _.uniqWith(expressionArray.filter((expression) => {
-    const knownTypes = ['not', 'BooleanExists', 'descriptor', 'list', 'post-list', 'value'];
+  let otherExpressions = _.uniqWith(expressionArray.filter((expression) => {
+    const knownTypes = ['not', 'BooleanExists', 'descriptor', 'list', 'post-list', 'value', 'Count'];
     return knownTypes.indexOf(expression.type) === -1;
   }), _.isEqual);
   let hasStarted = false;
+
+  // Count modifier will always refer to a group of elements, so always treat it as plural
+  const returnsPlural = returnType.includes('list_of_') || countExpression;
+  const returnsBoolean = returnType === 'boolean';
+
+  if (countExpression) {
+    otherExpressions = updateExpressionsForCountExpression(otherExpressions);
+  }
 
   // Handle not and exists
   if (existsExpression) {
@@ -431,25 +457,36 @@ function orderExpressionSentenceArray(
       hasStarted = true;
     }
   } else if (!returnsPlural && returnsBoolean && !checkExistenceExpression) {
-    if (notExpression && (type === 'parameter')) {
+    if (notExpression && (type === 'parameter' || type === 'externalCqlElement')) {
       orderedExpressionArray.push({ expressionText: 'Not', isExpression: true });
       hasStarted = true;
-    } else if (notExpression && (type !== 'parameter')) {
+    } else if (notExpression && !(type === 'parameter' || type === 'externalCqlElement')) {
       orderedExpressionArray.push({ expressionText: 'There does', isExpression: false });
       orderedExpressionArray.push({ expressionText: 'not', isExpression: true });
       orderedExpressionArray.push({ expressionText: 'exist', isExpression: false });
       hasStarted = true;
-    } else if (type !== 'parameter') {
+    } else if (!(type === 'parameter' || type === 'externalCqlElement')) {
       orderedExpressionArray.push({ expressionText: 'There exists', isExpression: false });
       hasStarted = true;
     }
-  } else if (notExpression) {
+  } else if (notExpression && !countExpression) {
     if (checkExistenceExpression) {
       orderedExpressionArray.push({ expressionText: 'It is', isExpression: false });
       orderedExpressionArray.push({ expressionText: 'not', isExpression: true });
       orderedExpressionArray.push({ expressionText: 'the case that', isExpression: false });
       hasStarted = true;
     }
+  } else if (countExpression) {
+    const article = notExpression ? 'the' : 'The';
+    if (notExpression) {
+      orderedExpressionArray.push({ expressionText: 'It is', isExpression: false });
+      orderedExpressionArray.push({ expressionText: 'not', isExpression: true });
+      orderedExpressionArray.push({ expressionText: 'the case that', isExpression: false });
+    }
+    orderedExpressionArray.push({ expressionText: article, isExpression: false });
+    orderedExpressionArray.push({ expressionText: 'count', isExpression: true });
+    orderedExpressionArray.push({ expressionText: 'of', isExpression: false });
+    hasStarted = true;
   }
 
   // Handle descriptors (ex. highest, most recent)
@@ -472,7 +509,7 @@ function orderExpressionSentenceArray(
       const listText = listExpression.modifierText;
       const listArticle = getArticle(listText);
       if (hasStarted) {
-        if (!descriptorExpression && index === 0) {
+        if (!descriptorExpression && index === 0 && !countExpression) {
           orderedExpressionArray.push({ expressionText: listArticle, isExpression: false });
         }
         orderedExpressionArray.push({ expressionText: listText, isExpression: true });
@@ -493,8 +530,10 @@ function orderExpressionSentenceArray(
     } else {
       elementText = 'group';
     }
+  } else if (type === 'externalCqlElement') {
+    elementText = 'external CQL element';
   }
-  const elementArticle = (type !== 'parameter') ? getArticle(elementText) : 'the';
+  const elementArticle = (!(type === 'parameter' || type === 'externalCqlElement')) ? getArticle(elementText) : 'the';
   if (hasStarted) {
     if (returnsPlural) {
       if (type !== 'Intersect' && type !== 'Union') elementText = `${elementText}s`;
@@ -525,8 +564,8 @@ function orderExpressionSentenceArray(
   if (type === 'Intersect' || type === 'Union') {
     orderedExpressionArray.push({ expressionText: 'of', isExpression: false });
   }
-  if (type === 'parameter') {
-    orderedExpressionArray.push({ expressionText: parameterName, isExpression: true });
+  if (type === 'parameter' || type === 'externalCqlElement') {
+    orderedExpressionArray.push({ expressionText: referenceElementName, isExpression: true });
   }
 
   // Handle value sets and codes and other element names
@@ -552,10 +591,10 @@ export default function convertToExpression(
   valueSets,
   codes,
   returnType,
-  otherParameters = [],
+  otherFields = [],
   elementNames = [],
   isBaseElementAndOr = false,
-  parameterName = null
+  referenceElementName = null
 ) {
   const expressionSentenceArray = expressionsArray.reduce((accumulator, currentExpression) => {
     const expressionSentenceValue = getExpressionSentenceValue(currentExpression);
@@ -572,10 +611,10 @@ export default function convertToExpression(
     valueSets,
     codes,
     returnType,
-    otherParameters,
+    otherFields,
     elementNames,
     isBaseElementAndOr,
-    parameterName
+    referenceElementName
   );
 
   return orderedExpressionSentenceArray;

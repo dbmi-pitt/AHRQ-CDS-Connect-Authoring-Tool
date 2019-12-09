@@ -6,8 +6,7 @@ class ELMErrorModal extends Component {
   static propTypes = {
     isOpen: PropTypes.bool.isRequired,
     closeModal: PropTypes.func.isRequired,
-    errors: PropTypes.array.isRequired,
-    isForTesting: PropTypes.bool
+    errors: PropTypes.array.isRequired
   }
 
   enterKeyCheck = (func, argument, event) => {
@@ -31,21 +30,18 @@ class ELMErrorModal extends Component {
           <div className="element-modal__container">
             <header className="modal__header">
               <span className="modal__heading">
-              {this.props.isForTesting
-                ? 'About your testing...'
-                : 'About your download...'}
+                About your CQL...
               </span>
             </header>
             <main className="modal__body">
-              {this.props.isForTesting
-                ? 'We detected some errors in the ELM files you just used for testing:'
-                : 'We detected some errors in the ELM files you just downloaded:'}
+              We detected some errors in the ELM files you just used:
               <ul>
                 {uniqueErrors.map((e, i) => <li key={i}> {e} </li>)}
               </ul>
             </main>
             <footer className="modal__footer">
               <button className="primary-button"
+                      type="button"
                       onClick={ this.props.closeModal }
                       onKeyDown={ e => this.enterKeyCheck(this.props.closeModal, null, e) }>
                       Close

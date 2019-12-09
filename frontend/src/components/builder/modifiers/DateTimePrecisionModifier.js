@@ -1,10 +1,20 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import Select from 'react-select';
 import moment from 'moment';
 import DatePicker from 'react-datepicker';
 import TimePicker from 'rc-time-picker';
 import _ from 'lodash';
+
+import StyledSelect from '../../elements/StyledSelect';
+
+const options = [
+  { value: 'year', label: 'year' },
+  { value: 'month', label: 'month' },
+  { value: 'day', label: 'day' },
+  { value: 'hour', label: 'hour' },
+  { value: 'minute', label: 'minute' },
+  { value: 'second', label: 'second' }
+];
 
 /* eslint-disable jsx-a11y/no-onchange */
 export default class DateTimePrecisionModifier extends Component {
@@ -41,15 +51,6 @@ export default class DateTimePrecisionModifier extends Component {
     const timeId = _.uniqueId('time-');
     const precId = _.uniqueId('prec-');
 
-    const options = [
-      { value: 'year', label: 'year' },
-      { value: 'month', label: 'month' },
-      { value: 'day', label: 'day' },
-      { value: 'hour', label: 'hour' },
-      { value: 'minute', label: 'minute' },
-      { value: 'second', label: 'second' }
-    ];
-
     return (
       /* eslint-disable jsx-a11y/label-has-for */
       <div className="col-9 d-flex modifier-vert-aligned">
@@ -66,6 +67,7 @@ export default class DateTimePrecisionModifier extends Component {
             ? moment(this.props.date, 'YYYY-MM-DD')
             : null}
           dateFormat="L"
+          autoComplete="off"
           onChange={ (e) => {
             this.assignValue(e, 'date');
           }}
@@ -79,18 +81,20 @@ export default class DateTimePrecisionModifier extends Component {
             moment(this.props.time, 'HH:mm:ss').isValid()
             ? moment(this.props.time, 'HH:mm:ss')
             : null}
+          autoComplete="off"
           onChange={ (e) => {
             this.assignValue(e, 'time');
           }}
         />
 
         <label htmlFor={precId}>
-          <Select
-            name={'Precision'}
-            aria-label={'Precision'}
+          <StyledSelect
+            className="Select date-time-precision-modifier__select"
+            name="Precision"
+            aria-label="Precision"
             id={precId}
-            value={this.props.precision}
-            onChange={ (e) => {
+            value={options.find(({ value }) => value === this.props.precision)}
+            onChange={(e) => {
               this.assignValue(e, 'precision');
             }}
             options={options}

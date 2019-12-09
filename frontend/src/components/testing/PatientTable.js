@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import Select from 'react-select';
 import FontAwesome from 'react-fontawesome';
+import { UncontrolledTooltip } from 'reactstrap';
 import _ from 'lodash';
 
 import renderDate from '../../utils/dates';
-import { sortMostRecent } from '../../utils/sort';
+import { sortAlphabeticallyByPatientName } from '../../utils/sort';
 import patientProps from '../../prop-types/patient';
 import artifactProps from '../../prop-types/artifact';
 
@@ -13,6 +13,8 @@ import Modal from '../elements/Modal';
 import VSACAuthenticationModal from '../builder/VSACAuthenticationModal';
 import CodeService from '../../utils/code_service/CodeService';
 import PatientView from './PatientView';
+import TestingParameters from './TestingParameters';
+import StyledSelect from '../elements/StyledSelect';
 
 export default class PatientTable extends Component {
   constructor(props) {
@@ -23,8 +25,9 @@ export default class PatientTable extends Component {
       showConfirmDeleteModal: false,
       patientToView: null,
       showViewDetailsModal: false,
-      patientToExecute: null,
+      patientsToExecute: [],
       artifactToExecute: null,
+      paramsToExecute: [],
       showExecuteCQLModal: false,
       testReport: null,
       codeService: new CodeService()
@@ -60,35 +63,76 @@ export default class PatientTable extends Component {
     this.closeViewDetailsModal();
   }
 
-  // ----------------------- EXECUTE CQL MODAL -------------------------- //
+  // ----------------------- EXECUTE CQL MODALS -------------------------- //
 
-  openExecuteCQLModal = (patient) => {
-    this.setState({ showExecuteCQLModal: true, patientToExecute: patient });
+  openExecuteCQLModal = () => {
+    this.setState({ showExecuteCQLModal: true });
   }
 
   closeExecuteCQLModal = () => {
-    this.setState({ showExecuteCQLModal: false, patientToExecute: null, artifactToExecute: null });
+    this.setState({
+      showExecuteCQLModal: false,
+      artifactToExecute: null,
+      paramsToExecute: []
+    });
   }
 
   selectArtifactForCQLModal = (artifact) => {
-    this.setState({ artifactToExecute: artifact });
+    if (!artifact) {
+      this.setState({ artifactToExecute: null, paramsToExecute: [] });
+    } else {
+      let params = [];
+      if (artifact.value && artifact.value.parameters) {
+        params = artifact.value.parameters.map(p => ({
+          name: p.name,
+          type: p.type,
+          value: _.clone(p.value)
+        }));
+      }
+      this.setState({ artifactToExecute: artifact, paramsToExecute: params });
+    }
   }
 
   handleExecuteCQL = () => {
-    this.executeCQL(this.state.artifactToExecute.value, this.state.patientToExecute);
+    this.executeCQL(this.state.artifactToExecute.value, this.state.paramsToExecute, this.state.patientsToExecute);
     this.closeExecuteCQLModal();
+  }
+
+  // ----------------------- HANDLE PATIENTS ---------------------------- //
+
+  updatePatientsToExecute = (patient) => {
+    const patientsClone = [...this.state.patientsToExecute];
+    const patientIndex = patientsClone.findIndex(p => p._id === patient._id);
+
+    if (patientIndex !== -1) {
+      patientsClone.splice(patientIndex, 1);
+    } else {
+      patientsClone.push(patient);
+    }
+
+    this.setState({ patientsToExecute: patientsClone });
+  }
+
+  // ----------------------- HANDLE PARAMETERS -------------------------- //
+
+  updateParameters = (params) => {
+    this.setState({ paramsToExecute: params });
   }
 
   // ----------------------- PERFORM CQL EXECUTION -------------------------- //
 
-  executeCQL = (artifact, patient) => {
-    const dataModel = (patient.fhirVersion === 'STU3')
+  executeCQL = (artifact, params, patients) => {
+    const dataModel = (patients[0].fhirVersion === 'STU3')
       ? { name: 'FHIR', version: '3.0.0' }
       : { name: 'FHIR', version: '1.0.2' };
 
+    const patientsInfo = patients
+      .map(patient => patient.patient);
+
     this.props.executeCQLArtifact(
       artifact,
-      patient.patient,
+      params,
+      patientsInfo,
       this.props.vsacFHIRCredentials,
       this.state.codeService,
       dataModel
@@ -152,125 +196,152 @@ export default class PatientTable extends Component {
   }
 
   renderExecuteCQLModal() {
-    const artifactOptions = _.map(this.props.artifacts, a => ({ value: a, label: a.name }));
+    const fhirVersionMap = { '1.0.2': 'DSTU2', '3.0.0': 'STU3' };
+    const validArtifactsToExecute = this.props.artifacts.filter((a) => {
+      const noFHIRVersion = a.fhirVersion === '';
+      const sameFHIRVersion =
+        fhirVersionMap[a.fhirVersion] === _.get(this.state, 'patientsToExecute[0].fhirVersion', '');
+      return noFHIRVersion || sameFHIRVersion;
+    });
+    const artifactOptions = _.map(validArtifactsToExecute, a => ({ value: a, label: a.name }));
 
     return (
       <Modal
-        modalTitle="Execute CQL"
+        modalTitle="Execute CQL on Selected Patients"
         modalId="execute-cql-modal"
         modalTheme="light"
-        modalSubmitButtonText={this.state.artifactToExecute == null ? '' : 'Execute CQL'}
+        modalSubmitButtonText={'Execute CQL'}
+        submitDisabled={this.state.artifactToExecute == null}
         handleShowModal={this.state.showExecuteCQLModal}
         handleCloseModal={this.closeExecuteCQLModal}
         handleSaveModal={this.handleExecuteCQL}>
 
         <div className="patient-table__modal modal__content">
-          <h5>Executing on Patient:</h5>
-
-          <div className="patient-info">
-            <span>Name: </span>
-            <span>
-              {_.chain(this.state.patientToExecute)
-                  .get('patient.entry')
-                  .find({ resource: { resourceType: 'Patient' } })
-                  .get('resource.name[0].given[0]')
-                  .value() || 'given_placeholder'}
-              {' '}
-              {_.chain(this.state.patientToExecute)
-                .get('patient.entry')
-                .find({ resource: { resourceType: 'Patient' } })
-                .get('resource.name[0].family')
-                .value() || 'family_placeholder'}
-            </span>
-          </div>
-
-          <br/>
-
-          <Select
-            aria-label={'Select Artifact'}
+          <div className="select-label">FHIR Compatible Artifacts:</div>
+          <StyledSelect
+            aria-label="Select Artifact"
             inputProps={{ title: 'Select Artifact' }}
-            clearable={false}
             options={artifactOptions}
             value={this.state.artifactToExecute}
             onChange={this.selectArtifactForCQLModal}
+          />
+
+          <TestingParameters
+            parameters={this.state.paramsToExecute}
+            updateParameters={this.updateParameters}
+            vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+            loginVSACUser={this.props.loginVSACUser}
+            setVSACAuthStatus={this.props.setVSACAuthStatus}
+            vsacStatus={this.props.vsacStatus}
+            vsacStatusText={this.props.vsacStatusText}
+            isValidatingCode={this.props.isValidatingCode}
+            isValidCode={this.props.isValidCode}
+            codeData={this.props.codeData}
+            validateCode={this.props.validateCode}
+            resetCodeValidation={this.props.resetCodeValidation}
           />
         </div>
       </Modal>
     );
   }
 
-  renderTableRow = patient => (
-    <tr key={patient._id}>
-      <td className="patients__tablecell-wide" data-th="Name">
-        <div>
-          {_.chain(patient)
+  renderTableRow = (patient) => {
+    const { patientsToExecute } = this.state;
+    const patientSelected = patientsToExecute.some(p => p._id === patient._id);
+    const differentFHIRVersion = patientsToExecute.length > 0
+      && patientsToExecute[0].fhirVersion !== patient.fhirVersion;
+
+    return (
+      <tr key={patient._id}>
+        <td className="patients__tablecell-tiny" data-th="Check Box">
+          <button aria-label="View"
+            id={`SelectPatientTooltip-${patient._id}`}
+            className={`button invisible-button ${
+              differentFHIRVersion ? 'disabled' : ''
+            }`}
+            onClick={() => { if (!differentFHIRVersion) this.updatePatientsToExecute(patient); }}>
+            <FontAwesome
+              name={patientSelected ? 'check-square' : 'square'}
+              className={`select-patient-checkbox ${patientSelected ? 'checked' : ''}`} />
+          </button>
+        </td>
+
+        {differentFHIRVersion &&
+          <UncontrolledTooltip target={`SelectPatientTooltip-${patient._id}`} placement="top">
+            To select this patient, first deselect all patients of other FHIR versions.
+          </UncontrolledTooltip>
+        }
+
+        <td className="patients__tablecell-wide" data-th="Name">
+          <div>
+            {_.chain(patient)
+                .get('patient.entry')
+                .find({ resource: { resourceType: 'Patient' } })
+                .get('resource.name[0].given[0]')
+                .value() || 'given_placeholder'}
+            {' '}
+            {_.chain(patient)
               .get('patient.entry')
               .find({ resource: { resourceType: 'Patient' } })
-              .get('resource.name[0].given[0]')
-              .value() || 'given_placeholder'}
-          {' '}
-          {_.chain(patient)
-            .get('patient.entry')
-            .find({ resource: { resourceType: 'Patient' } })
-            .get('resource.name[0].family')
-            .value() || 'family_placeholder'}
-        </div>
-      </td>
+              .get('resource.name[0].family')
+              .value() || 'family_placeholder'}
+          </div>
+        </td>
 
-      <td className="patients__tablecell-wide" data-th="Birth Date">
-        <div>
-          {_.chain(patient)
-              .get('patient.entry')
-              .find({ resource: { resourceType: 'Patient' } })
-              .get('resource.birthDate')
-              .value() || 'birthdate_placeholder'}
-        </div>
-      </td>
+        <td className="patients__tablecell-wide" data-th="Birth Date">
+          <div>
+            {_.chain(patient)
+                .get('patient.entry')
+                .find({ resource: { resourceType: 'Patient' } })
+                .get('resource.birthDate')
+                .value() || 'birthdate_placeholder'}
+          </div>
+        </td>
 
-      <td className="patients__tablecell-short" data-th="Gender">
-        <div>
-          {_.chain(patient)
-              .get('patient.entry')
-              .find({ resource: { resourceType: 'Patient' } })
-              .get('resource.gender')
-              .value() || 'gender_placeholder'}
-        </div>
-      </td>
+        <td className="patients__tablecell-short" data-th="Gender">
+          <div>
+            {_.chain(patient)
+                .get('patient.entry')
+                .find({ resource: { resourceType: 'Patient' } })
+                .get('resource.gender')
+                .value() || 'gender_placeholder'}
+          </div>
+        </td>
 
-      <td className="patients__tablecell-short" data-th="FHIR Version">
-        <div>
-          {_.get(patient, 'fhirVersion', 'version_placeholder')}
-        </div>
-      </td>
+        <td className="patients__tablecell-short" data-th="FHIR Version">
+          <div>
+            {_.get(patient, 'fhirVersion', 'version_placeholder')}
+          </div>
+        </td>
 
-      <td className="patients__tablecell-wide" data-th="Updated">
-        {renderDate(patient.updatedAt)}
-      </td>
+        <td className="patients__tablecell-wide" data-th="Updated">
+          {renderDate(patient.updatedAt)}
+        </td>
 
-      <td data-th="">
-        <button aria-label="View"
-          className="button primary-button details-button"
-          onClick={() => this.openViewDetailsModal(patient)}>
-          <FontAwesome name='eye'/>
-        </button>
+        <td data-th="">
+          <button aria-label="View"
+            className="button primary-button details-button"
+            onClick={() => this.openViewDetailsModal(patient)}>
+            <FontAwesome name='eye'/>
+          </button>
 
-        <button aria-label="Execute CQL"
-          disabled={this.props.vsacFHIRCredentials.username == null}
-          className={`button primary-button execute-button ${
-            this.props.vsacFHIRCredentials.username != null ? '' : 'disabled-button'
-          }`}
-          onClick={() => this.openExecuteCQLModal(patient)}>
-          Execute CQL
-        </button>
-
-        <button
-          className="button danger-button"
-          onClick={() => this.openConfirmDeleteModal(patient)}>
-          Delete
-        </button>
-      </td>
-    </tr>
-  );
+          <button
+            id={`DeletePatientTooltip-${patient._id}`}
+            className={`button danger-button ${
+              patientSelected ? 'disabled' : ''
+            }`}
+            onClick={() => { if (!patientSelected) this.openConfirmDeleteModal(patient); }}>
+            Delete
+          </button>
+          {patientSelected &&
+            <UncontrolledTooltip target={`DeletePatientTooltip-${patient._id}`} placement="top">
+              To delete this patient, first deselect it.
+            </UncontrolledTooltip>
+          }
+        </td>
+      </tr>
+    );
+  }
 
   renderVSACLogin = () => {
     // If last time authenticated was less than 7.5 hours ago, force user to log in again.
@@ -301,20 +372,37 @@ export default class PatientTable extends Component {
 
     return (
       <div className="patient-table">
+        <div className="patient-table__buttons">
+          {this.renderVSACLogin()}
+
+          <button aria-label="Execute CQL on Selected Patients"
+            disabled={
+              this.props.vsacFHIRCredentials.username == null
+              || this.state.patientsToExecute.length === 0
+            }
+            className={`button primary-button execute-button ${
+              this.props.vsacFHIRCredentials.username != null ? '' : 'disabled-button'
+            }`}
+            onClick={() => this.openExecuteCQLModal()}>
+            Execute CQL on Selected Patients
+          </button>
+        </div>
+
         <table className="patients__table">
           <thead>
             <tr>
+              <th scope="col" className="patients__tablecell-tiny"></th>
               <th scope="col" className="patients__tablecell-wide">Name</th>
               <th scope="col" className="patients__tablecell-wide">Birth Date</th>
               <th scope="col" className="patients__tablecell-short">Gender</th>
               <th scope="col" className="patients__tablecell-short">Version</th>
               <th scope="col" className="patients__tablecell-wide">Last Updated</th>
-              <th>{this.renderVSACLogin()}</th>
+              <th></th>
             </tr>
           </thead>
 
           <tbody>
-            {patients.sort(sortMostRecent).map(this.renderTableRow)}
+            {patients.sort(sortAlphabeticallyByPatientName).map(this.renderTableRow)}
           </tbody>
         </table>
 
@@ -336,5 +424,10 @@ PatientTable.propTypes = {
   setVSACAuthStatus: PropTypes.func.isRequired,
   vsacStatus: PropTypes.string,
   vsacStatusText: PropTypes.string,
+  isValidatingCode: PropTypes.bool.isRequired,
+  isValidCode: PropTypes.bool,
+  codeData: PropTypes.object,
+  validateCode: PropTypes.func.isRequired,
+  resetCodeValidation: PropTypes.func.isRequired,
   vsacIsAuthenticating: PropTypes.bool.isRequired
 };

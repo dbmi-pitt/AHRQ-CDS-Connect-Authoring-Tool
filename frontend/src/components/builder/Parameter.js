@@ -1,28 +1,38 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import Select from 'react-select';
 import FontAwesome from 'react-fontawesome';
 import { UncontrolledTooltip } from 'reactstrap';
 import _ from 'lodash';
 
-import StringParameter from './parameters/types/StringParameter';
-import BooleanEditor from './parameters/editors/BooleanEditor';
-import CodeEditor from './parameters/editors/CodeEditor';
-import IntegerEditor from './parameters/editors/IntegerEditor';
-import DateTimeEditor from './parameters/editors/DateTimeEditor';
-import DecimalEditor from './parameters/editors/DecimalEditor';
-import QuantityEditor from './parameters/editors/QuantityEditor';
-import StringEditor from './parameters/editors/StringEditor';
-import TimeEditor from './parameters/editors/TimeEditor';
-import IntervalOfIntegerEditor from './parameters/editors/IntervalOfIntegerEditor';
-import IntervalOfDateTimeEditor from './parameters/editors/IntervalOfDateTimeEditor';
-import IntervalOfDecimalEditor from './parameters/editors/IntervalOfDecimalEditor';
-import IntervalOfQuantityEditor from './parameters/editors/IntervalOfQuantityEditor';
-import TextAreaParameter from './parameters/types/TextAreaParameter';
+import StringField from './fields/StringField';
+import TextAreaField from './fields/TextAreaField';
+import BooleanEditor from './parameters/BooleanEditor';
+import CodeEditor from './parameters/CodeEditor';
+import IntegerEditor from './parameters/IntegerEditor';
+import DateTimeEditor from './parameters/DateTimeEditor';
+import DecimalEditor from './parameters/DecimalEditor';
+import QuantityEditor from './parameters/QuantityEditor';
+import StringEditor from './parameters/StringEditor';
+import TimeEditor from './parameters/TimeEditor';
+import IntervalOfIntegerEditor from './parameters/IntervalOfIntegerEditor';
+import IntervalOfDateTimeEditor from './parameters/IntervalOfDateTimeEditor';
+import IntervalOfDecimalEditor from './parameters/IntervalOfDecimalEditor';
+import IntervalOfQuantityEditor from './parameters/IntervalOfQuantityEditor';
+import StyledSelect from '../elements/StyledSelect';
 
-import { doesParameterNeedWarning, parameterHasDuplicateName } from '../../utils/warnings';
+import {
+  doesParameterNeedUsageWarning,
+  parameterHasDuplicateName,
+  parameterIsIncompleteWarning
+} from '../../utils/warnings';
 
 export default class Parameter extends Component {
+  constructor(props) {
+    super(props);
+
+    this.state = { showParameter: true };
+  }
+
   componentDidMount = () => {
     const { id, type, name, value, comment } = this.props;
     if (_.isUndefined(id)) {
@@ -36,6 +46,10 @@ export default class Parameter extends Component {
     }
   }
 
+  showHideParameterBody = () => {
+    this.setState({ showParameter: !this.state.showParameter });
+  }
+
   updateParameter = (object) => {
     this.props.updateInstanceOfParameter(object, this.props.index);
   }
@@ -47,11 +61,18 @@ export default class Parameter extends Component {
     }
   }
 
+  changeParameterType = (type, name, comment) => {
+    if (type) {
+      this.updateParameter({ name, uniqueId: this.props.id, type: type.value, comment, value: null });
+    }
+  }
+
   renderParameter() {
     const parameterProps = {
       id: `param-name-${this.props.index}`,
       name: this.props.name,
       type: this.props.type != null ? this.props.type : null,
+      label: 'Default Value:',
       value: this.props.value,
       updateInstance: e => this.updateParameter({
         name: this.props.name,
@@ -107,8 +128,49 @@ export default class Parameter extends Component {
     }
   }
 
+  renderCollapsed(id, index, name, parameterUsed, disabledClass, parameterNeedsWarning) {
+    const { showParameter } = this.state;
+
+    return (
+      <div className="card-element">
+        <div className="card-element__header">
+          <div className="heading-name">
+            {name}: {parameterNeedsWarning &&
+              <div className="warning"><FontAwesome name="exclamation-circle" /> Has warnings</div>
+            }
+          </div>
+
+          <div className="card-element__buttons">
+            <button
+              onClick={this.showHideParameterBody}
+              className="element__hidebutton transparent-button"
+              aria-label={`hide ${name}`}>
+              <FontAwesome name={showParameter ? 'angle-double-down' : 'angle-double-right'} />
+            </button>
+
+            <button
+              id={`deletebutton-${id}`}
+              onClick={() => { this.deleteParameter(index); }}
+              className={`button transparent-button delete-button ${disabledClass}`}
+              aria-label="Delete Parameter">
+              <FontAwesome fixedWidth name='close' />
+            </button>
+            {parameterUsed &&
+              <UncontrolledTooltip
+                target={`deletebutton-${id}`} placement="left">
+                  To delete this parameter, remove all references to it.
+              </UncontrolledTooltip> }
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   render() {
-    const { index, name, id, type, value, comment } = this.props;
+    const {
+      index, name, id, type, value, comment, usedBy, instanceNames
+    } = this.props;
+    const { showParameter } = this.state;
     const typeOptions = [
       { value: 'boolean', label: 'Boolean' },
       { value: 'system_code', label: 'Code' },
@@ -128,53 +190,74 @@ export default class Parameter extends Component {
     const doesHaveDuplicateName = parameterHasDuplicateName(
       name,
       id,
-      this.props.usedBy,
-      this.props.instanceNames,
+      usedBy,
+      instanceNames,
       this.props.getAllInstancesInAllTrees()
     );
     const parameterUsed = this.props.usedBy ? this.props.usedBy.length !== 0 : false;
     const disabledClass = parameterUsed ? 'disabled' : '';
-    const doesHaveParameterWarning = doesParameterNeedWarning(
-      this.props.name,
-      this.props.usedBy,
-      this.props.comment,
+    const doesHaveParameterUsageWarning = doesParameterNeedUsageWarning(
+      name,
+      usedBy,
+      comment,
       this.props.getAllInstancesInAllTrees()
     );
+    const isIncompleteWarning = parameterIsIncompleteWarning(type, value);
+    const parameterNeedsWarning
+      = doesHaveDuplicateName || doesHaveParameterUsageWarning || (isIncompleteWarning != null);
 
     return (
-      <div className="parameter card-group card-group__top" id={this.props.id}>
-        <div className="card-element">
+      <div className="parameter card-group card-group__top" id={id}>
+        {showParameter ? <div className="card-element">
           <div className="card-element__header">
-            <StringParameter
+            <StringField
               id={`param-name-${index}`}
               name={'Parameter Name'}
               value={name}
               disabled={parameterUsed}
               updateInstance={e => (this.updateParameter({
                 name: e[`param-name-${index}`],
-                uniqueId: this.props.id,
+                uniqueId: id,
                 type,
                 comment,
                 value
               }))}
             />
 
-            <button
-              id={`deletebutton-${this.props.id}`}
-              onClick={() => { this.deleteParameter(index); }}
-              className={`button transparent-button delete-button ${disabledClass}`}
-              aria-label="Delete Parameter">
-              <FontAwesome fixedWidth name='close' />
-            </button>
-            {parameterUsed &&
-              <UncontrolledTooltip
-                target={`deletebutton-${this.props.id}`} placement="left">
-                  To delete this parameter, remove all references to it.
-              </UncontrolledTooltip> }
+
+            <div className="card-element__buttons">
+              <button
+                onClick={this.showHideParameterBody}
+                className="element__hidebutton transparent-button"
+                aria-label={`hide ${name}`}>
+                <FontAwesome name={showParameter ? 'angle-double-down' : 'angle-double-right'} />
+              </button>
+
+              <button
+                id={`deletebutton-${id}`}
+                onClick={() => { this.deleteParameter(index); }}
+                className={`button transparent-button delete-button ${disabledClass}`}
+                aria-label="Delete Parameter">
+                <FontAwesome fixedWidth name='close' />
+              </button>
+              {parameterUsed &&
+                <UncontrolledTooltip
+                  target={`deletebutton-${id}`} placement="left">
+                    To delete this parameter, remove all references to it.
+                </UncontrolledTooltip> }
+            </div>
           </div>
 
+          {(isIncompleteWarning != null)
+            && !doesHaveDuplicateName
+            && !doesHaveParameterUsageWarning
+            && <div className="warning">
+                  {`Warning: Default value is incomplete. ${isIncompleteWarning}`}
+                </div>
+          }
+
           {doesHaveDuplicateName
-            && !doesHaveParameterWarning
+            && !doesHaveParameterUsageWarning
             && <div className="warning">Warning: Name already in use. Choose another name.</div>}
 
           {parameterUsed
@@ -183,7 +266,7 @@ export default class Parameter extends Component {
                   Parameter name and type can't be changed while it is being referenced.
                 </div>}
 
-          {doesHaveParameterWarning
+          {doesHaveParameterUsageWarning
             && <div className="warning">
                   Warning: One or more uses of this Parameter have changed. Choose another name.
                 </div>
@@ -191,16 +274,16 @@ export default class Parameter extends Component {
 
           <div className="card-element__body">
             <div className="parameter__item">
-              <TextAreaParameter
-                key={this.props.id}
-                id={this.props.id}
+              <TextAreaField
+                key={id}
+                id={id}
                 name={'Comment'}
-                value={this.props.comment}
+                value={comment}
                 updateInstance={e => this.updateParameter({
                   name,
-                  uniqueId: this.props.id,
+                  uniqueId: id,
                   type,
-                  comment: e[this.props.id],
+                  comment: e[id],
                   value
                 })}
                 />
@@ -212,31 +295,21 @@ export default class Parameter extends Component {
               </div>
 
               <div className="col-9">
-                <Select
+                <StyledSelect
                   aria-label={'Select Parameter Type'}
                   inputProps={{ title: 'Select Parameter Type', id: `parameter-${index}` }}
-                  clearable={false}
                   options={typeOptions}
-                  value={type}
+                  value={typeOptions.find(typeOption => typeOption.value === type)}
                   disabled={parameterUsed}
-                  onChange={(e) => {
-                    if (e) { // in case of keystroke delete, where e is null/undefined
-                      this.updateParameter({
-                        name,
-                        uniqueId: this.props.id,
-                        type: e.value,
-                        comment,
-                        value: null
-                      });
-                    }
-                  }}
+                  isClearable={false}
+                  onChange={parameterType => this.changeParameterType(parameterType, name, comment)}
                 />
               </div>
             </div>
 
             {this.renderParameter()}
           </div>
-        </div>
+        </div> : this.renderCollapsed(id, index, name, parameterUsed, disabledClass, parameterNeedsWarning)}
       </div>
     );
   }

@@ -1,17 +1,18 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import Select from 'react-select';
 import FontAwesome from 'react-fontawesome';
 import { UncontrolledTooltip } from 'reactstrap';
 
 import TemplateInstance from './TemplateInstance';
 import ElementSelect from './ElementSelect';
-import StringParameter from './parameters/types/StringParameter';
+import StringField from './fields/StringField';
+import StyledSelect from '../elements/StyledSelect';
 import ExpressionPhrase from './modifiers/ExpressionPhrase';
 
 import createTemplateInstance from '../../utils/templates';
 import { hasGroupNestedWarning } from '../../utils/warnings';
 import requiredIf from '../../utils/prop_types';
+import { getFieldWithId } from '../../utils/instances';
 
 export default class ConjunctionGroup extends Component {
   constructor(props) {
@@ -58,7 +59,6 @@ export default class ConjunctionGroup extends Component {
   // returns class name for odd conjunction groups determined from length of child instances
   getNestingClassName = () => {
     const level = this.getPath().split('.').filter(pathSection => pathSection === 'childInstances').length;
-
     if (level === 0) {
       return 'card-group__top';
     } else if (level % 2 === 0) {
@@ -139,8 +139,8 @@ export default class ConjunctionGroup extends Component {
   }
 
   conjunctionHasDuplicateName = (child) => {
-    const elementNameParam = child.parameters.find(param => param.id === 'element_name');
-    const nameValue = elementNameParam.value === undefined ? '' : elementNameParam.value;
+    const elementNameField = getFieldWithId(child.fields, 'element_name');
+    const nameValue = elementNameField.value === undefined ? '' : elementNameField.value;
     const duplicateNameIndex = this.props.instanceNames.findIndex(name =>
       name.id !== child.uniqueId && name.name === nameValue);
     return duplicateNameIndex !== -1;
@@ -174,18 +174,19 @@ export default class ConjunctionGroup extends Component {
   );
 
   renderConjunctionSelect = i => (
-    <Select
+    <StyledSelect
       className="card-group__conjunction-select"
-      name={ `conjunction-select-${i}` }
-      value={ this.props.instance.name }
-      valueKey="name"
-      labelKey="name"
+      name={`conjunction-select-${i}`}
+      value={this.props.instance}
+      getOptionValue={({ name }) => name}
+      getOptionLabel={({ name }) => name}
       placeholder="Select one"
-      searchable={ false }
-      clearable={ false }
-      options={ this.props.options === 'listOperations' ? this.listOperations : this.types }
-      onChange={ this.handleTypeChange }
+      isSearchable={false}
+      isClearable={false}
+      options={this.props.options === 'listOperations' ? this.listOperations : this.types}
+      onChange={this.handleTypeChange}
       inputProps={{ 'aria-label': 'Select conjunction type', title: 'Select conjunction type' }}
+      classNamePrefix="conjunction-select"
     />
   )
 
@@ -219,7 +220,7 @@ export default class ConjunctionGroup extends Component {
   renderRoot() {
     const { showGroup } = this.state;
     const collapsedClass = showGroup ? '' : 'expression-collapsed';
-    const elementNameParam = this.props.instance.parameters.find(param => param.id === 'element_name');
+    const elementNameField = getFieldWithId(this.props.instance.fields, 'element_name');
     const conjunctionHasDuplicateName = this.conjunctionHasDuplicateName(this.props.instance);
 
     if (!this.props.root) {
@@ -230,10 +231,10 @@ export default class ConjunctionGroup extends Component {
             <div className="card-group__header-title">
               {showGroup ?
                 <div>
-                  <StringParameter
-                    id={elementNameParam.id}
-                    name={elementNameParam.name}
-                    value={elementNameParam.value}
+                  <StringField
+                    id={elementNameField.id}
+                    name={elementNameField.name}
+                    value={elementNameField.value}
                     updateInstance={this.handleNameChange}
                   />
                   {conjunctionHasDuplicateName
@@ -241,7 +242,7 @@ export default class ConjunctionGroup extends Component {
                 </div>
               :
                 <div className="group-heading-name">
-                  {elementNameParam.value}:
+                  {elementNameField.value}:
                   {(conjunctionHasDuplicateName || this.hasNestedWarnings(this.props.instance.childInstances))
                     && <div className="warning"><FontAwesome name="exclamation-circle" /> Has warnings</div>}
                 </div>
@@ -254,7 +255,7 @@ export default class ConjunctionGroup extends Component {
               <button
                 onClick={this.showHideGroupBody}
                 className="element__hidebutton transparent-button"
-                aria-label={`hide ${elementNameParam.name}`}>
+                aria-label={`hide ${elementNameField.name}`}>
                 <FontAwesome name={showGroup ? 'angle-double-down' : 'angle-double-right'} />
               </button>
 
@@ -306,6 +307,8 @@ export default class ConjunctionGroup extends Component {
               updateInstanceModifiers={this.props.updateInstanceModifiers}
               parameters={this.props.parameters}
               baseElements={this.props.baseElements}
+              externalCqlList={this.props.externalCqlList}
+              loadExternalCqlList={this.props.loadExternalCqlList}
               getPath={this.getChildsPath}
               conversionFunctions={this.props.conversionFunctions}
               instanceNames={this.props.instanceNames}
@@ -346,7 +349,7 @@ export default class ConjunctionGroup extends Component {
   renderTemplate(instance) {
     const allInstancesInAllTrees = this.props.getAllInstancesInAllTrees();
     return (
-      <div key={instance.uniqueId} className="card-group-section">
+      <div key={instance.uniqueId} className="card-group-section" id={instance.uniqueId}>
         <TemplateInstance
           valueSets={this.props.valueSets}
           loadValueSets={this.props.loadValueSets}
@@ -404,10 +407,13 @@ export default class ConjunctionGroup extends Component {
         {showGroup &&
           <div className="card-element">
             <ElementSelect
+              artifactId={this.props.artifact._id}
               categories={this.props.templates}
               onSuggestionSelected={this.addChild}
               parameters={this.props.parameters}
               baseElements={this.props.baseElements}
+              externalCqlList={this.props.externalCqlList}
+              loadExternalCqlList={this.props.loadExternalCqlList}
               loginVSACUser={this.props.loginVSACUser}
               setVSACAuthStatus={this.props.setVSACAuthStatus}
               vsacStatus={this.props.vsacStatus}
@@ -438,40 +444,42 @@ export default class ConjunctionGroup extends Component {
 }
 
 ConjunctionGroup.propTypes = {
-  root: PropTypes.bool.isRequired,
-  treeName: PropTypes.string.isRequired,
   artifact: PropTypes.object,
-  templates: PropTypes.array,
-  valueSets: PropTypes.array,
-  loadValueSets: PropTypes.func.isRequired,
-  getPath: requiredIf(PropTypes.func, props => !props.root), // path needed for children
+  codeData: PropTypes.object,
+  conversionFunctions: PropTypes.array,
+  deleteInstance: PropTypes.func.isRequired,
+  disableElement: PropTypes.bool,
+  disableIndent: PropTypes.bool,
+  elementUniqueId: PropTypes.string,
+  externalCqlList: PropTypes.array.isRequired,
   getAllInstances: PropTypes.func.isRequired,
   getAllInstancesInAllTrees: PropTypes.func.isRequired,
-  deleteInstance: PropTypes.func.isRequired,
-  instanceNames: PropTypes.array.isRequired,
-  conversionFunctions: PropTypes.array,
-  scrollToElement: PropTypes.func.isRequired,
-  loginVSACUser: PropTypes.func.isRequired,
-  setVSACAuthStatus: PropTypes.func.isRequired,
-  vsacStatus: PropTypes.string,
-  vsacStatusText: PropTypes.string,
-  searchVSACByKeyword: PropTypes.func.isRequired,
-  isSearchingVSAC: PropTypes.bool.isRequired,
-  vsacSearchResults: PropTypes.array.isRequired,
-  vsacSearchCount: PropTypes.number.isRequired,
+  getPath: requiredIf(PropTypes.func, props => !props.root), // path needed for children
   getVSDetails: PropTypes.func.isRequired,
+  instanceNames: PropTypes.array.isRequired,
   isRetrievingDetails: PropTypes.bool.isRequired,
+  isSearchingVSAC: PropTypes.bool.isRequired,
+  isValidatingCode: PropTypes.bool.isRequired,
+  isValidCode: PropTypes.bool,
+  loadExternalCqlList: PropTypes.func.isRequired,
+  loadValueSets: PropTypes.func.isRequired,
+  loginVSACUser: PropTypes.func.isRequired,
+  options: PropTypes.string,
+  resetCodeValidation: PropTypes.func.isRequired,
+  root: PropTypes.bool.isRequired,
+  scrollToElement: PropTypes.func.isRequired,
+  searchVSACByKeyword: PropTypes.func.isRequired,
+  setVSACAuthStatus: PropTypes.func.isRequired,
+  templates: PropTypes.array,
+  treeName: PropTypes.string.isRequired,
+  validateCode: PropTypes.func.isRequired,
+  validateReturnType: PropTypes.bool,
+  valueSets: PropTypes.array,
   vsacDetailsCodes: PropTypes.array.isRequired,
   vsacDetailsCodesError: PropTypes.string.isRequired,
   vsacFHIRCredentials: PropTypes.object,
-  validateReturnType: PropTypes.bool,
-  isValidatingCode: PropTypes.bool.isRequired,
-  isValidCode: PropTypes.bool,
-  resetCodeValidation: PropTypes.func.isRequired,
-  codeData: PropTypes.object,
-  validateCode: PropTypes.func.isRequired,
-  options: PropTypes.string,
-  disableIndent: PropTypes.bool,
-  disableElement: PropTypes.bool,
-  elementUniqueId: PropTypes.string
+  vsacSearchCount: PropTypes.number.isRequired,
+  vsacSearchResults: PropTypes.array.isRequired,
+  vsacStatus: PropTypes.string,
+  vsacStatusText: PropTypes.string
 };

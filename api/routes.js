@@ -1,8 +1,8 @@
 const artifactRouter = require('./routers/artifactRouter.js');
 const testingRouter = require('./routers/testingRouter.js');
+const externalCQLRouter = require('./routers/externalCQLRouter.js');
 const configRouter = require('./routers/configRouter.js');
 const cqlRouter = require('./routers/cqlRouter');
-const expressionRouter = require('./routers/expressionRouter');
 const authRouter = require('./routers/authRouter.js');
 const repository = require('./routers/repository');
 const fhirRouter = require('./routers/fhirRouter');
@@ -20,14 +20,14 @@ module.exports = (app) => {
   // Routing for Testing
   app.use('/authoring/api/testing', testingRouter);
 
+  // Routing for External CQL
+  app.use('/authoring/api/externalCQL', externalCQLRouter);
+
   // Routing for Resources, ValueSets, Templates
   app.use('/authoring/api/config', configRouter);
 
   // Routing for cql files
   app.use('/authoring/api/cql', cqlRouter);
-
-  // Routing for Artifact Elements
-  app.use('/authoring/api/expressions', expressionRouter);
 
   // Routing for Auth
   app.use('/authoring/api/auth', authRouter);

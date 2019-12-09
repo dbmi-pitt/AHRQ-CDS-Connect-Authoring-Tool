@@ -1,42 +1,46 @@
 import Validators from './validators';
-import { getReturnType, allModifiersValid } from './instances';
+import { getReturnType, allModifiersValid, getFieldWithId, getFieldWithType } from './instances';
 
 export function doesBaseElementInstanceNeedWarning(instance, allInstancesInAllTrees) {
   const isBaseElement = instance.usedBy;
   if (isBaseElement) {
-    let anyUseHasChanged = false;
-    instance.usedBy.forEach((usageId) => {
+    return instance.usedBy.some((usageId) => {
       const use = allInstancesInAllTrees.find(i => i.uniqueId === usageId);
       if (use) {
-        const useCommentParameter = use.parameters.find(param => param.id === 'comment');
-        const useCommentValue = useCommentParameter ? useCommentParameter.value : '';
-        const instanceCommentParameter = instance.parameters.find(param => param.id === 'comment');
-        const instanceCommentValue = instanceCommentParameter ? instanceCommentParameter.value : '';
+        const useCommentField = getFieldWithId(use.fields, 'comment');
+        const useCommentValue = useCommentField ? useCommentField.value : '';
+        const useNameField = getFieldWithId(use.fields, 'element_name');
+        const instanceCommentField = getFieldWithId(instance.fields, 'comment');
+        const instanceCommentValue = instanceCommentField ? instanceCommentField.value : '';
+        const instanceNameField = getFieldWithId(instance.fields, 'element_name');
+
         if (((use.modifiers && use.modifiers.length > 0) || (instanceCommentValue !== useCommentValue)) &&
-          instance.parameters[0].value === use.parameters[0].value) {
-          anyUseHasChanged = true;
+          instanceNameField.value === useNameField.value) {
+          return true;
         }
       }
+
+      return false;
     });
-    return anyUseHasChanged;
   }
 
   return false;
 }
 
 export function doesBaseElementUseNeedWarning(instance, baseElements) {
-  const elementNameParameter = instance.parameters.find(param => param.id === 'element_name');
-  const instanceCommentParameter = instance.parameters.find(param => param.id === 'comment');
-  const instanceCommentValue = instanceCommentParameter ? instanceCommentParameter.value : '';
+  const elementNameField = getFieldWithId(instance.fields, 'element_name');
+  const instanceCommentField = getFieldWithId(instance.fields, 'comment');
+  const instanceCommentValue = instanceCommentField ? instanceCommentField.value : '';
 
   if (instance.type === 'baseElement') {
-    const referenceParameter = instance.parameters.find(param => param.type === 'reference');
-    const originalBaseElement = baseElements.find(baseEl => referenceParameter.value.id === baseEl.uniqueId);
-    const originalCommentParameter = originalBaseElement.parameters.find(param => param.id === 'comment');
-    const originalCommentValue = originalCommentParameter ? originalCommentParameter.value : '';
+    const referenceField = getFieldWithType(instance.fields, 'reference');
+    const originalBaseElement = baseElements.find(baseEl => referenceField.value.id === baseEl.uniqueId);
+    const originalCommentField = getFieldWithId(originalBaseElement.fields, 'comment');
+    const originalCommentValue = originalCommentField ? originalCommentField.value : '';
+    const originalNameField = getFieldWithId(originalBaseElement.fields, 'element_name');
     // If some modifiers applied AND the name is the same as original, it should be changed. Need a warning.
     if (((instance.modifiers && instance.modifiers.length > 0) || (instanceCommentValue !== originalCommentValue)) &&
-      elementNameParameter.value === originalBaseElement.parameters[0].value) {
+      elementNameField.value === originalNameField.value) {
       return true;
     }
     return false;
@@ -46,19 +50,17 @@ export function doesBaseElementUseNeedWarning(instance, baseElements) {
 }
 
 export function doesParameterUseNeedWarning(instance, parameters) {
-  const elementNameParameter = instance.parameters.find(param => param.id === 'element_name');
-  const instanceCommentParameter = instance.parameters.find(param => param.id === 'comment');
-  const instanceCommentValue
-    = (instanceCommentParameter && instanceCommentParameter.value) ? instanceCommentParameter.value : '';
+  const elementNameField = getFieldWithId(instance.fields, 'element_name');
+  const instanceCommentField = getFieldWithId(instance.fields, 'comment');
+  const instanceCommentValue = (instanceCommentField && instanceCommentField.value) ? instanceCommentField.value : '';
 
   if (instance.type === 'parameter') {
-    const referenceParameter = instance.parameters.find(param => param.type === 'reference');
-    const originalParameter = parameters.find(param => referenceParameter.value.id === param.uniqueId);
-    const originalCommentValue
-      = (originalParameter && originalParameter.comment) ? originalParameter.comment : '';
+    const referenceField = getFieldWithType(instance.fields, 'reference');
+    const originalParameter = parameters.find(param => referenceField.value.id === param.uniqueId);
+    const originalCommentValue = (originalParameter && originalParameter.comment) ? originalParameter.comment : '';
     // If some modifiers applied AND the name is the same as original, it should be changed. Need a warning.
     if (((instance.modifiers && instance.modifiers.length > 0) || (instanceCommentValue !== originalCommentValue)) &&
-      elementNameParameter.value === originalParameter.name) {
+      elementNameField.value === originalParameter.name) {
       return true;
     }
     return false;
@@ -67,18 +69,18 @@ export function doesParameterUseNeedWarning(instance, parameters) {
   return false;
 }
 
-export function doesParameterNeedWarning(name, usedBy, comment, allInstancesInAllTrees) {
+export function doesParameterNeedUsageWarning(name, usedBy, comment, allInstancesInAllTrees) {
   if (usedBy && usedBy.length > 0) {
     let anyUseHasChanged = false;
     usedBy.forEach((usageId) => {
       const use = allInstancesInAllTrees.find(i => i.uniqueId === usageId);
       if (use) {
-        const useCommentParameter = use.parameters.find(param => param.id === 'comment');
-        const useCommentValue
-          = (useCommentParameter && useCommentParameter.value) ? useCommentParameter.value : '';
+        const useCommentField = getFieldWithId(use.fields, 'comment');
+        const useCommentValue = (useCommentField && useCommentField.value) ? useCommentField.value : '';
+        const useNameField = getFieldWithId(use.fields, 'element_name');
         const instanceCommentValue = comment || '';
         if (((use.modifiers && use.modifiers.length > 0) || (instanceCommentValue !== useCommentValue)) &&
-          name === use.parameters[0].value) {
+          name === useNameField.value) {
           anyUseHasChanged = true;
         }
       }
@@ -90,15 +92,15 @@ export function doesParameterNeedWarning(name, usedBy, comment, allInstancesInAl
 }
 
 export function hasDuplicateName(templateInstance, instanceNames, baseElements, parameters, allInstancesInAllTrees) {
-  const elementNameParameter = templateInstance.parameters.find(param => param.id === 'element_name');
+  const elementNameField = getFieldWithId(templateInstance.fields, 'element_name');
   // Treat undefined as empty string so unnamed elements display duplicate correctly.
-  const nameValue = elementNameParameter.value === undefined ? '' : elementNameParameter.value;
+  const nameValue = elementNameField.value === undefined ? '' : elementNameField.value;
   const duplicateNameIndex = instanceNames.findIndex((name) => {
     const isDuplicate = name.id !== templateInstance.uniqueId && name.name === nameValue;
     // If base element use, don't include a duplicate from the original base element.
     if (isDuplicate && templateInstance.type === 'baseElement') {
-      const referenceParameter = templateInstance.parameters.find(param => param.type === 'reference');
-      const originalBaseElement = baseElements.find(baseEl => referenceParameter.value.id === baseEl.uniqueId);
+      const referenceField = getFieldWithType(templateInstance.fields, 'reference');
+      const originalBaseElement = baseElements.find(baseEl => referenceField.value.id === baseEl.uniqueId);
       // If the duplicate is another of the uses, don't consider duplicate unless that use has changed.
       const anotherUseId = originalBaseElement.usedBy.find(id => id === name.id);
       const anotherUse = allInstancesInAllTrees.find(instance => instance.uniqueId === anotherUseId);
@@ -118,8 +120,8 @@ export function hasDuplicateName(templateInstance, instanceNames, baseElements, 
       return name.id !== originalBaseElement.uniqueId;
     } else if (isDuplicate && templateInstance.type === 'parameter') {
       // If parameter use, don't include a duplicate from the original parameter.
-      const referenceParameter = templateInstance.parameters.find(param => param.type === 'reference');
-      const originalParameter = parameters.find(param => referenceParameter.value.id === param.uniqueId);
+      const referenceField = getFieldWithType(templateInstance.fields, 'reference');
+      const originalParameter = parameters.find(param => referenceField.value.id === param.uniqueId);
       // If the duplicate is another of the uses, don't consider duplicate unless that use has changed.
       const anotherUseId = originalParameter.usedBy ? originalParameter.usedBy.find(id => id === name.id) : null;
       const anotherUse = allInstancesInAllTrees.find(instance => instance.uniqueId === anotherUseId);
@@ -160,13 +162,49 @@ export function parameterHasDuplicateName(parameterName, id, usedBy, instanceNam
   return duplicateNameIndex !== -1;
 }
 
-export function validateElement(instance, params) {
+export function parameterIsIncompleteWarning(type, value) {
+  if (value) {
+    switch (type) {
+      case 'datetime':
+        if (value.time && !value.date) {
+          return 'A DateTime must have at least a date.';
+        }
+        break;
+      case 'system_quantity':
+        if (value.unit && !(value.quantity || value.quantity === 0)) {
+          return 'A Quantity must have at least a numerical value.';
+        }
+        break;
+      case 'interval_of_datetime':
+        if ((value.firstTime && !value.firstDate)
+        || (value.secondTime && !value.secondDate)) {
+          return 'An Interval<DateTime> cannot include a time without a corresponding date.';
+        }
+        break;
+      case 'interval_of_quantity':
+        if (value.unit &&
+          !(
+            (value.firstQuantity || value.firstQuantity === 0)
+            || (value.secondQuantity || value.secondQuantity === 0)
+          )) {
+          return 'An Interval<Quantity> must have at least one numerical value.';
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  return null;
+}
+
+export function validateElement(instance, templateInstanceFields) {
   if (instance.validator) {
     const validator = Validators[instance.validator.type];
-    const fields = instance.validator.fields;
+    const validatorFields = instance.validator.fields;
     const args = instance.validator.args;
-    const values = fields.map(f => params[f]);
-    const names = fields.map(f => instance.parameters.find(el => el.id === f).name);
+    const values = validatorFields.map(f => templateInstanceFields[f]);
+    const names = validatorFields.map(f => instance.fields.find(el => el.id === f).name);
     if (!validator.check(values, args)) {
       return validator.warning(names, args);
     }
@@ -205,12 +243,12 @@ export function hasGroupNestedWarning(
         warning = hasDuplicateName(child, instanceNames, baseElements, parameters, allInstancesInAllTrees);
       }
     } else {
-      const params = {};
-      child.parameters.forEach((param) => {
-        params[param.id] = param.value;
+      const fields = {};
+      child.fields.forEach((field) => {
+        fields[field.id] = field.value;
       });
 
-      const hasValidateElementWarning = validateElement(child, params) !== null;
+      const hasValidateElementWarning = validateElement(child, fields) !== null;
       const hasReturnTypeWarning =
         hasReturnTypeError(child.returnType, child.modifiers, 'boolean', validateReturnType);
       const hasModifierWarning = !allModifiersValid(child.modifiers);
@@ -233,4 +271,8 @@ export function hasGroupNestedWarning(
     }
   });
   return hasNestedWarning;
+}
+
+export function hasInvalidListWarning(returnType) {
+  return returnType.toLowerCase() === 'invalid';
 }

@@ -1,9 +1,18 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import Select from 'react-select';
 import _ from 'lodash';
 
+import StyledSelect from '../../elements/StyledSelect';
+
 const { Def } = window;
+const options = [
+  { value: '>', label: '>' },
+  { value: '>=', label: '>=' },
+  { value: '=', label: '=' },
+  { value: '!=', label: '!=' },
+  { value: '<', label: '<' },
+  { value: '<=', label: '<=' }
+];
 
 /* eslint-disable jsx-a11y/no-onchange */
 export default class ValueComparisonObservation extends Component {
@@ -32,6 +41,7 @@ export default class ValueComparisonObservation extends Component {
   }
 
   render() {
+    const { minValue, maxValue } = this.props;
     const minValueId = _.uniqueId('value-');
     const minOperatorId = _.uniqueId('operator-');
     const maxValueId = _.uniqueId('value2-');
@@ -40,23 +50,16 @@ export default class ValueComparisonObservation extends Component {
 
     return (
       <div className="value-comparison-observation">
-        <Select
-          className="operator"
+        <StyledSelect
+          className="Select operator"
           name="Min Operator"
           title="Min Operator"
           aria-label="Min Operator"
           id={minOperatorId}
-          value={this.props.minOperator}
+          value={options.find(({ value }) => value === this.props.minOperator)}
           placeholder="minOp"
           onChange={this.handleChangeMin}
-          options={[
-            { value: '>', label: '>' },
-            { value: '>=', label: '>=' },
-            { value: '=', label: '=' },
-            { value: '!=', label: '!=' },
-            { value: '<', label: '<' },
-            { value: '<=', label: '<=' }
-          ]}
+          options={options}
         />
 
         <label htmlFor={minValueId}>
@@ -68,30 +71,23 @@ export default class ValueComparisonObservation extends Component {
             step="any"
             name="Min value"
             aria-label="Min Value"
-            value={this.props.minValue || ''}
+            value={(minValue || minValue === 0) ? minValue : ''}
             onChange={(event) => {
-              this.props.updateAppliedModifier(this.props.index, { minValue: parseFloat(event.target.value, 10) });
+              this.props.updateAppliedModifier(this.props.index, { minValue: parseFloat(event.target.value) });
             }}
           />
         </label>
 
-        <Select
-          className="operator"
+        <StyledSelect
+          className="Select operator"
           name="Max Operator"
           title="Max Operator"
           aria-label="Max Operator"
           id={maxOperatorId}
-          value={this.props.maxOperator}
+          value={options.find(({ value }) => value === this.props.maxOperator)}
           placeholder="maxOp"
           onChange={this.handleChangeMax}
-          options={[
-            { value: '>', label: '>' },
-            { value: '>=', label: '>=' },
-            { value: '=', label: '=' },
-            { value: '!=', label: '!=' },
-            { value: '<', label: '<' },
-            { value: '<=', label: '<=' }
-          ]}
+          options={options}
         />
 
         <label htmlFor={maxValueId}>
@@ -103,9 +99,9 @@ export default class ValueComparisonObservation extends Component {
             step="any"
             name="Max value"
             aria-label="Max Value"
-            value={this.props.maxValue || ''}
+            value={(maxValue || maxValue === 0) ? maxValue : ''}
             onChange={(event) => {
-              this.props.updateAppliedModifier(this.props.index, { maxValue: parseFloat(event.target.value, 10) });
+              this.props.updateAppliedModifier(this.props.index, { maxValue: parseFloat(event.target.value) });
             }}
           />
         </label>

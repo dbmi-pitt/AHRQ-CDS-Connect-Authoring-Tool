@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { Dropdown, DropdownToggle, DropdownMenu, DropdownItem } from 'reactstrap';
+import { Dropdown, DropdownToggle, DropdownMenu, DropdownItem, UncontrolledTooltip } from 'reactstrap';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import withGracefulUnmount from 'react-graceful-unmount';
@@ -18,16 +18,21 @@ import {
 import {
   loginVSACUser, setVSACAuthStatus, searchVSACByKeyword, getVSDetails, validateCode, resetCodeValidation
 } from '../actions/vsac';
+import {
+  loadExternalCqlList, loadExternalCqlLibraryDetails, addExternalLibrary, deleteExternalCqlLibrary,
+  clearExternalCqlValidationWarnings, clearAddLibraryErrorsAndMessages
+} from '../actions/external_cql';
 
-import EditArtifactModal from '../components/artifact/EditArtifactModal';
+import BaseElements from '../components/builder/BaseElements';
 import ConjunctionGroup from '../components/builder/ConjunctionGroup';
-import Subpopulations from '../components/builder/Subpopulations';
+import EditArtifactModal from '../components/artifact/EditArtifactModal';
+import ELMErrorModal from '../components/builder/ELMErrorModal';
 import ErrorStatement from '../components/builder/ErrorStatement';
+import ExternalCQL from '../components/builder/ExternalCQL';
 import Parameters from '../components/builder/Parameters';
 import Recommendations from '../components/builder/Recommendations';
 import RepoUploadModal from '../components/builder/RepoUploadModal';
-import ELMErrorModal from '../components/builder/ELMErrorModal';
-import BaseElements from '../components/builder/BaseElements';
+import Subpopulations from '../components/builder/Subpopulations';
 
 import isBlankArtifact from '../utils/artifacts/isBlankArtifact';
 import { findValueAtPath } from '../utils/find';
@@ -63,7 +68,6 @@ export class Builder extends Component {
         this.props.initializeArtifact(andTemplate, orTemplate);
       }
     });
-    this.props.publishArtifact();
     this.props.loadConversionFunctions();
   }
 
@@ -75,7 +79,7 @@ export class Builder extends Component {
     }
   }
 
-  componentWillReceiveProps(newProps) {
+  UNSAFE_componentWillReceiveProps(newProps) { // eslint-disable-line camelcase
     this.setState({ showELMErrorModal: newProps.downloadedArtifact.elmErrors.length > 0 });
   }
 
@@ -85,20 +89,20 @@ export class Builder extends Component {
     this.setState({ activeTabIndex });
   }
 
-  scrollToElement = (elementId, referenceType) => {
+  scrollToElement = (elementId, referenceType, tabIndex = null) => {
     const baseElementTabIndex = 3;
     const parameterTabIndex = 5;
+
     let activeTabIndex = 0;
-    if (referenceType === 'baseElementReference') {
-      activeTabIndex = baseElementTabIndex;
-    } else if (referenceType === 'parameterReference') {
-      activeTabIndex = parameterTabIndex;
-    }
+    if (referenceType === 'baseElementReference') activeTabIndex = baseElementTabIndex;
+    if (referenceType === 'parameterReference') activeTabIndex = parameterTabIndex;
+    if (referenceType === 'baseElementUse') activeTabIndex = tabIndex;
+
+    if (activeTabIndex == null) return;
+
     this.setState({ activeTabIndex }, () => {
       const elementToScrollTo = document.getElementById(elementId);
-      if (elementToScrollTo) {
-        elementToScrollTo.scrollIntoView();
-      }
+      if (elementToScrollTo) elementToScrollTo.scrollIntoView();
     });
   }
 
@@ -118,6 +122,7 @@ export class Builder extends Component {
       allInstancesInAllTrees =
         allInstancesInAllTrees.concat(this.getAllInstances('baseElements', null, baseElement.uniqueId));
     });
+
     return allInstancesInAllTrees;
   }
 
@@ -129,15 +134,19 @@ export class Builder extends Component {
 
     // If the tree has no child instances, it is a single element. Only occurs for individual base elements.
     if (!treeInstance.childInstances) {
+      treeInstance.tab = treeName;
       return [treeInstance];
     }
 
-    return _.flatten((treeInstance.childInstances || []).map((instance) => {
+    const result = _.flatten((treeInstance.childInstances || []).map((instance) => {
       if (instance.childInstances) {
         return _.flatten([instance, this.getAllInstances(treeName, instance)]);
       }
+      instance.tab = treeName;
       return instance;
     }));
+
+    return result;
   }
 
   addInstance = (treeName, instance, parentPath, uid = null, currentIndex, incomingTree, updatedReturnType = null) => {
@@ -162,30 +171,30 @@ export class Builder extends Component {
     this.setTree('baseElements', treeData, tree);
   }
 
-  editInstance = (treeName, editedParams, path, editingConjunctionType = false, uid = null) => {
+  editInstance = (treeName, editedFields, path, editingConjunctionType = false, uid = null) => {
     const treeData = this.findTree(treeName, uid);
     const tree = treeData.tree;
     const target = findValueAtPath(tree, path);
 
     if (editingConjunctionType) {
-      target.id = editedParams.id;
-      target.name = editedParams.name;
+      target.id = editedFields.id;
+      target.name = editedFields.name;
     } else {
-      // If only one parameter is being updated, it comes in as a single object. Put it into an array of objects.
-      if (!Array.isArray(editedParams)) {
-        editedParams = [editedParams]; // eslint-disable-line no-param-reassign
+      // If only one field is being updated, it comes in as a single object. Put it into an array of objects.
+      if (!Array.isArray(editedFields)) {
+        editedFields = [editedFields]; // eslint-disable-line no-param-reassign
       }
-      // Update each parameter attribute that needs updating. Then updated the full tree with changes.
-      editedParams.forEach((editedParam) => {
-        // function to retrieve relevant parameter
-        const paramIndex = target.parameters.findIndex(param =>
-          Object.prototype.hasOwnProperty.call(editedParam, param.id));
+      // Update each field attribute that needs updating. Then updated the full tree with changes.
+      editedFields.forEach((editedField) => {
+        // function to retrieve relevant field
+        const fieldIndex = target.fields.findIndex(field =>
+          Object.prototype.hasOwnProperty.call(editedField, field.id));
 
         // If an attribute was specified, update that one. Otherwise update the value attribute.
-        if (editedParam.attributeToEdit) {
-          target.parameters[paramIndex][editedParam.attributeToEdit] = editedParam[target.parameters[paramIndex].id];
+        if (editedField.attributeToEdit) {
+          target.fields[fieldIndex][editedField.attributeToEdit] = editedField[target.fields[fieldIndex].id];
         } else {
-          target.parameters[paramIndex].value = editedParam[target.parameters[paramIndex].id];
+          target.fields[fieldIndex].value = editedField[target.fields[fieldIndex].id];
         }
       });
     }
@@ -215,7 +224,7 @@ export class Builder extends Component {
     }
   }
 
-  // subpop_index is an optional parameter, for determing which tree within subpop we are referring to
+  // subpop_index is an optional parameter, for determining which tree within subpop we are referring to
   updateInstanceModifiers = (treeName, modifiers, path, subpopIndex, updatedReturnType = null) => {
     const tree = _.cloneDeep(this.props.artifact[treeName]);
     const valuePath = _.isNumber(subpopIndex) ? tree[subpopIndex] : tree;
@@ -332,6 +341,11 @@ export class Builder extends Component {
     this.setState({ showMenu: !this.state.showMenu });
   }
 
+  downloadOptionSelected = (disabled, version) => {
+    const { artifact } = this.props;
+    if (!disabled) this.props.downloadArtifact(artifact, { name: 'FHIR', version });
+  }
+
   // ----------------------- RENDER ---------------------------------------- //
 
   renderConjunctionGroup = (treeName) => {
@@ -360,6 +374,8 @@ export class Builder extends Component {
           updateInstanceModifiers={this.updateInstanceModifiers}
           parameters={namedParameters}
           baseElements={artifact.baseElements}
+          externalCqlList={this.props.externalCqlList}
+          loadExternalCqlList={this.props.loadExternalCqlList}
           conversionFunctions={conversionFunctions}
           instanceNames={this.props.names}
           scrollToElement={this.scrollToElement}
@@ -390,6 +406,12 @@ export class Builder extends Component {
   renderHeader() {
     const { statusMessage, artifact, publishEnabled } = this.props;
     const artifactName = artifact ? artifact.name : null;
+    let disableDSTU2 = false;
+    let disableSTU3 = false;
+
+    const artifactFHIRVersion = artifact.fhirVersion;
+    if (artifactFHIRVersion === '1.0.2') disableSTU3 = true;
+    if (artifactFHIRVersion === '3.0.0') disableDSTU2 = true;
 
     return (
       <header className="builder__header" aria-label="Workspace Header">
@@ -406,12 +428,28 @@ export class Builder extends Component {
             <Dropdown isOpen={this.state.showMenu} toggle={this.toggleMenu} className="dropdown-button">
               <DropdownToggle caret><FontAwesome name="download" className="icon" />Download CQL</DropdownToggle>
               <DropdownMenu>
-                <DropdownItem onClick={() => this.props.downloadArtifact(artifact, { name: 'FHIR', version: '1.0.2' })}>
+                <DropdownItem
+                  id='dstu2DownloadOption'
+                  className={disableDSTU2 ? 'disabled-dropdown' : ''}
+                  onClick={() => this.downloadOptionSelected(disableDSTU2, '1.0.2')}>
                   FHIR DSTU2
                 </DropdownItem>
-                <DropdownItem onClick={() => this.props.downloadArtifact(artifact, { name: 'FHIR', version: '3.0.0' })}>
+                <DropdownItem
+                  id='stu3DownloadOption'
+                  className={disableSTU3 ? 'disabled-dropdown' : ''}
+                  onClick={() => this.downloadOptionSelected(disableSTU3, '3.0.0')}>
                   FHIR STU3
                 </DropdownItem>
+                {disableDSTU2 &&
+                  <UncontrolledTooltip className='light-tooltip' target='dstu2DownloadOption' placement="left">
+                    Downloading this FHIR version is disabled based on external library versions.
+                  </UncontrolledTooltip>
+                }
+                {disableSTU3 &&
+                  <UncontrolledTooltip className='light-tooltip' target='stu3DownloadOption' placement="left">
+                    Downloading this FHIR version is disabled based on external library versions.
+                  </UncontrolledTooltip>
+                }
               </DropdownMenu>
             </Dropdown>
 
@@ -467,6 +505,7 @@ export class Builder extends Component {
                 <Tab>Recommendations</Tab>
                 <Tab>Parameters</Tab>
                 <Tab>Handle Errors</Tab>
+                <Tab>External CQL</Tab>
               </TabList>
 
               <div className="tab-panel-container">
@@ -503,6 +542,8 @@ export class Builder extends Component {
                     updateSubpopulations={this.updateSubpopulations}
                     parameters={namedParameters}
                     baseElements={artifact.baseElements}
+                    externalCqlList={this.props.externalCqlList}
+                    loadExternalCqlList={this.props.loadExternalCqlList}
                     addInstance={this.addInstance}
                     editInstance={this.editInstance}
                     updateInstanceModifiers={this.updateInstanceModifiers}
@@ -559,6 +600,8 @@ export class Builder extends Component {
                     instanceNames={this.props.names}
                     baseElements={artifact.baseElements}
                     parameters={namedParameters}
+                    externalCqlList={this.props.externalCqlList}
+                    loadExternalCqlList={this.props.loadExternalCqlList}
                     scrollToElement={this.scrollToElement}
                     loginVSACUser={this.props.loginVSACUser}
                     setVSACAuthStatus={this.props.setVSACAuthStatus}
@@ -633,6 +676,30 @@ export class Builder extends Component {
                     updateErrorStatement={this.updateErrorStatement} />
                 </TabPanel>
 
+                <TabPanel>
+                  <div className="workspace-blurb">
+                    Reference external CQL libraries that can be used in Inclusions, Exclusions, and Subpopulations.
+                  </div>
+                  <ExternalCQL
+                    artifact={this.props.artifact}
+                    externalCqlList={this.props.externalCqlList}
+                    externalCqlLibrary={this.props.externalCqlLibrary}
+                    externalCQLLibraryParents={this.props.externalCQLLibraryParents}
+                    externalCqlLibraryDetails={this.props.externalCqlLibraryDetails}
+                    externalCqlFhirVersion={this.props.externalCqlFhirVersion}
+                    externalCqlErrors={this.props.externalCqlErrors}
+                    isAddingExternalCqlLibrary={this.props.isAddingExternalCqlLibrary}
+                    deleteExternalCqlLibrary={this.props.deleteExternalCqlLibrary}
+                    addExternalLibrary={this.props.addExternalLibrary}
+                    loadExternalCqlList={this.props.loadExternalCqlList}
+                    clearExternalCqlValidationWarnings={this.props.clearExternalCqlValidationWarnings}
+                    clearAddLibraryErrorsAndMessages={this.props.clearAddLibraryErrorsAndMessages}
+                    loadExternalCqlLibraryDetails={this.props.loadExternalCqlLibraryDetails}
+                    isLoadingExternalCqlDetails={this.props.isLoadingExternalCqlDetails}
+                    addExternalCqlLibraryError={this.props.addExternalCqlLibraryError}
+                    addExternalCqlLibraryErrorMessage={this.props.addExternalCqlLibraryErrorMessage}
+                    librariesInUse={this.props.librariesInUse} />
+                </TabPanel>
               </div>
             </Tabs>
           </section>
@@ -679,6 +746,21 @@ Builder.propTypes = {
   isValidCode: PropTypes.bool,
   codeData: PropTypes.object,
   names: PropTypes.array.isRequired,
+  librariesInUse: PropTypes.array.isRequired,
+  externalCqlList: PropTypes.array,
+  externalCQLLibraryParents: PropTypes.object.isRequired,
+  externalCqlLibrary: PropTypes.object,
+  externalCqlLibraryDetails: PropTypes.object,
+  externalCqlFhirVersion: PropTypes.string,
+  externalCqlErrors: PropTypes.array,
+  isAddingExternalCqlLibrary: PropTypes.bool.isRequired,
+  deleteExternalCqlLibrary: PropTypes.func.isRequired,
+  addExternalLibrary: PropTypes.func.isRequired,
+  loadExternalCqlList: PropTypes.func.isRequired,
+  loadExternalCqlLibraryDetails: PropTypes.func.isRequired,
+  isLoadingExternalCqlDetails: PropTypes.bool.isRequired,
+  addExternalCqlLibraryError: PropTypes.number,
+  addExternalCqlLibraryErrorMessage: PropTypes.string
 };
 
 // these props are used for dispatching actions
@@ -701,7 +783,13 @@ function mapDispatchToProps(dispatch) {
     validateCode,
     resetCodeValidation,
     clearArtifactValidationWarnings,
-    loadConversionFunctions
+    loadConversionFunctions,
+    deleteExternalCqlLibrary,
+    addExternalLibrary,
+    loadExternalCqlList,
+    clearExternalCqlValidationWarnings,
+    clearAddLibraryErrorsAndMessages,
+    loadExternalCqlLibraryDetails
   }, dispatch);
 }
 
@@ -715,6 +803,7 @@ function mapStateToProps(state) {
     valueSets: state.valueSets.valueSets,
     publishEnabled: state.artifacts.publishEnabled,
     names: state.artifacts.names,
+    librariesInUse: state.artifacts.librariesInUse,
     vsacStatus: state.vsac.authStatus,
     vsacStatusText: state.vsac.authStatusText,
     isSearchingVSAC: state.vsac.isSearchingVSAC,
@@ -728,7 +817,17 @@ function mapStateToProps(state) {
     vsacDetailsCodesError: state.vsac.detailsCodesErrorMessage,
     vsacFHIRCredentials: { username: state.vsac.username, password: state.vsac.password },
     conversionFunctions: state.modifiers.conversionFunctions,
-    isLoggingOut: state.auth.isLoggingOut
+    isLoggingOut: state.auth.isLoggingOut,
+    externalCqlList: state.externalCQL.externalCqlList,
+    externalCqlLibrary: state.externalCQL.externalCqlLibrary,
+    externalCQLLibraryParents: state.externalCQL.externalCQLLibraryParents,
+    externalCqlLibraryDetails: state.externalCQL.externalCqlLibraryDetails,
+    externalCqlFhirVersion: state.externalCQL.fhirVersion,
+    externalCqlErrors: state.externalCQL.externalCqlErrors,
+    isAddingExternalCqlLibrary: state.externalCQL.addExternalCqlLibrary.isAdding,
+    isLoadingExternalCqlDetails: state.externalCQL.loadExternalCqlLibraryDetails.isLoading,
+    addExternalCqlLibraryError: state.externalCQL.addExternalCqlLibrary.error,
+    addExternalCqlLibraryErrorMessage: state.externalCQL.addExternalCqlLibrary.message
   };
 }
 

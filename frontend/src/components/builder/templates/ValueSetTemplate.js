@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import FontAwesome from 'react-fontawesome';
-import _ from 'lodash';
 import { UncontrolledTooltip } from 'reactstrap';
+import _ from 'lodash';
 
 import ElementModal from '../ElementModal';
+import { getFieldWithType } from '../../../utils/instances';
 
 export default class ValueSetTemplate extends Component {
   viewValueSetDetails = (valueSet) => {
@@ -12,17 +13,18 @@ export default class ValueSetTemplate extends Component {
       return (
         <span className='element-select__modal element-modal disabled'>
           <span>
-          <span
-              id={`LoginTooltip-${this.props.templateInstance.uniqueId}`}>
+            <span id={`LoginTooltip-${this.props.templateInstance.uniqueId}`}>
               <FontAwesome name="eye"/>
             </span>
-          <UncontrolledTooltip target={`LoginTooltip-${this.props.templateInstance.uniqueId}`} placement="left">
-            Authenticate VSAC to view details
+
+            <UncontrolledTooltip target={`LoginTooltip-${this.props.templateInstance.uniqueId}`} placement="left">
+              Authenticate VSAC to view details
             </UncontrolledTooltip>
           </span>
         </span>
       );
     }
+
     return (
       <ElementModal
         className="element-select__modal"
@@ -38,7 +40,7 @@ export default class ValueSetTemplate extends Component {
         vsacDetailsCodesError={this.props.vsacDetailsCodesError}
         selectedElement={this.props.valueSet}
         useIconButton={true}
-        iconForButton={'eye'}
+        iconForButton="eye"
         viewOnly={true}
         vsacFHIRCredentials={this.props.vsacFHIRCredentials}
       />
@@ -47,13 +49,14 @@ export default class ValueSetTemplate extends Component {
 
   deleteValueSet = (valueSetToDelete) => {
     const templateInstanceClone = _.cloneDeep(this.props.templateInstance);
-    if (templateInstanceClone.parameters[1] && templateInstanceClone.parameters[1].valueSets) {
-      const updatedValueSets = templateInstanceClone.parameters[1].valueSets;
+    const templateInstanceVsacField = getFieldWithType(templateInstanceClone.fields, '_vsac');
+    if (templateInstanceVsacField && templateInstanceVsacField.valueSets) {
+      const updatedValueSets = templateInstanceVsacField.valueSets;
       const indexOfVSToRemove = updatedValueSets.findIndex(vs =>
         (vs.name === valueSetToDelete.name && vs.oid === valueSetToDelete.oid));
       updatedValueSets.splice(indexOfVSToRemove, 1);
       const arrayToUpdate = [
-        { [templateInstanceClone.parameters[1].id]: updatedValueSets, attributeToEdit: 'valueSets' }
+        { [templateInstanceVsacField.id]: updatedValueSets, attributeToEdit: 'valueSets' }
       ];
       this.props.updateInstance(arrayToUpdate);
     }
@@ -64,12 +67,12 @@ export default class ValueSetTemplate extends Component {
   }
 
   render() {
-    const { vsacParameter, valueSet, index } = this.props;
+    const { vsacField, valueSet, index } = this.props;
 
     return (
       <div className="vs-info">
         <div className="bold align-right vs-info__label">
-          Value Set{vsacParameter.valueSets.length > 1 ? ` ${index + 1}` : ''}:
+          Value Set{vsacField.valueSets.length > 1 ? ` ${index + 1}` : ''}:
         </div>
 
         <div className="vs-info__info">
@@ -99,17 +102,17 @@ export default class ValueSetTemplate extends Component {
 }
 
 ValueSetTemplate.propTypes = {
-  index: PropTypes.number.isRequired,
-  vsacParameter: PropTypes.object.isRequired,
-  valueSet: PropTypes.object.isRequired,
-  updateInstance: PropTypes.func.isRequired,
-  searchVSACByKeyword: PropTypes.func.isRequired,
-  isSearchingVSAC: PropTypes.bool.isRequired,
-  vsacSearchResults: PropTypes.array.isRequired,
-  vsacSearchCount: PropTypes.number.isRequired,
-  templateInstance: PropTypes.object.isRequired,
   getVSDetails: PropTypes.func.isRequired,
+  index: PropTypes.number.isRequired,
   isRetrievingDetails: PropTypes.bool.isRequired,
+  isSearchingVSAC: PropTypes.bool.isRequired,
+  searchVSACByKeyword: PropTypes.func.isRequired,
+  templateInstance: PropTypes.object.isRequired,
+  updateInstance: PropTypes.func.isRequired,
+  valueSet: PropTypes.object.isRequired,
   vsacDetailsCodes: PropTypes.array.isRequired,
-  vsacDetailsCodesError: PropTypes.string.isRequired,
+  vsacDetailsCodesError: PropTypes.string,
+  vsacField: PropTypes.object.isRequired,
+  vsacSearchCount: PropTypes.number.isRequired,
+  vsacSearchResults: PropTypes.array.isRequired,
 };

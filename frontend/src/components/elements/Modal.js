@@ -11,7 +11,7 @@ export default class Modal extends Component {
     };
   }
 
-  componentWillReceiveProps(nextProps) {
+  UNSAFE_componentWillReceiveProps(nextProps) { // eslint-disable-line camelcase
     this.setState({
       classNames: Modal.modalClassNames(nextProps)
     });
@@ -38,8 +38,14 @@ export default class Modal extends Component {
 
   render() {
     const {
-      handleShowModal, handleCloseModal, modalTitle, modalId,
-      modalSubmitButtonText, children
+      handleShowModal,
+      handleCloseModal,
+      modalTitle,
+      modalId,
+      hasSecondaryButton,
+      modalSubmitButtonText,
+      submitDisabled,
+      children
     } = this.props;
 
     return (
@@ -68,10 +74,15 @@ export default class Modal extends Component {
           </div>
 
           <footer className="modal__footer">
-            {modalSubmitButtonText
+            {hasSecondaryButton
               && <button type="button" className="secondary-button" onClick={handleCloseModal}>Cancel</button>}
             {modalSubmitButtonText
-              && <button type="submit" className="primary-button">{modalSubmitButtonText}</button>}
+              && <button
+                type="submit"
+                disabled={submitDisabled}
+                className={`primary-button ${submitDisabled ? 'disabled-button' : ''}`}>
+                {modalSubmitButtonText}
+              </button>}
           </footer>
         </form>
       </ReactModal>
@@ -83,9 +94,16 @@ Modal.propTypes = {
   modalTitle: PropTypes.string.isRequired,
   modalId: PropTypes.string.isRequired,
   modalSubmitButtonText: PropTypes.string,
+  submitDisabled: PropTypes.bool,
   modalTheme: PropTypes.string,
+  hasSecondaryButton: PropTypes.bool,
   handleShowModal: PropTypes.bool.isRequired,
   handleCloseModal: PropTypes.func.isRequired,
   handleSaveModal: PropTypes.func.isRequired,
   children: PropTypes.element.isRequired
+};
+
+Modal.defaultTypes = {
+  hasSecondaryButton: true,
+  submitDisabled: false
 };
