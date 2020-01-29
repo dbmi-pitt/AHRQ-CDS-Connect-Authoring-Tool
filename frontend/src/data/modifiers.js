@@ -12,7 +12,7 @@ const elementLists = ['list_of_observations', 'list_of_conditions', 'list_of_med
 const everyElement = elementLists.concat(['boolean', 'system_quantity', 'system_concept', 'system_code',
   'observation', 'condition', 'medication_statement', 'medication_order', 'procedure', 'allergy_intolerance',
   'encounter', 'integer', 'datetime', 'decimal', 'string', 'time', 'interval_of_integer',
-  'interval_of_datetime', 'interval_of_decimal', 'interval_of_quantity', 'any', 'other']);
+  'interval_of_datetime', 'interval_of_decimal', 'interval_of_quantity', 'any', 'other', 'dose']);
 
 export default [
   // observations
@@ -501,5 +501,37 @@ export default [
     returnType: 'boolean',
     cqlTemplate: 'BaseModifier',
     cqlLibraryFunction: 'AnyTrue'
-  }
+  },
+  {
+    id: 'DoseMedicationStatement',
+    type: 'Dose',
+    name: 'Dose',
+    inputTypes: ['list_of_medication_statements'],
+    returnType: 'dose',
+    values: {value: undefined, unit: undefined},
+    cqlTemplate: 'DoseModifier',
+    //TODO: CHANGE THIS
+    cqlLibraryFunction: 'C3F.MedicationStatementDose'
+  },
+  {
+    id: 'DoseMedicationOrder',
+    type: 'Dose',
+    name: 'Dose',
+    inputTypes: ['list_of_medication_orders'],
+    returnType: 'dose',
+    values: {value: undefined, unit: undefined},
+    cqlTemplate: 'DoseModifier',
+    //TODO: CHANGE THIS
+    cqlLibraryFunction: 'C3F.MedicationOrderDose'
+  },
+  {
+    id: 'ValueComparisonDose',
+    name: 'Value Comparison',
+    inputTypes: ['dose'],
+    returnType: 'boolean',
+    validator: {type: 'require', fields: ['minValue', 'minOperator', 'unit'], args: null},
+    values: {minOperator: undefined, minValue: '', maxOperator: undefined, maxValue: '', unit: ''},
+    cqlTemplate: 'ValueComparisonDose',
+    comparisonOperator: null
+  },
 ];

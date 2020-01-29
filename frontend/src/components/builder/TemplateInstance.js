@@ -35,6 +35,8 @@ import ValueComparisonNumber from './modifiers/ValueComparisonNumber';
 import ValueComparisonObservation from './modifiers/ValueComparisonObservation';
 import WithUnit from './modifiers/WithUnit';
 import Qualifier from './modifiers/Qualifier';
+import Dose from './modifiers/Dose';
+import ValueComparisonDose from "./modifiers/ValueComparisonDose";
 
 import { hasDuplicateName, doesBaseElementUseNeedWarning, doesBaseElementInstanceNeedWarning,
   doesParameterUseNeedWarning, validateElement, hasGroupNestedWarning } from '../../utils/warnings';
@@ -325,6 +327,28 @@ export default class TemplateInstance extends Component {
               index={index}
               name={mod.name}
               value={mod.values.value}
+              updateAppliedModifier={this.updateAppliedModifier}/>
+          );
+        case 'Dose':
+        return (
+            <Dose
+              key={index}
+              index={index}
+              value={mod.values.value}
+              unit={mod.values.unit}
+              updateAppliedModifier={this.updateAppliedModifier}/>
+          );
+        case 'ValueComparisonDose':
+          return (
+            <ValueComparisonDose
+              key={index}
+              index={index}
+              uniqueId={`${this.props.templateInstance.uniqueId}-comparison-${index}`}
+              minOperator={mod.values.minOperator}
+              minValue={mod.values.minValue}
+              maxOperator={mod.values.maxOperator}
+              maxValue={mod.values.maxValue}
+              unit={mod.values.unit}
               updateAppliedModifier={this.updateAppliedModifier}/>
           );
         default:

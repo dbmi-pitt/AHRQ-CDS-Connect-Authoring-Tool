@@ -162,6 +162,8 @@
     }
 
     .look-back,
+    .dose,
+    .value-comparison-dose,
     .value-comparison-observation {
       display: flex;
       flex-wrap: wrap;
@@ -171,6 +173,7 @@
       }
     }
 
+    .value-comparison-dose label input,
     .value-comparison-observation label input {
       min-width: inherit;
       width: calc(80px + 4vw);

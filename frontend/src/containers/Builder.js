@@ -31,6 +31,7 @@ import ErrorStatement from '../components/builder/ErrorStatement';
 import ExternalCQL from '../components/builder/ExternalCQL';
 import Parameters from '../components/builder/Parameters';
 import Recommendations from '../components/builder/Recommendations';
+import PDDIRecommendations from "../components/builder/PDDIRecommendations";
 import RepoUploadModal from '../components/builder/RepoUploadModal';
 import Subpopulations from '../components/builder/Subpopulations';
 
@@ -38,6 +39,7 @@ import isBlankArtifact from '../utils/artifacts/isBlankArtifact';
 import { findValueAtPath } from '../utils/find';
 
 import artifactProps from '../prop-types/artifact';
+import {getReturnType} from "../utils/instances";
 
 // TODO: This is needed because the tree on this.state is not updated in time. Figure out a better way to handle this
 let localTree;
@@ -303,6 +305,19 @@ export class Builder extends Component {
       }
     }
     this.setState({ recommendations: recs });
+
+    const pddiRecs = _.cloneDeep(this.props.artifact.pddiRecommendations);
+    for (let i = 0; i < pddiRecs.length; i++) {
+      const subpops = pddiRecs[i].subpopulations;
+      for (let j = 0; j < subpops.length; j++) {
+        if (subpops[j].uniqueId === uniqueId) {
+          subpops[j].subpopulationName = newName;
+        }
+      }
+    }
+
+    this.setState({ pddiRecommendations: pddiRecs });
+
   }
 
   updateSubpopulations = (subpopulations, target = 'subpopulations') => {
@@ -311,6 +326,10 @@ export class Builder extends Component {
 
   updateRecommendations = (recommendations) => {
     this.props.updateArtifact(this.props.artifact, { recommendations });
+  }
+
+  updatePDDIRecommendations = (pddiRecommendations) => {
+    this.props.updateArtifact(this.props.artifact, { pddiRecommendations });
   }
 
   updateParameters = (parameters) => {
@@ -330,6 +349,15 @@ export class Builder extends Component {
         }
       }
     }
+    for (let i = 0; i < this.props.artifact.pddiRecommendations.length; i++) {
+      const subpops = this.props.artifact.pddiRecommendations[i].subpopulations;
+      for (let j = 0; j < subpops.length; j++) {
+        if (subpops[j].uniqueId === uniqueId) {
+          return true;
+        }
+      }
+    }
+
     return false;
   }
 
@@ -638,6 +666,15 @@ export class Builder extends Component {
                     setActiveTab={this.setActiveTab}
                     uniqueIdCounter={this.state.uniqueIdCounter}
                     incrementUniqueIdCounter={this.incrementUniqueIdCounter} />
+                  <br></br>
+                  <PDDIRecommendations
+                      artifact={artifact}
+                      templates={templates}
+                      updatePDDIRecommendations={this.updatePDDIRecommendations}
+                      updateSubpopulations={this.updateSubpopulations}
+                      setActiveTab={this.setActiveTab}
+                      uniqueIdCounter={this.state.uniqueIdCounter}
+                      incrementUniqueIdCounter={this.incrementUniqueIdCounter}/>
                 </TabPanel>
 
                 <TabPanel>

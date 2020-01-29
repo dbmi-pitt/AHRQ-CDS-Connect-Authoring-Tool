@@ -418,6 +418,11 @@ define function MedicationStatementLookBack(MedList List<MedicationStatement>, L
     where M.effectiveDateTime.value in LookBackInterval
       or FHIRHelpers.ToInterval(M.effectivePeriod) overlaps LookBackInterval
 
+
+define function MedicationOrderDose(MedList List<MedicationOrder>, Unit String):
+  MedList M where M.valueQuantity.unit.value = Unit or M.valueQuantity.code.value = Unit
+
+
 /**
  * MedicationOrders with a written date in the specified "look back" period.  For example, opioid orders in the last
  * 180 days.

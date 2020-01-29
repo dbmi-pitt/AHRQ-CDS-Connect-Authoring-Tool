@@ -41,6 +41,11 @@ define function WithUnit(ObsList List<Observation>, Unit String):
   ObsList O
     where (O.value as FHIR.Quantity).unit.value = Unit or (O.value as FHIR.Quantity).code.value = Unit
 
+
+define function MedicationStatementDose(MedList List<MedicationStatement>, Unit String):
+   MedList M
+    where (M.value as FHIR.Quantity).unit.value = Unit or (M.value as FHIR.Quantity).code.value = Unit
+
 /**
  * Observations with an effective or issued date in the specified "look back" period.  For example, LDL-C Tests in the
  * last 6 years.

@@ -55,6 +55,13 @@ function transformObservation(childInstance) {
         }
         break;
       }
+      case 'ValueComparisonDose': {
+        if (parameter.value) {
+          modifier.values.unit = observationValueSets.units.code.replace(/'/g, '');
+          if (modifier.validator) modifier.validator.fields.push('unit');
+        }
+        break;
+      }
       case 'ConceptValue': {
         modifier.returnType = 'system_concept';
         break;

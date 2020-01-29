@@ -81,7 +81,11 @@ function getExpressionSentenceValue(modifier) {
     BooleanNot: { modifierText: 'not', leadingText: '', type: 'not' },
     InProgress: { modifierText: 'in progress', leadingText: '', type: 'list' },
     AllTrue: { modifierText: 'all elements true', leadingText: 'with', type: 'post' },
-    AnyTrue: { modifierText: 'any element true', leadingText: 'with', type: 'post' }
+    AnyTrue: { modifierText: 'any element true', leadingText: 'with', type: 'post' },
+    DoseMedicationStatement: { modifierText: 'dose', leadingText: 'with dose', type: 'post'},
+    DoseMedicationOrder: { modifierText: 'dose', leadingText: 'with dose', type: 'post'},
+    ValueComparisonDose: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' },
+
   };
 
   // Don't display the expression if it is not filled out completely.
@@ -225,6 +229,22 @@ function getExpressionSentenceValue(modifier) {
       }
       case 'CheckExistence': {
         expressionSentenceValues[modifier.id].modifierText = modifier.values.value;
+        break;
+      }
+      case 'DoseMedicationOrder':
+      case 'DoseMedicationStatement': {
+        expressionSentenceValues[modifier.id].modifierText = `of  ${modifier.values.value} ${modifier.values.unit}`;
+        break;
+      }
+      case 'ValueComparisonDose': {
+        const minOperatorWord = getOperation(modifier.values.minOperator);
+        const maxOperatorWord = getOperation(modifier.values.maxOperator);
+        expressionSentenceValues[modifier.id].modifierText =
+          `is ${minOperatorWord} ${modifier.values.minValue} ${modifier.values.unit}`;
+        if (maxOperatorWord) {
+          expressionSentenceValues[modifier.id].modifierText +=
+            ` and is ${maxOperatorWord} ${modifier.values.maxValue} ${modifier.values.unit}`;
+        }
         break;
       }
       default: break;
