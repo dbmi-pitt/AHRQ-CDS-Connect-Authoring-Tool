@@ -851,6 +851,9 @@ function applyModifiers(values = [] , modifiers = []) { // default modifiers to 
       if (!(modifier.cqlTemplate in modifierMap)) {
         console.error(`Modifier Template could not be found: ${modifier.cqlTemplate}`);
       }
+      console.log("Modifier Map:");
+      console.log(modifierContext);
+      console.log(modifierMap[modifier.cqlTemplate]);
       newValue = ejs.render(modifierMap[modifier.cqlTemplate], modifierContext);
     });
     return newValue;
@@ -1012,6 +1015,8 @@ function objToCql(req, res) {
         };
         externalLibs.push(libJson);
       });
+      console.log("Current artifact:");
+      console.log(artifactFromRequest);
       const artifact = new CqlArtifact(artifactFromRequest);
       res.attachment('archive-name.zip');
       writeZip(artifact, externalLibs, res, (err) => {
