@@ -418,7 +418,7 @@ define function MedicationStatementLookBack(MedList List<MedicationStatement>, L
     where M.effectiveDateTime.value in LookBackInterval
       or FHIRHelpers.ToInterval(M.effectivePeriod) overlaps LookBackInterval
 
-
+-- TODO: Update this function to mimic CDS CONNECT COMMONS FHIR 3
 define function MedicationOrderDose(MedList List<MedicationOrder>, Unit String):
   MedList M where M.valueQuantity.unit.value = Unit or M.valueQuantity.code.value = Unit
 

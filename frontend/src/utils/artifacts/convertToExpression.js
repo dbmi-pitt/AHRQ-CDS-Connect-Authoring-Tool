@@ -84,7 +84,8 @@ function getExpressionSentenceValue(modifier) {
     AnyTrue: { modifierText: 'any element true', leadingText: 'with', type: 'post' },
     DoseMedicationStatement: { modifierText: 'dose', leadingText: 'with dose', type: 'post'},
     DoseMedicationOrder: { modifierText: 'dose', leadingText: 'with dose', type: 'post'},
-    ValueComparisonDose: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' },
+    ValueComparisonDoseMedicationStatement: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' },
+    ValueComparisonDoseMedicationOrder: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' }
 
   };
 
@@ -236,7 +237,8 @@ function getExpressionSentenceValue(modifier) {
         expressionSentenceValues[modifier.id].modifierText = `of  ${modifier.values.value} ${modifier.values.unit}`;
         break;
       }
-      case 'ValueComparisonDose': {
+      case 'ValueComparisonDoseMedicationOrder':
+      case 'ValueComparisonDoseMedicationStatement': {
         const minOperatorWord = getOperation(modifier.values.minOperator);
         const maxOperatorWord = getOperation(modifier.values.maxOperator);
         expressionSentenceValues[modifier.id].modifierText =

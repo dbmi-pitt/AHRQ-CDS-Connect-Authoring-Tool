@@ -525,9 +525,21 @@ export default [
     cqlLibraryFunction: 'C3F.MedicationOrderDose'
   },
   {
-    id: 'ValueComparisonDose',
-    name: 'Value Comparison',
-    inputTypes: ['dose'],
+    id: 'ValueComparisonDoseMedicationStatement',
+    type: 'ValueComparisonDose',
+    name: 'Value Comparison Dose',
+    inputTypes: ['list_of_medication_statements'],
+    returnType: 'boolean',
+    validator: {type: 'require', fields: ['minValue', 'minOperator', 'unit'], args: null},
+    values: {minOperator: undefined, minValue: '', maxOperator: undefined, maxValue: '', unit: ''},
+    cqlTemplate: 'ValueComparisonDose',
+    comparisonOperator: null
+  },
+  {
+    id: 'ValueComparisonDoseMedicationOrder',
+    type: 'ValueComparisonDose',
+    name: 'Value Comparison Dose',
+    inputTypes: ['list_of_medication_orders'],
     returnType: 'boolean',
     validator: {type: 'require', fields: ['minValue', 'minOperator', 'unit'], args: null},
     values: {minOperator: undefined, minValue: '', maxOperator: undefined, maxValue: '', unit: ''},
