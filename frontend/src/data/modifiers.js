@@ -532,7 +532,7 @@ export default [
     returnType: 'boolean',
     validator: {type: 'require', fields: ['minValue', 'minOperator', 'unit'], args: null},
     values: {minOperator: undefined, minValue: '', maxOperator: undefined, maxValue: '', unit: ''},
-    cqlTemplate: 'ValueComparisonDose',
+    cqlTemplate: 'ValueComparisonDoseMedicationStatement',
     comparisonOperator: null
   },
   {
@@ -543,7 +543,7 @@ export default [
     returnType: 'boolean',
     validator: {type: 'require', fields: ['minValue', 'minOperator', 'unit'], args: null},
     values: {minOperator: undefined, minValue: '', maxOperator: undefined, maxValue: '', unit: ''},
-    cqlTemplate: 'ValueComparisonDose',
+    cqlTemplate: 'ValueComparisonDoseMedicationOrder',
     comparisonOperator: null
   },
 ];

@@ -282,7 +282,8 @@ class CqlArtifact {
     this.exclusions = artifact.expTreeExclude;
     this.subpopulations = artifact.subpopulations;
     this.baseElements = artifact.baseElements;
-    this.recommendations = artifact.recommendations;
+    this.recommendations = artifact.recommendations.concat(artifact.pddiRecommendations);
+    this.pddiRecommendations = artifact.pddiRecommendations;
     this.errorStatement = artifact.errorStatement;
 
     fhirTarget = artifact.dataModel;
