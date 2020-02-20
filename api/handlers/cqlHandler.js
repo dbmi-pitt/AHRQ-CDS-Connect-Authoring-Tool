@@ -747,7 +747,12 @@ class CqlArtifact {
   }
 
   recommendation() {
-    let text = this.recommendations.map((recommendation) => {
+    let recommendations = this.recommendations;
+    if (this.recommendations.length > 0 && (this.recommendations[0].grade === 'A' && this.recommendations[0].text ===
+        '' && this.recommendations[0].rationale === '' && this.recommendations[0].subpopulations.length === 0)) {
+      recommendations.splice(0,1);
+    }
+    let text = recommendations.map((recommendation) => {
       const conditional = constructOneRecommendationConditional(recommendation);
       return `${conditional}'${sanitizeCQLString(recommendation.text)}'`;
     });
@@ -756,7 +761,12 @@ class CqlArtifact {
   }
 
   rationale() {
-    let rationaleText = this.recommendations.map((recommendation) => {
+    let recommendations = this.recommendations;
+    if (this.recommendations.length > 0 && (this.recommendations[0].grade === 'A' && this.recommendations[0].text ===
+        '' && this.recommendations[0].rationale === '' && this.recommendations[0].subpopulations.length === 0)) {
+      recommendations.splice(0,1);
+    }
+    let rationaleText = recommendations.map((recommendation) => {
       const conditional = constructOneRecommendationConditional(recommendation);
       return conditional + (_.isEmpty(recommendation.rationale)
         ? 'null'
@@ -764,6 +774,41 @@ class CqlArtifact {
     });
     rationaleText = _.isEmpty(rationaleText) ? 'null' : rationaleText.join('\n  else ').concat('\n  else null');
     return ejs.render(templateMap.BaseTemplate, { element_name: 'Rationale', cqlString: rationaleText });
+  }
+
+  classification() {
+    let classificationText = this.pddiRecommendations.map((recommendation) => {
+      const conditional = constructOneRecommendationConditional(recommendation);
+      return conditional + (_.isEmpty(recommendation.classification)
+        ? 'null'
+        : `'${sanitizeCQLString(recommendation.classification)}'`);
+    });
+
+    classificationText = _.isEmpty(classificationText) ? 'null' :
+        classificationText.join('\n  else ').concat('\n  else null');
+    return ejs.render(templateMap.BaseTemplate, { element_name: 'Classification', cqlString: classificationText });
+  }
+
+  indicator() {
+    let indicatorText = this.pddiRecommendations.map((recommendation) => {
+      let conditionalText = '';
+      if (recommendation.classification === 'Avoid Combination' ||
+          recommendation.classification === 'Usually Avoid Combination') {
+        conditionalText = 'critical';
+      } else if (recommendation.classification === 'Minimize Risk' || recommendation.classification === 'Monitor') {
+        conditionalText = 'warning';
+      } else {
+        conditionalText = 'info';
+      }
+      const conditional = constructOneRecommendationConditional(recommendation);
+      return conditional + (_.isEmpty(recommendation.classification)
+        ? 'null'
+        : `'${sanitizeCQLString(conditionalText)}'`);
+    });
+
+    indicatorText = _.isEmpty(indicatorText) ? 'null' :
+        indicatorText.join('\n  else ').concat('\n  else null');
+    return ejs.render(templateMap.BaseTemplate, { element_name: 'Indicator', cqlString: indicatorText });
   }
 
   errors() {
@@ -792,7 +837,7 @@ class CqlArtifact {
     const bodyString = this.body();
     const headerString = this.header();
     let fullString = `${headerString}${bodyString}\n${this.population()}\n${this.recommendation()}\n` +
-      `${this.rationale()}${this.errors()}`;
+      `${this.rationale()}\n${this.classification()}\n${this.indicator()}${this.errors()}`;
     fullString = fullString.replace(/\r\n|\r|\n/g, '\r\n'); // Make all line endings CRLF
     return fullString;
   }

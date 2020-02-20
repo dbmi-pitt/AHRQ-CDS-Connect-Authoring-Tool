@@ -32,12 +32,17 @@ export default function isBlankArtifact(artifact) {
     return false;
   }
   // If it has more than one recommendation, it is NOT blank
-  if (artifact.recommendations.length > 1) {
+  if (artifact.recommendations.length > 1 || artifact.pddiRecommendations.length > 1) {
     return false;
   }
   // If it has only one recommendation, check if it is a blank recommendation
-  if (artifact.recommendations.length === 1) {
-    const r = artifact.recommendations[0];
+  if (artifact.recommendations.length + artifact.pddiRecommendations.length === 1) {
+    var r = null;
+    if(artifact.pddiRecommendations.length > 0) {
+      r = artifact.pddiRecommendations[0];
+    } else {
+      r = artifact.recommendations[0];
+    }
     if (r.grade !== 'A' || r.text !== '' || r.rationale !== '' || r.subpopulations.length > 1) {
       return false;
     }
