@@ -1,0 +1,70 @@
+{
+    "resourceType": "Bundle",
+    "type": "transaction",
+    "entry": [
+	{
+	    "resource": {
+		"resourceType": "PlanDefinition",
+		"id": "<%-element_name%>",
+		"version": "1.0",
+		"name": "PlanDefinition - <%-element_name%>",
+		"title": "<%-element_name%>",
+		"type": {
+		    "coding": [
+			{
+			    "system": "http://hl7.org/fhir/plan-definition-type",
+			    "code": "eca-rule",
+			    "display": "ECA Rule"
+			}
+		    ]
+		},
+		"status": "draft",
+		"url": <USER DEFINES THIS>,
+		"topic": [
+		    {
+			"text": <USER DEFINES THIS>
+		    }
+		],
+		"library": [
+		    {
+			"reference": <BASED ON THE LIBRARY WE CREATE>
+		    }
+		],
+		"relatedArtifact": [ <USER DEFINES THIS SECTION>
+		    {
+			"type": "documentation",
+			"display": "Warfarin-NSAIDs clinical decision support algorithm",
+			"url": "https://ddi-cds.org/warfarin-nsaids/"
+		    }
+		],
+		<% if (element_recommendations) {%>
+            "action": [
+                <% element_recommendations.forEach(r => { %>
+                <% if(planDefinitionRecommendations.includes(r.text)){ %>
+                {
+                    "title": "<%-r.text%>",
+                    "description": "<%-r.rationale%>",
+                    "condition": [
+                    <% r.subpopulations.forEach(subpopulation => { %>
+                        {
+                            "kind": "applicability",
+                            "language": "text/cql",
+                            "expression": "<%-subpopulation.subpopulationName%>"
+                        }
+                    <% }); %>
+                    ],
+                    "action": [
+                        {
+                            "label": "<%-r.classification%>"
+                        }
+                    ]
+                },
+                <% } %>
+
+                <% }); %>
+            ]
+        <% } %>
+		}
+	}
+	]
+}

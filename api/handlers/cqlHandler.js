@@ -284,6 +284,7 @@ class CqlArtifact {
     this.baseElements = artifact.baseElements;
     this.recommendations = artifact.recommendations.concat(artifact.pddiRecommendations);
     this.pddiRecommendations = artifact.pddiRecommendations;
+    this.planDefinitionRecommendations = artifact.planDefinitionRecommendations;
     this.errorStatement = artifact.errorStatement;
 
     fhirTarget = artifact.dataModel;
@@ -897,9 +898,6 @@ function applyModifiers(values = [] , modifiers = []) { // default modifiers to 
       if (!(modifier.cqlTemplate in modifierMap)) {
         console.error(`Modifier Template could not be found: ${modifier.cqlTemplate}`);
       }
-      console.log("Modifier Map:");
-      console.log(modifierContext);
-      console.log(modifierMap[modifier.cqlTemplate]);
       newValue = ejs.render(modifierMap[modifier.cqlTemplate], modifierContext);
     });
     return newValue;
@@ -1135,6 +1133,8 @@ function writeZip(cqlArtifact, externalLibs, writeStream, callback /* (error) */
   // TODO: Consider separating EJS rendering from toJSON() or toString() methods.
   const artifactJson = cqlArtifact.toJson();
   const artifacts = [artifactJson, ...externalLibs];
+  const planDefinition = writePlanDefinition(cqlArtifact);
+  const library = writeLibrary('URL', Buffer.from(artifactJson.text).toString('base64'), 'BASE64');
   // We must first convert to ELM before packaging up
   convertToElm(artifacts, (err, elmFiles) => {
     if (err) {
@@ -1150,6 +1150,8 @@ function writeZip(cqlArtifact, externalLibs, writeStream, callback /* (error) */
       archive.append(artifact.text, { name: `${artifact.filename}.cql` });
     });
     archive.append(artifactJson.text, { name: `${artifactJson.filename}.cql` });
+    archive.append(planDefinition, { name: `${artifactJson.filename}-PlanDefinition.json` });
+    archive.append(library, {name: `${artifactJson.filename}-Library-Bundle.json` })
     elmFiles.forEach((e, i) => {
       archive.append(e.content.replace(/\r\n|\r|\n/g, '\r\n'), { name: `${e.name}.json` });
     });
@@ -1245,4 +1247,34 @@ function splitELM(body, contentType, callback /* (error, elmFiles) */) {
 
 function buildCQL(artifactBody) {
   return new CqlArtifact(artifactBody);
+}
+
+function writePlanDefinition(artifact) {
+  console.log(artifact.planDefinitionRecommendations);
+    if (artifact.pddiRecommendations != null) {
+        return ejs.render(
+            templateMap.PlanDefinition,
+            {
+                element_name: artifact.name,
+                planDefinitionRecommendations: artifact.planDefinitionRecommendations,
+                element_recommendations: artifact.pddiRecommendations
+            }
+        );
+    } else {
+        return ejs.render(
+            templateMap.PlanDefinition,
+            {
+                element_name: artifact.name,
+                planDefinitionRecommendations: artifact.planDefinitionRecommendations,
+                element_recommendations: artifact.recommendations
+            }
+        );
+    }
+}
+
+function writeLibrary(url, cql_base64_data, elm_base64_data) {
+    return ejs.render(
+        templateMap.Library,
+        {url: url, cql_base64_data: cql_base64_data, elm_base64_data: elm_base64_data}
+    );
 }

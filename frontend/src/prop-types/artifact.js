@@ -54,6 +54,7 @@ const artifactProps = {
     text: PropTypes.string,
     subpopulations: PropTypes.arrayOf(PropTypes.shape(subpopulationsProps))
   })),
+  planDefinitionRecommendations:  PropTypes.array,
   subpopulations: PropTypes.arrayOf(PropTypes.shape(subpopulationsProps)),
   parameters: PropTypes.arrayOf(PropTypes.shape(parametersProps)),
   errorStatement: PropTypes.shape({

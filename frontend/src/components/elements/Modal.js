@@ -40,6 +40,7 @@ export default class Modal extends Component {
     const {
       handleShowModal,
       handleCloseModal,
+      onAfterOpen,
       modalTitle,
       modalId,
       hasSecondaryButton,
@@ -53,6 +54,7 @@ export default class Modal extends Component {
         contentLabel={modalTitle}
         id={modalId}
         isOpen={handleShowModal}
+        onAfterOpen={onAfterOpen}
         onRequestClose={handleCloseModal}
         className={this.state.classNames.modal}
         shouldCloseOnOverlayClick={false}
@@ -97,6 +99,7 @@ Modal.propTypes = {
   submitDisabled: PropTypes.bool,
   modalTheme: PropTypes.string,
   hasSecondaryButton: PropTypes.bool,
+  onAfterOpen: PropTypes.func,
   handleShowModal: PropTypes.bool.isRequired,
   handleCloseModal: PropTypes.func.isRequired,
   handleSaveModal: PropTypes.func.isRequired,

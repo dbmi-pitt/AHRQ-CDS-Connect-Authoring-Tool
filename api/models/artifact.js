@@ -10,6 +10,7 @@ const ArtifactSchema = new Schema({
   expTreeExclude: Object,
   recommendations: Array,
   pddiRecommendations: Array,
+  planDefinitionRecommendations: Array,
   subpopulations: Array,
   baseElements: Array,
   parameters: Array,

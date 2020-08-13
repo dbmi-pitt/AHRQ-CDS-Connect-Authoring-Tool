@@ -26,6 +26,7 @@ import {
 import BaseElements from '../components/builder/BaseElements';
 import ConjunctionGroup from '../components/builder/ConjunctionGroup';
 import EditArtifactModal from '../components/artifact/EditArtifactModal';
+import ArtifactPlanDefinitionModal from '../components/artifact/ArtifactPlanDefinitionModal'
 import ELMErrorModal from '../components/builder/ELMErrorModal';
 import ErrorStatement from '../components/builder/ErrorStatement';
 import ExternalCQL from '../components/builder/ExternalCQL';
@@ -50,6 +51,7 @@ export class Builder extends Component {
 
     this.state = {
       showEditArtifactModal: false,
+      showArtifactPlanDefinitionModal: false,
       showPublishModal: false,
       showELMErrorModal: false,
       showMenu: false,
@@ -260,10 +262,27 @@ export class Builder extends Component {
     this.setState({ showEditArtifactModal: false });
   }
 
-
   handleSaveArtifact = (artifactPropsChanged) => {
     this.props.updateAndSaveArtifact(this.props.artifact, artifactPropsChanged);
     this.closeEditArtifactModal(false);
+  }
+
+
+  openArtifactPlanDefinitionModal = async() => {
+    this.setState({showArtifactPlanDefinitionModal: true});
+    await this.props.updateAndSaveArtifact(this.props.artifact, {planDefinitionRecommendations: []});
+    this.setState({artifact: this.props.artifact});
+  }
+
+  closeArtifactPlanDefinitionModal = () => {
+    this.setState({showArtifactPlanDefinitionModal: false});
+  }
+
+  handleSaveArtifactAndDownload = async (artifactPropsChanged) => {
+    await this.props.updateAndSaveArtifact(this.props.artifact, artifactPropsChanged);
+    this.downloadOptionSelected(false, '3.0.0');
+    this.closeArtifactPlanDefinitionModal(false);
+
   }
 
   // ----------------------- TREES ----------------------------------------- //
@@ -465,7 +484,8 @@ export class Builder extends Component {
                 <DropdownItem
                   id='stu3DownloadOption'
                   className={disableSTU3 ? 'disabled-dropdown' : ''}
-                  onClick={() => this.downloadOptionSelected(disableSTU3, '3.0.0')}>
+                  onClick={this.openArtifactPlanDefinitionModal}>
+                  {/*onClick={() => this.downloadOptionSelected(disableSTU3, '3.0.0')}>*/}
                   FHIR STU3
                 </DropdownItem>
                 {disableDSTU2 &&
@@ -749,10 +769,16 @@ export class Builder extends Component {
           version={artifact.version} />
 
         <EditArtifactModal
-          artifactEditing={artifact}
-          showModal={this.state.showEditArtifactModal}
-          closeModal={this.closeEditArtifactModal}
-          saveModal={this.handleSaveArtifact} />
+            artifactEditing={artifact}
+            showModal={this.state.showEditArtifactModal}
+            closeModal={this.closeEditArtifactModal}
+            saveModal={this.handleSaveArtifact}/>
+
+        <ArtifactPlanDefinitionModal
+            artifact={artifact}
+            showModal={this.state.showArtifactPlanDefinitionModal}
+            closeModal={this.closeArtifactPlanDefinitionModal}
+            saveModal={this.handleSaveArtifactAndDownload}/>
 
         <ELMErrorModal
           isOpen={this.state.showELMErrorModal}
