@@ -11,6 +11,7 @@ const ArtifactSchema = new Schema({
   recommendations: Array,
   pddiRecommendations: Array,
   planDefinitionRecommendations: Array,
+  planDefinition: Object,
   subpopulations: Array,
   baseElements: Array,
   parameters: Array,

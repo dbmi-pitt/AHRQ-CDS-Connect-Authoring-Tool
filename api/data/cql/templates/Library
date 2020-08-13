@@ -5,10 +5,10 @@
 	{
 	    "resource": {
 		"resourceType": "Library",
-		"id": "warfarin-nsaids-cds-select",
-		"version": "1.0",
+		"id": "<%-element_id%>",
+		"version": "<%-element_version%>",
 		"status": "draft",
-		"url": "<%-url%>",
+		"url": "<%-element_library_url%>",
 		"type": {
 		    "coding": [
 			{
@@ -20,10 +20,6 @@
 		    {
 			"contentType": "text/cql",
 			"data": "<%-cql_base64_data%>"
-		    },
-{
-			"contentType": "application/elm+xml",
-			"data": "<%-elm_base64_data%>"
 		    }
 		]
 	    }

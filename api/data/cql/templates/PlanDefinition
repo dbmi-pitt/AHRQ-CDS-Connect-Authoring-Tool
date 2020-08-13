@@ -5,8 +5,8 @@
 	{
 	    "resource": {
 		"resourceType": "PlanDefinition",
-		"id": "<%-element_name%>",
-		"version": "1.0",
+		"id": "<%-element_id%>",
+		"version": "<%-element_version%>",
 		"name": "PlanDefinition - <%-element_name%>",
 		"title": "<%-element_name%>",
 		"type": {
@@ -19,27 +19,27 @@
 		    ]
 		},
 		"status": "draft",
-		"url": <USER DEFINES THIS>,
+		"url": "<%-element_url%>",
 		"topic": [
 		    {
-			"text": <USER DEFINES THIS>
+			"text": "<%-element_topic%>"
 		    }
 		],
 		"library": [
 		    {
-			"reference": <BASED ON THE LIBRARY WE CREATE>
+			"reference": "<%-element_library_url%>"
 		    }
 		],
-		"relatedArtifact": [ <USER DEFINES THIS SECTION>
+		"relatedArtifact": [
 		    {
-			"type": "documentation",
-			"display": "Warfarin-NSAIDs clinical decision support algorithm",
-			"url": "https://ddi-cds.org/warfarin-nsaids/"
+			"type": "<%-element_related_artifact_type%>",
+			"display": "<%-element_related_artifact_name%>",
+			"url": "<%-element_related_artifact_url%>"
 		    }
 		],
 		<% if (element_recommendations) {%>
             "action": [
-                <% element_recommendations.forEach(r => { %>
+                <% element_recommendations.forEach(function(r, idx, array){ %>
                 <% if(planDefinitionRecommendations.includes(r.text)){ %>
                 {
                     "title": "<%-r.text%>",
@@ -58,7 +58,8 @@
                             "label": "<%-r.classification%>"
                         }
                     ]
-                },
+                }
+                <% if(idx < array.length -1) {%> , <% } %>
                 <% } %>
 
                 <% }); %>

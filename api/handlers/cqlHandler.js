@@ -285,6 +285,7 @@ class CqlArtifact {
     this.recommendations = artifact.recommendations.concat(artifact.pddiRecommendations);
     this.pddiRecommendations = artifact.pddiRecommendations;
     this.planDefinitionRecommendations = artifact.planDefinitionRecommendations;
+    this.planDefinition = artifact.planDefinition;
     this.errorStatement = artifact.errorStatement;
 
     fhirTarget = artifact.dataModel;
@@ -1134,7 +1135,7 @@ function writeZip(cqlArtifact, externalLibs, writeStream, callback /* (error) */
   const artifactJson = cqlArtifact.toJson();
   const artifacts = [artifactJson, ...externalLibs];
   const planDefinition = writePlanDefinition(cqlArtifact);
-  const library = writeLibrary('URL', Buffer.from(artifactJson.text).toString('base64'), 'BASE64');
+  const library = writeLibrary(cqlArtifact, Buffer.from(artifactJson.text).toString('base64'), 'BASE64');
   // We must first convert to ELM before packaging up
   convertToElm(artifacts, (err, elmFiles) => {
     if (err) {
@@ -1255,7 +1256,15 @@ function writePlanDefinition(artifact) {
         return ejs.render(
             templateMap.PlanDefinition,
             {
+                element_id: artifact.name.toLowerCase().replace(/\s/g , "-"),
                 element_name: artifact.name,
+                element_version: artifact.version,
+                element_url: artifact.planDefinition.planDefinitionURL,
+                element_library_url: artifact.planDefinition.planDefinitionLibraryURL,
+                element_topic: artifact.planDefinition.planDefinitionTopicText,
+                element_related_artifact_type: artifact.planDefinition.relatedArtifactType,
+                element_related_artifact_name: artifact.planDefinition.relatedArtifactName,
+                element_related_artifact_url: artifact.planDefinition.relatedArtifactURL,
                 planDefinitionRecommendations: artifact.planDefinitionRecommendations,
                 element_recommendations: artifact.pddiRecommendations
             }
@@ -1264,7 +1273,15 @@ function writePlanDefinition(artifact) {
         return ejs.render(
             templateMap.PlanDefinition,
             {
+                element_id: artifact.name.toLowerCase().replace(/\s/g , "-"),
                 element_name: artifact.name,
+                element_version: artifact.version,
+                element_url: artifact.planDefinition.planDefinitionURL,
+                element_library_url: artifact.planDefinition.planDefinitionLibraryURL,
+                element_topic: artifact.planDefinition.planDefinitionTopicText,
+                element_related_artifact_type: artifact.planDefinition.relatedArtifactType,
+                element_related_artifact_name: artifact.planDefinition.relatedArtifactName,
+                element_related_artifact_url: artifact.planDefinition.relatedArtifactURL,
                 planDefinitionRecommendations: artifact.planDefinitionRecommendations,
                 element_recommendations: artifact.recommendations
             }
@@ -1272,9 +1289,14 @@ function writePlanDefinition(artifact) {
     }
 }
 
-function writeLibrary(url, cql_base64_data, elm_base64_data) {
+function writeLibrary(artifact, cql_base64_data) {
     return ejs.render(
         templateMap.Library,
-        {url: url, cql_base64_data: cql_base64_data, elm_base64_data: elm_base64_data}
+        {
+            element_id: artifact.name.toLowerCase().replace(/\s/g , "-"),
+            element_version: artifact.version,
+            element_library_url: artifact.planDefinition.planDefinitionLibraryURL,
+            cql_base64_data: cql_base64_data
+        }
     );
 }
