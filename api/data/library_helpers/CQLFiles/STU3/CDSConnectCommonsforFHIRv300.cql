@@ -3,7 +3,7 @@
 // - 1.0.1
 //   - Remove NullSafe conversion functions since FHIRHelpers now does null-safe conversions
 //   - Note functions that exist in DSTU2 version of commons, but not here in STU3 version
-library CDS_Connect_Commons_for_FHIRv300 version '1.0.1'
+library CDSConnectCommonsforFHIRv300 version '1.0.1'
 
 using FHIR version '3.0.0'
 

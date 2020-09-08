@@ -546,10 +546,10 @@ export class Builder extends Component {
           <section className="builder__canvas">
             <Tabs selectedIndex={this.state.activeTabIndex} onSelect={tabIndex => this.setActiveTab(tabIndex)}>
               <TabList aria-label="Workspace Tabs">
+                <Tab>Base Elements</Tab>
                 <Tab>Inclusions</Tab>
                 <Tab>Exclusions</Tab>
                 <Tab>Subpopulations</Tab>
-                <Tab>Base Elements</Tab>
                 <Tab>Recommendations</Tab>
                 <Tab>Parameters</Tab>
                 <Tab>Handle Errors</Tab>
@@ -557,6 +557,54 @@ export class Builder extends Component {
               </TabList>
 
               <div className="tab-panel-container">
+                <TabPanel>
+                  <div className="workspace-blurb">
+                    Specify individual elements that can be re-used in the Inclusions, Exclusions, and Subpopulations,
+                    or should standalone as independent expressions in the resulting artifact. An example might be a lab
+                    result value that is referenced multiple times throughout the artifact.
+                  </div>
+                  <BaseElements
+                      treeName='baseElements'
+                      instance={artifact}
+                      addBaseElement={this.addBaseElement}
+                      loadValueSets={this.props.loadValueSets}
+                      getAllInstances={this.getAllInstances}
+                      getAllInstancesInAllTrees={this.getAllInstancesInAllTrees}
+                      addInstance={this.addInstance}
+                      editInstance={this.editInstance}
+                      updateInstanceModifiers={this.updateInstanceModifiers}
+                      deleteInstance={this.deleteInstance}
+                      updateBaseElementLists={this.updateSubpopulations}
+                      templates={templates}
+                      valueSets={this.props.valueSets}
+                      conversionFunctions={conversionFunctions}
+                      instanceNames={this.props.names}
+                      baseElements={artifact.baseElements}
+                      parameters={namedParameters}
+                      externalCqlList={this.props.externalCqlList}
+                      loadExternalCqlList={this.props.loadExternalCqlList}
+                      scrollToElement={this.scrollToElement}
+                      loginVSACUser={this.props.loginVSACUser}
+                      setVSACAuthStatus={this.props.setVSACAuthStatus}
+                      vsacStatus={this.props.vsacStatus}
+                      vsacStatusText={this.props.vsacStatusText}
+                      searchVSACByKeyword={this.props.searchVSACByKeyword}
+                      isSearchingVSAC={this.props.isSearchingVSAC}
+                      vsacSearchResults={this.props.vsacSearchResults}
+                      vsacSearchCount={this.props.vsacSearchCount}
+                      getVSDetails={this.props.getVSDetails}
+                      isRetrievingDetails={this.props.isRetrievingDetails}
+                      vsacDetailsCodes={this.props.vsacDetailsCodes}
+                      vsacDetailsCodesError={this.props.vsacDetailsCodesError}
+                      vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+                      isValidatingCode={this.props.isValidatingCode}
+                      isValidCode={this.props.isValidCode}
+                      codeData={this.props.codeData}
+                      validateCode={this.props.validateCode}
+                      resetCodeValidation={this.props.resetCodeValidation}
+                      validateReturnType={false}/>
+                </TabPanel>
+
                 <TabPanel>
                   <div className="workspace-blurb">
                     Specify criteria to identify a target population that should receive a recommendation from this
@@ -622,54 +670,6 @@ export class Builder extends Component {
                     codeData={this.props.codeData}
                     validateCode={this.props.validateCode}
                     resetCodeValidation={this.props.resetCodeValidation} />
-                </TabPanel>
-
-                <TabPanel>
-                  <div className="workspace-blurb">
-                    Specify individual elements that can be re-used in the Inclusions, Exclusions, and Subpopulations,
-                    or should standalone as independent expressions in the resulting artifact. An example might be a lab
-                    result value that is referenced multiple times throughout the artifact.
-                  </div>
-                  <BaseElements
-                    treeName='baseElements'
-                    instance={artifact}
-                    addBaseElement={this.addBaseElement}
-                    loadValueSets={this.props.loadValueSets}
-                    getAllInstances={this.getAllInstances}
-                    getAllInstancesInAllTrees={this.getAllInstancesInAllTrees}
-                    addInstance={this.addInstance}
-                    editInstance={this.editInstance}
-                    updateInstanceModifiers={this.updateInstanceModifiers}
-                    deleteInstance={this.deleteInstance}
-                    updateBaseElementLists={this.updateSubpopulations}
-                    templates={templates}
-                    valueSets={this.props.valueSets}
-                    conversionFunctions={conversionFunctions}
-                    instanceNames={this.props.names}
-                    baseElements={artifact.baseElements}
-                    parameters={namedParameters}
-                    externalCqlList={this.props.externalCqlList}
-                    loadExternalCqlList={this.props.loadExternalCqlList}
-                    scrollToElement={this.scrollToElement}
-                    loginVSACUser={this.props.loginVSACUser}
-                    setVSACAuthStatus={this.props.setVSACAuthStatus}
-                    vsacStatus={this.props.vsacStatus}
-                    vsacStatusText={this.props.vsacStatusText}
-                    searchVSACByKeyword={this.props.searchVSACByKeyword}
-                    isSearchingVSAC={this.props.isSearchingVSAC}
-                    vsacSearchResults={this.props.vsacSearchResults}
-                    vsacSearchCount={this.props.vsacSearchCount}
-                    getVSDetails={this.props.getVSDetails}
-                    isRetrievingDetails={this.props.isRetrievingDetails}
-                    vsacDetailsCodes={this.props.vsacDetailsCodes}
-                    vsacDetailsCodesError={this.props.vsacDetailsCodesError}
-                    vsacFHIRCredentials={this.props.vsacFHIRCredentials}
-                    isValidatingCode={this.props.isValidatingCode}
-                    isValidCode={this.props.isValidCode}
-                    codeData={this.props.codeData}
-                    validateCode={this.props.validateCode}
-                    resetCodeValidation={this.props.resetCodeValidation}
-                    validateReturnType={false}/>
                 </TabPanel>
 
                 <TabPanel>

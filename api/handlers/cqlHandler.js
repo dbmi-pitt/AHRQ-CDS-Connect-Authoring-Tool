@@ -11,6 +11,12 @@ const glob = require('glob');
 const request = require('request');
 const Busboy = require('busboy');
 
+const tmp = require('tmp');
+const { exec } = require("child_process");
+const propertiesReader = require('properties-reader');
+var root = path.dirname(require.main.filename)
+const properties = propertiesReader(path.join(root,'../authoring.properties') );
+
 const templatePath = './data/cql/templates';
 const specificPath = './data/cql/specificTemplates';
 const modifierPath = './data/cql/modifiers';
@@ -22,13 +28,13 @@ const modifierMap = loadTemplates(modifierPath);
 const includeLibrariesDstu2 = [
   { name: 'FHIRHelpers', version: '1.0.2', alias: 'FHIRHelpers' },
   { name: 'CDS_Connect_Commons_for_FHIRv102', version: '1.3.2', alias: 'C3F' },
-  { name: 'CDS_Connect_Conversions', version: '1', alias: 'Convert' }
+  { name: 'CDSConnectConversions', version: '1', alias: 'Convert' }
 ];
 
 const includeLibrariesStu3 = [
   { name: 'FHIRHelpers', version: '3.0.0', alias: 'FHIRHelpers' },
-  { name: 'CDS_Connect_Commons_for_FHIRv300', version: '1.0.1', alias: 'C3F' },
-  { name: 'CDS_Connect_Conversions', version: '1', alias: 'Convert' }
+  { name: 'CDSConnectCommonsforFHIRv300', version: '1.0.1', alias: 'C3F' },
+  { name: 'CDSConnectConversions', version: '1', alias: 'Convert' }
 ];
 
 // A flag to hold the FHIR version, so that it can be used
@@ -1132,39 +1138,73 @@ function validateELM(cqlArtifact, externalLibs, writeStream, callback) {
 function writeZip(cqlArtifact, externalLibs, writeStream, callback /* (error) */) {
   // Artifact JSON is generated first and passed in to avoid incorrect EJS rendering.
   // TODO: Consider separating EJS rendering from toJSON() or toString() methods.
+  let helperPath;
+  if (fhirTarget.version === '3.0.0') {
+    helperPath = `${__dirname}/../data/library_helpers/CQLFiles/STU3`;
+  } else {
+    helperPath = `${__dirname}/../data/library_helpers/CQLFiles/DSTU2`;
+  }
+
   const artifactJson = cqlArtifact.toJson();
   const artifacts = [artifactJson, ...externalLibs];
   const planDefinition = writePlanDefinition(cqlArtifact);
-  const library = writeLibrary(cqlArtifact, Buffer.from(artifactJson.text).toString('base64'), 'BASE64');
-  // We must first convert to ELM before packaging up
-  convertToElm(artifacts, (err, elmFiles) => {
-    if (err) {
-      callback(err);
-      return;
-    }
-    // Now build the zip, piping it to the writestream
-    const archive = archiver('zip', { zlib: { level: 9 } })
-      .on('error', callback);
-    writeStream.on('close', callback);
-    archive.pipe(writeStream);
-    externalLibs.forEach(artifact => {
-      archive.append(artifact.text, { name: `${artifact.filename}.cql` });
-    });
-    archive.append(artifactJson.text, { name: `${artifactJson.filename}.cql` });
-    archive.append(planDefinition, { name: `${artifactJson.filename}-PlanDefinition.json` });
-    archive.append(library, {name: `${artifactJson.filename}-Library-Bundle.json` })
-    elmFiles.forEach((e, i) => {
-      archive.append(e.content.replace(/\r\n|\r|\n/g, '\r\n'), { name: `${e.name}.json` });
-    });
-    let helperPath;
-    if (fhirTarget.version === '3.0.0') {
-      helperPath = `${__dirname}/../data/library_helpers/CQLFiles/STU3`;
-    } else {
-      helperPath = `${__dirname}/../data/library_helpers/CQLFiles/DSTU2`;
-    }
-    archive.directory(helperPath, '/');
-    archive.finalize();
-  });
+
+  var cql_to_elm = properties.get('CQL_TO_ELM_BASE');
+  var tmpCQL = tmp.fileSync({postfix: '.cql' , dir: helperPath});
+  fs.writeSync(tmpCQL.fd, artifactJson.text);
+
+  var elm;
+  var library;
+  try {
+    exec(cql_to_elm + " -i " + tmpCQL.name + " -o " + helperPath + "/" + artifactJson.filename + ".xml",
+        (error, stdout, stderr) => {
+          if (error) {
+            console.log(`error: ${error.message}`);
+          }
+          if (stderr) {
+            console.log(`stderr: ${stderr}`);
+          }
+          elm = fs.readFileSync(helperPath + "/" + artifactJson.filename + ".xml", 'utf8');
+          library = writeLibrary(cqlArtifact, Buffer.from(artifactJson.text).toString('base64'),
+              Buffer.from(elm).toString('base64'));
+
+          // We must first convert to ELM before packaging up
+          convertToElm(artifacts, (err, elmFiles) => {
+            if (err) {
+              callback(err);
+              return;
+            }
+            // Now build the zip, piping it to the writestream
+            const archive = archiver('zip', {zlib: {level: 9}})
+                .on('error', callback);
+            writeStream.on('close', callback);
+            archive.pipe(writeStream);
+            externalLibs.forEach(artifact => {
+              archive.append(artifact.text, {name: `${artifact.filename}.cql`});
+            });
+            archive.append(artifactJson.text, {name: `${artifactJson.filename}.cql`});
+            archive.append(planDefinition, {name: `${artifactJson.filename}-PlanDefinition.json`});
+            archive.append(library, {name: `${artifactJson.filename}-Library-Bundle.json`});
+            archive.append(elm, {name: `${artifactJson.filename}.xml`});
+            elmFiles.forEach((e, i) => {
+              archive.append(e.content.replace(/\r\n|\r|\n/g, '\r\n'), {name: `${e.name}.json`});
+            });
+            archive.directory(helperPath, '/');
+            archive.finalize();
+          });
+
+          // Remove tmp file
+          tmpCQL.removeCallback();
+          fs.unlinkSync(helperPath + "/" + artifactJson.filename + ".xml")
+        });
+
+  } catch (error) {
+    // Remove tmp file
+    tmpCQL.removeCallback();
+    fs.unlinkSync(helperPath + "/" + artifactJson.filename + ".xml")
+    console.log("Error creating library bundle.");
+    console.log(error);
+  }
 }
 
 function convertToElm(artifacts, callback /* (error, elmFiles) */) {
@@ -1289,14 +1329,15 @@ function writePlanDefinition(artifact) {
     }
 }
 
-function writeLibrary(artifact, cql_base64_data) {
+function writeLibrary(artifact, cql_base64_data, elm_base64_data) {
     return ejs.render(
         templateMap.Library,
         {
             element_id: artifact.name.toLowerCase().replace(/\s/g , "-"),
             element_version: artifact.version,
             element_library_url: artifact.planDefinition.planDefinitionLibraryURL,
-            cql_base64_data: cql_base64_data
+            cql_base64_data: cql_base64_data,
+            elm_base64_data: elm_base64_data
         }
     );
 }

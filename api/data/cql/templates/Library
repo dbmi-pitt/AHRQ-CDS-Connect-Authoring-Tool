@@ -20,6 +20,10 @@
 		    {
 			"contentType": "text/cql",
 			"data": "<%-cql_base64_data%>"
+		    },
+		    {
+			"contentType": "application/elm+xml",
+			"data": "<%-elm_base64_data%>"
 		    }
 		]
 	    }
