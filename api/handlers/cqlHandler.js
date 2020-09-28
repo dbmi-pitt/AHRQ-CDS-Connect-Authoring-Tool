@@ -1313,10 +1313,10 @@ function writePlanDefinition(artifact) {
         return ejs.render(
             templateMap.PlanDefinition,
             {
-                element_id: artifact.name.toLowerCase().replace(/\s/g , "-"),
+                element_id: artifact.planDefinition.planDefinitionURL,
                 element_name: artifact.name,
                 element_version: artifact.version,
-                element_url: artifact.planDefinition.planDefinitionURL,
+                element_url: "PlanDefinition/" + artifact.planDefinition.planDefinitionURL,
                 element_library_url: artifact.planDefinition.planDefinitionLibraryURL,
                 element_topic: artifact.planDefinition.planDefinitionTopicText,
                 element_related_artifact_type: artifact.planDefinition.relatedArtifactType,
@@ -1333,9 +1333,9 @@ function writeLibrary(artifact, cql_base64_data, elm_base64_data) {
     return ejs.render(
         templateMap.Library,
         {
-            element_id: artifact.name.toLowerCase().replace(/\s/g , "-"),
+            element_id: artifact.planDefinition.planDefinitionLibraryURL,
             element_version: artifact.version,
-            element_library_url: artifact.planDefinition.planDefinitionLibraryURL,
+            element_library_url: "Library/" + artifact.planDefinition.planDefinitionLibraryURL,
             cql_base64_data: cql_base64_data,
             elm_base64_data: elm_base64_data
         }

@@ -67,14 +67,14 @@ export default class ArtifactPlanDefinitionModal extends Component {
                         <div className="artifact-form__inputs d-flex justify-content-start">
                             <div className='form__group p-2'>
                                 <div className='form__group p-2'>
-                                    <label htmlFor="urlID">Plan Definition URL</label>
+                                    <label htmlFor="urlID">Plan Definition ID</label>
                                     <input id="urlID" required className='input__long' name='planDefinitionURL'
                                            type='text'
                                            onChange={this.handleInputChange}/>
                                 </div>
 
                                 <div className='form__group p-2'>
-                                    <label htmlFor="libraryID">Library URL</label>
+                                    <label htmlFor="libraryID">Library ID</label>
                                     <input id="libraryID" required className='input__long'
                                            name='planDefinitionLibraryURL' type='text'
                                            onChange={this.handleInputChange}/>

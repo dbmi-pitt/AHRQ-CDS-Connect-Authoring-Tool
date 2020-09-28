@@ -55,6 +55,16 @@ export default [
     comparisonOperator: null
   },
   {
+    id: 'ValueComparisonObservation',
+    name: 'Value Comparison',
+    inputTypes: ['list_of_observations'],
+    returnType: 'boolean',
+    validator: {type: 'require', fields: ['minValue', 'minOperator', 'unit'], args: null},
+    values: {minOperator: undefined, minValue: '', maxOperator: undefined, maxValue: '', unit: ''},
+    cqlTemplate: 'ValueComparisonObservationList',
+    comparisonOperator: null
+  },
+  {
     id: 'QuantityValue',
     name: 'Quantity Value',
     inputTypes: ['observation'],
