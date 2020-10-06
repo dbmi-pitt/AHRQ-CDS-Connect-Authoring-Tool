@@ -34,6 +34,7 @@ function getExpressionSentenceValue(modifier) {
     WithUnit: { modifierText: '', leadingText: 'with unit', type: 'post-list' },
     ValueComparisonNumber: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' },
     ValueComparisonObservation: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' },
+    ValueComparisonObservationList: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' },
     QuantityValue: { modifierText: 'quantity value', leadingText: '', type: 'value' }, // Will not be displayed in phrase
     ConceptValue: { modifierText: 'concept value', leadingText: '', type: 'value' }, // Will not be displayed in phrase
     Qualifier: { modifierText: 'with a code', leadingText: '', type: 'post' },
@@ -117,6 +118,7 @@ function getExpressionSentenceValue(modifier) {
         }
         break;
       }
+      case 'ValueComparisonObservationList':
       case 'ValueComparisonObservation': {
         const minOperatorWord = getOperation(modifier.values.minOperator);
         const maxOperatorWord = getOperation(modifier.values.maxOperator);

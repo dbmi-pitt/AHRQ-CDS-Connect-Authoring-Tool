@@ -48,6 +48,7 @@ function transformObservation(childInstance) {
     let modifier = modifierParam;
     let observationValueSets = ValueSets.observations[parameter.value];
     switch (modifier.id) {
+      case 'ValueComparisonObservationList':
       case 'ValueComparisonObservation': {
         if (parameter.value) {
           modifier.values.unit = observationValueSets.units.code.replace(/'/g, '');
