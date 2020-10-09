@@ -56,6 +56,7 @@ export default [
   },
   {
     id: 'ValueComparisonObservationList',
+    type: 'ValueComparisonObservation',
     name: 'Value Comparison',
     inputTypes: ['list_of_observations'],
     returnType: 'boolean',

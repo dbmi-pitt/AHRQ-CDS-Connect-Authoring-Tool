@@ -19,7 +19,7 @@
 		    ]
 		},
 		"status": "draft",
-		"url": "<%-element_url%>",
+		"url": "http://hl7.org/fhir/ig/PDDI-CDS/PlanDefinition/<%-element_id%>",
 		"topic": [
 		    {
 			"text": "<%-element_topic%>"
@@ -27,7 +27,7 @@
 		],
 		"library": [
 		    {
-			"reference": "<%-element_library_url%>"
+			"reference": "Library/<%-element_library_url%>"
 		    }
 		],
 		"extension": [
