@@ -445,7 +445,7 @@ bluebird@~3.4.1:
   resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.4.7.tgz#f72d760be09b7f76d08ed8fae98b289a8d05fab3"
   integrity sha1-9y12C+Cbf3bQjtj66Ysomo0F+rM=
 
-body-parser@1.19.0, body-parser@^1.18.2:
+body-parser@1.19.0, body-parser@^1.19.0:
   version "1.19.0"
   resolved "https://registry.yarnpkg.com/body-parser/-/body-parser-1.19.0.tgz#96b2709e57c9c4e09a6fd66a8fd979844f69f08a"
   integrity sha512-dhEPs72UPbDnAQJ9ZKMNTP6ptJaionhP5cBb541nXPlW60Jepo9RV/a4fX4XWW9CuFNK22krhrj1+rgzifNCsw==
@@ -3369,6 +3369,13 @@ propagate@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/propagate/-/propagate-1.0.0.tgz#00c2daeedda20e87e3782b344adba1cddd6ad709"
   integrity sha1-AMLa7t2iDofjeCs0Stuhzd1q1wk=
+
+properties-reader@^2.1.1:
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/properties-reader/-/properties-reader-2.1.1.tgz#9b1bee1538352595f218f3578b3d3cf8fbfd2f6d"
+  integrity sha512-1t9JG6aMQn/I6ZzwbusXJB4pvHLbi43cQVZj56CuBq7tUmLe1S/HtSN5iqw4qg26UxOQLj0IEfikD5Zcrc3XvA==
+  dependencies:
+    mkdirp "~0.5.1"
 
 proxy-addr@~2.0.5:
   version "2.0.5"
