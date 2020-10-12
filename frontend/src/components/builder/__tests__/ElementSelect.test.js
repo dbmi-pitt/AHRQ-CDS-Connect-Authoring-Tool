@@ -57,7 +57,7 @@ describe('<ElementSelect />', () => {
 
       openSelect(getByLabelText('Choose element type'));
 
-      expect(container.querySelectorAll('.element-select__option')).toHaveLength(11);
+      expect(container.querySelectorAll('.element-select__option')).toHaveLength(13);
     });
 
     it('options display correct values and have key icon if VSAC auth required', () => {
@@ -115,7 +115,7 @@ describe('<ElementSelect />', () => {
 
   describe('in base elements', () => {
     it('does not allow an option to be selected', () => {
-      const { container, getByText, getByLabelText } = renderComponent({ disableElement: true });
+      const { container, getByText, getByLabelText } = renderComponent({ disableAddElement: true });
 
       openSelect(getByLabelText('Choose element type'));
 

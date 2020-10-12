@@ -22,14 +22,14 @@ For specific development details of each component, including configuration, see
 
 ### Prerequisites
 
-First, ensure you have [Node.js LTS](https://nodejs.org/), [Yarn](https://yarnpkg.com/), and MongoDB[https://www.mongodb.com/download-center/community] installed.  The CDS Authoring Tool is tested using MongoDB 3.4.x, but later versions are expected to work.
+First, ensure you have [Node.js LTS](https://nodejs.org/), [Yarn](https://yarnpkg.com/), and [MongoDB](https://www.mongodb.com/download-center/community) installed.  The CDS Authoring Tool is tested using MongoDB 3.4.x, but later versions are expected to work.
 
 ### Install Node Foreman
 
 To allow for simple development, a _Procfile_ is provided which will launch the _api_ and _frontend_ projects in development mode.  To use the Procfile, you must install [node-foreman](https://www.npmjs.com/package/foreman).
 
 ```bash
-yarn add global foreman
+yarn global add foreman
 ```
 
 ### Install Dependencies
@@ -96,7 +96,7 @@ docker build -t cdsauthoringtool .
 
 For the authoring tool to run in a docker container, MongoDB and CQL-to-ELM docker containers must be linked.  The following commands run the necessary containers, with the required links and exposed ports:
 ```bash
-docker run --name cat-cql2elm -d cqframework/cql-translation-service:v1.3.17
+docker run --name cat-cql2elm -d cqframework/cql-translation-service:v1.3.19
 docker run --name cat-mongo -d mongo:3.4
 docker run --name cat \
   --link cat-cql2elm:cql2elm \

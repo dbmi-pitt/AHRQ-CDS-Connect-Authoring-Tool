@@ -26,6 +26,8 @@ button.transparent-button {
     transparent,
     none);
 
+  border: 1px solid transparent;
+
   &:hover,
   &:focus,
   &:active {
@@ -124,4 +126,8 @@ button.danger-button {
 .delete-valueset-button,
 .fa-eye {
   cursor: pointer;
+}
+
+button.has-comment svg {
+  color: $blue-light;
 }

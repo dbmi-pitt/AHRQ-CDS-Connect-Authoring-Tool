@@ -1,10 +1,14 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import _ from 'lodash';
-import FontAwesome from 'react-fontawesome';
 import pluralize from 'pluralize';
-import classNames from 'classnames';
+import classnames from 'classnames';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faCheck, faExclamationCircle, faComment, faCommentDots, faAngleDoubleDown, faAngleDoubleRight, faTimes
+} from '@fortawesome/free-solid-svg-icons';
 import { UncontrolledTooltip } from 'reactstrap';
+import _ from 'lodash';
+
 import { findValueAtPath } from '../../utils/find';
 import { doesBaseElementInstanceNeedWarning, hasDuplicateName, hasGroupNestedWarning, hasInvalidListWarning }
   from '../../utils/warnings';
@@ -13,15 +17,18 @@ import { getReturnType, getFieldWithId } from '../../utils/instances';
 import ConjunctionGroup from './ConjunctionGroup';
 import ExpressionPhrase from './modifiers/ExpressionPhrase';
 import StringField from './fields/StringField';
+import TextAreaField from "./fields/TextAreaField";
 
 const listTypes = [
   'list_of_observations',
   'list_of_conditions',
   'list_of_medication_statements',
-  'list_of_medication_orders',
+  'list_of_medication_requests',
   'list_of_procedures',
   'list_of_allergy_intolerances',
   'list_of_encounters',
+  'list_of_immunizations',
+  'devices',
   'list_of_booleans',
   'list_of_system_quantities',
   'list_of_system_concepts',
@@ -32,10 +39,12 @@ const singularTypes = [
   'observation',
   'condition',
   'medication_statement',
-  'medication_order',
+  'medication_request',
   'procedure',
   'allergy_intolerance',
   'encounter',
+  'immunization',
+  'device',
   'boolean',
   'system_quantity',
   'system_concept'
@@ -46,7 +55,8 @@ export default class ListGroup extends Component {
     super(props);
 
     this.state = {
-      isExpanded: true
+      isExpanded: true,
+      showComment: false
     };
   }
 
@@ -68,12 +78,16 @@ export default class ListGroup extends Component {
     }
   }
 
-  updateBaseElementList = (name, uniqueId) => {
+  toggleComment = () => {
+    this.setState({ showComment: !this.state.showComment });
+  }
+
+  updateBaseElementList = (data, type, uniqueId) => {
     const newBaseElementLists = _.cloneDeep(this.props.artifact.baseElements);
     const baseElementIndex = this.props.artifact.baseElements.findIndex(baseElement =>
       baseElement.uniqueId === uniqueId);
-    const nameField = getFieldWithId(newBaseElementLists[baseElementIndex].fields, 'element_name');
-    nameField.value = name;
+    const field = getFieldWithId(newBaseElementLists[baseElementIndex].fields, type);
+    field.value = data;
 
     this.props.updateBaseElementLists(newBaseElementLists, 'baseElements');
   }
@@ -253,7 +267,8 @@ export default class ListGroup extends Component {
           {isAndOrElement && hasInvalidListWarning(instance.returnType) &&
             <div className="warning">
               Warning: Elements in groups combined with and/or must all have return type 'boolean'.
-            </div>}
+            </div>
+          }
 
           <ExpressionPhrase
             class="expression expression__group"
@@ -263,11 +278,15 @@ export default class ListGroup extends Component {
 
           <div className="return-type">
             <div className="bold align-right return-type__label">Return Type:</div>
+
             <div className="return-type__value">
-              {isAndOrElement
-                && (_.startCase(instance.returnType) === 'Boolean' || instance.childInstances.length === 1)
-                && <FontAwesome name="check" className="check" />}
-              {!isAndOrElement && <FontAwesome name="check" className="check" />}
+              {
+                isAndOrElement &&
+                (_.startCase(instance.returnType) === 'Boolean' || instance.childInstances.length === 1) &&
+                <FontAwesomeIcon icon={faCheck} className="check" />
+              }
+
+              {!isAndOrElement && <FontAwesomeIcon icon={faCheck} className="check" />}
               {_.startCase(instance.returnType)}
             </div>
           </div>
@@ -318,7 +337,7 @@ export default class ListGroup extends Component {
           validateReturnType={isAndOrElement}
           options={isAndOrElement ? '' : 'listOperations'}
           disableIndent={!isAndOrElement}
-          disableElement={baseElementListUsed}
+          disableAddElement={baseElementListUsed}
           elementUniqueId={instance.uniqueId}
         />
       </div>
@@ -326,18 +345,26 @@ export default class ListGroup extends Component {
   }
 
   renderList = () => {
-    const { instance } = this.props;
-    const { isExpanded } = this.state;
+    const { instance, instanceNames, baseElements, parameters } = this.props;
+    const { isExpanded, showComment } = this.state;
     const name = getFieldWithId(instance.fields, 'element_name').value;
+    const comment = getFieldWithId(instance.fields,'comment').value;
     const allInstancesInAllTrees = this.props.getAllInstancesInAllTrees();
-    const { instanceNames, baseElements, parameters } = this.props;
+
     const needsDuplicateNameWarning
       = hasDuplicateName(instance, instanceNames, baseElements, parameters, allInstancesInAllTrees);
     const needsBaseElementWarning = doesBaseElementInstanceNeedWarning(instance, allInstancesInAllTrees);
+    const needsIntersectionWarning =
+      instance.returnType === 'list_of_any' && instance.name === 'Intersect' && instance.childInstances.length > 0;
+    const needsHasWarningsWarning =
+      needsDuplicateNameWarning || needsBaseElementWarning || this.hasNestedWarnings(instance.childInstances);
+
     const baseElementListUsed = this.isBaseElementListUsed(instance);
     const disabledClass = baseElementListUsed ? 'disabled' : '';
-    const headerClass = classNames('card-element__header', { collapsed: !isExpanded });
-    const headerTopClass = classNames('card-element__header-top', { collapsed: !isExpanded });
+    const headerClass = classnames('card-element__header', { collapsed: !isExpanded });
+    const headerTopClass = classnames('card-element__header-top', { collapsed: !isExpanded });
+    const hasComment = comment && comment !== '';
+
     return (
       <div className="card-element">
         <div className={headerClass}>
@@ -345,67 +372,96 @@ export default class ListGroup extends Component {
             {isExpanded ?
               <div className="card-element__heading">
                 <StringField
-                  id={'base_element_name'}
-                  name={'Group'}
+                  id="base_element_name"
+                  name="Group"
                   uniqueId={instance.uniqueId}
-                  updateInstance={(value) => {
-                    this.updateBaseElementList(value.base_element_name, instance.uniqueId);
+                  updateInstance={value => {
+                    this.updateBaseElementList(value.base_element_name, "element_name", instance.uniqueId);
                   }}
                   value={name}
                 />
-                {needsDuplicateNameWarning && !needsBaseElementWarning
-                  && <div className="warning">Warning: Name already in use. Choose another name.</div>}
+
+                {showComment &&
+                  <TextAreaField
+                    id="base_comment"
+                    name="Comment"
+                    value={comment}
+                    updateInstance={value => {
+                      this.updateBaseElementList(value.base_comment, "comment", instance.uniqueId);
+                    }}
+                  />
+                }
+
+                {needsDuplicateNameWarning && !needsBaseElementWarning &&
+                  <div className="warning">Warning: Name already in use. Choose another name.</div>
+                }
+
                 {needsBaseElementWarning &&
                   <div className="warning">
                     Warning: One or more uses of this Base Element have changed. Choose another name.
-                  </div>}
-                {instance.returnType === 'list_of_any'
-                  && instance.name === 'Intersect'
-                  && instance.childInstances.length > 0
-                  && <div className="warning">
+                  </div>
+                }
+
+                {needsIntersectionWarning &&
+                  <div className="warning">
                     Warning: Intersecting different types will always result in an empty list
-                  </div>}
+                  </div>
+                }
               </div>
               :
               <div className="card-element__heading">
                 <div className="heading-name">
                   {name}:
-                  {(needsDuplicateNameWarning
-                    || needsBaseElementWarning
-                    || this.hasNestedWarnings(instance.childInstances))
-                    && <div className="warning"><FontAwesome name="exclamation-circle" /> Has warnings</div>}
+                  {needsHasWarningsWarning &&
+                    <div className="warning"><FontAwesomeIcon icon={faExclamationCircle} /> Has warnings</div>
+                  }
                 </div>
               </div>
             }
 
             <div className="card-element__buttons">
+              {isExpanded &&
+                <button
+                  onClick={this.toggleComment}
+                  className={classnames('element_hidebutton', 'transparent-button', hasComment && 'has-comment')}
+                  aria-label="show comment"
+                >
+                  <FontAwesomeIcon icon={hasComment ? faCommentDots : faComment} />
+                </button>
+              }
+
               <button
                 onClick={isExpanded ? this.collapse : this.expand}
                 className="element__hidebutton transparent-button"
-                aria-label={`hide ${name}`}>
-                <FontAwesome name={isExpanded ? 'angle-double-down' : 'angle-double-right'} />
+                aria-label={`hide ${name}`}
+              >
+                <FontAwesomeIcon icon={isExpanded ? faAngleDoubleDown : faAngleDoubleRight} />
               </button>
+
               <button
                 aria-label="Remove base element list"
                 className={`element__deletebutton transparent-button ${disabledClass}`}
                 id={`deletebutton-${instance.uniqueId}`}
-                onClick={() => this.deleteBaseElementList(instance.uniqueId)}>
-                <FontAwesome name="close" />
+                onClick={() => this.deleteBaseElementList(instance.uniqueId)}
+              >
+                <FontAwesomeIcon icon={faTimes} />
               </button>
+
               {baseElementListUsed &&
-                <UncontrolledTooltip
-                  target={`deletebutton-${instance.uniqueId}`} placement="left">
+                <UncontrolledTooltip target={`deletebutton-${instance.uniqueId}`} placement="left">
                   To delete this Base Element List, remove all references to it.
-              </UncontrolledTooltip>}
+                </UncontrolledTooltip>
+              }
             </div>
           </div>
-          {!isExpanded ?
+
+          {!isExpanded &&
             <ExpressionPhrase
               class="expression expression__group expression-collapsed"
               instance={instance}
               baseElements={baseElements}
             />
-            : null}
+          }
         </div>
 
         {isExpanded && this.renderListGroup()}

@@ -1,9 +1,11 @@
-import React, { Fragment, Component } from 'react';
+import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import _ from 'lodash';
-import FontAwesome from 'react-fontawesome';
 import pluralize from 'pluralize';
+import classnames from 'classnames';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBan, faKey, faCheck, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { components as SelectComponents } from 'react-select';
+import _ from 'lodash';
 
 import ElementModal from './ElementModal';
 import VSACAuthenticationModal from './VSACAuthenticationModal';
@@ -24,27 +26,24 @@ const getAllElements = categories => _.flatten(categories.map(cat => (
 
 const ElementMenuList = ({ children, ...props }) => {
   const { options } = props;
-  const isDisabled = options.some(({ isDisabled }) => isDisabled);
-
-  const optionStyle = {
-    padding: '8px 12px'
-  };
+  const optionStyle = { padding: '8px 12px' };
 
   return (
     <SelectComponents.MenuList {...props}>
-      {isDisabled ? (
+      {options.length === 0 ? (
         <div style={{ ...optionStyle, color: '#ccc' }}>
-          <FontAwesome name="ban" /> Cannot add element when Base Element List in use
+          <FontAwesomeIcon icon={faBan} /> Cannot add element when Base Element List in use
         </div>
       ) : (
-        <Fragment>
+        <>
           {children}
+
           <div style={{borderTop: '1px solid #eee', color: '#ccc'}}>
             <div style={optionStyle}>
-              <FontAwesome name="key" /> VSAC authentication required
+              <FontAwesomeIcon icon={faKey} /> VSAC authentication required
             </div>
           </div>
-        </Fragment>
+        </>
       )}
     </SelectComponents.MenuList>
   );
@@ -53,11 +52,17 @@ const ElementMenuList = ({ children, ...props }) => {
 const ElementOption = ({ children, ...props }) => (
   <SelectComponents.Option {...props}>
     <span className="element-select__option-value">{children}</span>
-    {(props.data.vsacAuthRequired || props.isDisabled) && (
-      <FontAwesome name="key" className={`element-select__option-category ${props.isDisabled ? 'is-disabled' : ''}`} />
-    )}
+    {props.data.vsacAuthRequired &&
+      <FontAwesomeIcon
+        icon={faKey}
+        className={classnames('element-select__option-category', props.isDisabled && 'is-disabled')}
+      />
+    }
+
     {props.data.displayReturnType && (
-      <span className="element-select__option-value">{` (${props.data.displayReturnType})`}</span>
+      <span className="element-select__option-value">
+        {` (${props.data.displayReturnType})`}
+      </span>
     )}
   </SelectComponents.Option>
 );
@@ -72,8 +77,10 @@ const elementOptions = [
   { value: 'baseElement', label: 'Base Elements', vsacAuthRequired: false },
   { value: 'condition', label: 'Condition', vsacAuthRequired: true, template: 'GenericCondition_vsac' },
   { value: 'demographics', label: 'Demographics', vsacAuthRequired: false },
+  { value: 'device', label: 'Device', vsacAuthRequired: true, template: 'GenericDevice_vsac' },
   { value: 'encounter', label: 'Encounter', vsacAuthRequired: true, template: 'GenericEncounter_vsac' },
   { value: 'externalCqlElement', label: 'External CQL', vsacAuthRequired: false },
+  { value: 'immunization', label: 'Immunization', vsacAuthRequired: true, template: 'GenericImmunization_vsac' },
   { value: 'listOperations', label: 'List Operations', vsacAuthRequired: false },
   {
     value: 'medicationStatement',
@@ -82,10 +89,10 @@ const elementOptions = [
     template: 'GenericMedicationStatement_vsac'
   },
   {
-    value: 'medicationOrder',
-    label: 'Medication Order',
+    value: 'medicationRequest',
+    label: 'Medication Request',
     vsacAuthRequired: true,
-    template: 'GenericMedicationOrder_vsac'
+    template: 'GenericMedicationRequest_vsac'
   },
   { value: 'observation', label: 'Observation', vsacAuthRequired: true, template: 'GenericObservation_vsac' },
   { value: 'booleanParameter', label: 'Parameters', vsacAuthRequired: false },
@@ -278,8 +285,8 @@ export default class ElementSelect extends Component {
 
     return (
       <div className="vsac-authenticate">
-        <button className="disabled-button" disabled={true}>
-          <FontAwesome name="check" /> VSAC Authenticated
+        <button className="disabled-button" disabled={true} aria-label="VSAC Authenticated">
+          <FontAwesomeIcon icon={faCheck} /> VSAC Authenticated
         </button>
 
         <ElementModal
@@ -295,7 +302,6 @@ export default class ElementSelect extends Component {
           vsacDetailsCodes={this.props.vsacDetailsCodes}
           vsacDetailsCodesError={this.props.vsacDetailsCodesError}
           vsacFHIRCredentials={this.props.vsacFHIRCredentials}
-
         />
 
         <CodeSelectModal
@@ -362,14 +368,26 @@ export default class ElementSelect extends Component {
     this.setState({ selectedElement, selectedExternalLibrary: null, selectedExternalDefinition: null });
   }
 
+  disableElement = elementType => {
+    const { categories } = this.state;
+    const disableableElements = ['Base Elements', 'Parameters', 'External CQL'];
+    const elementCategory = categories.find(category => category.name === elementType);
+
+    if (!elementCategory || disableableElements.indexOf(elementType) === -1) return false;
+    return elementCategory.entries.length === 0;
+  }
+
   render() {
-    const { inBaseElements, disableElement, elementUniqueId } = this.props;
+    const { inBaseElements, elementUniqueId, disableAddElement } = this.props;
     const { selectedElement, selectedExternalLibrary, selectedExternalDefinition } = this.state;
     const placeholderText = 'Choose element type';
     const elementOptionsToDisplay =
       elementOptions
         .filter(({ value }) => inBaseElements ? true : value !== 'listOperations')
-        .map(option => ({ ...option, isDisabled: disableElement }));
+        .map(option => ({
+          ...option,
+          isDisabled: this.disableElement(option.label)
+        }));
 
     let noAuthElementOptions;
     if (selectedElement && !selectedElement.vsacAuthRequired) {
@@ -419,8 +437,7 @@ export default class ElementSelect extends Component {
       <div className="element-select form__group">
         <div className="element-select__add-element">
           <div className="element-select__label">
-            <FontAwesome name="plus" />
-            Add element
+            <FontAwesomeIcon icon={faPlus} /> Add element
           </div>
 
           <StyledSelect
@@ -435,7 +452,7 @@ export default class ElementSelect extends Component {
             }
             placeholder={placeholderText}
             aria-label={placeholderText}
-            options={elementOptionsToDisplay}
+            options={disableAddElement ? [] : elementOptionsToDisplay}
             onChange={this.onElementSelected}
             components={{ MenuList: ElementMenuList, Option: ElementOption }}
             isClearable
@@ -501,7 +518,7 @@ ElementSelect.propTypes = {
   baseElements: PropTypes.array.isRequired,
   inBaseElements: PropTypes.bool.isRequired,
   elementUniqueId: PropTypes.string,
-  disableElement: PropTypes.bool,
+  disableAddElement: PropTypes.bool,
   externalCqlList: PropTypes.array.isRequired,
   loadExternalCqlList: PropTypes.func.isRequired
 };

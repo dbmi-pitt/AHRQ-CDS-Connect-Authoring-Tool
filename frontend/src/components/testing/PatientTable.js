@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import FontAwesome from 'react-fontawesome';
+import classnames from 'classnames';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCheckSquare, faSquare, faEye, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { UncontrolledTooltip } from 'reactstrap';
 import _ from 'lodash';
 
@@ -122,9 +124,14 @@ export default class PatientTable extends Component {
   // ----------------------- PERFORM CQL EXECUTION -------------------------- //
 
   executeCQL = (artifact, params, patients) => {
-    const dataModel = (patients[0].fhirVersion === 'STU3')
-      ? { name: 'FHIR', version: '3.0.0' }
-      : { name: 'FHIR', version: '1.0.2' };
+    const dataModel = { name: 'FHIR', version: '' };
+    if (patients[0].fhirVersion === 'DSTU2') {
+      dataModel.version = '1.0.2';
+    } else if (patients[0].fhirVersion === 'STU3') {
+      dataModel.version = '3.0.0';
+    } else {
+      dataModel.version = '4.0.0';
+    }
 
     const patientsInfo = patients
       .map(patient => patient.patient);
@@ -141,62 +148,58 @@ export default class PatientTable extends Component {
 
   // ----------------------- RENDER ---------------------------------------- //
 
-  renderConfirmDeleteModal() {
-    return (
-      <Modal
-        modalTitle="Delete Patient Confirmation"
-        modalId="confirm-delete-modal"
-        modalTheme="light"
-        modalSubmitButtonText="Delete"
-        handleShowModal={this.state.showConfirmDeleteModal}
-        handleCloseModal={this.closeConfirmDeleteModal}
-        handleSaveModal={this.handleDeletePatient}>
+  renderConfirmDeleteModal = () => (
+    <Modal
+      modalTitle="Delete Patient Confirmation"
+      modalId="confirm-delete-modal"
+      modalTheme="light"
+      modalSubmitButtonText="Delete"
+      handleShowModal={this.state.showConfirmDeleteModal}
+      handleCloseModal={this.closeConfirmDeleteModal}
+      handleSaveModal={this.handleDeletePatient}
+    >
+      <div className="delete-patient-confirmation-modal modal__content">
+        <h5>Are you sure you want to permanently delete the following Patient?</h5>
 
-        <div className="delete-patient-confirmation-modal modal__content">
-          <h5>Are you sure you want to permanently delete the following Patient?</h5>
-
-          <div className="patient-info">
-            <span>Name: </span>
-            <span>
-              {_.chain(this.state.patientToDelete)
-                  .get('patient.entry')
-                  .find({ resource: { resourceType: 'Patient' } })
-                  .get('resource.name[0].given[0]')
-                  .value() || 'given_placeholder'}
-              {' '}
-              {_.chain(this.state.patientToDelete)
+        <div className="patient-info">
+          <span>Name: </span>
+          <span>
+            {_.chain(this.state.patientToDelete)
                 .get('patient.entry')
                 .find({ resource: { resourceType: 'Patient' } })
-                .get('resource.name[0].family')
-                .value() || 'family_placeholder'}
-            </span>
-          </div>
+                .get('resource.name[0].given[0]')
+                .value() || 'given_placeholder'}
+            {' '}
+            {_.chain(this.state.patientToDelete)
+              .get('patient.entry')
+              .find({ resource: { resourceType: 'Patient' } })
+              .get('resource.name[0].family')
+              .value() || 'family_placeholder'}
+          </span>
         </div>
-      </Modal>
-    );
-  }
+      </div>
+    </Modal>
+  );
 
-  renderViewDetailsModal() {
-    return (
-      <Modal
-        modalTitle="View Patient Details"
-        modalId="view-details-modal"
-        modalTheme="light"
-        handleShowModal={this.state.showViewDetailsModal}
-        handleCloseModal={this.closeViewDetailsModal}
-        handleSaveModal={this.handleViewDetails}>
-
-        <div className="patient-table__modal modal__content">
-          <div className="patient-info">
-            <PatientView patient={this.state.patientToView} />
-          </div>
+  renderViewDetailsModal = () => (
+    <Modal
+      modalTitle="View Patient Details"
+      modalId="view-details-modal"
+      modalTheme="light"
+      handleShowModal={this.state.showViewDetailsModal}
+      handleCloseModal={this.closeViewDetailsModal}
+      handleSaveModal={this.handleViewDetails}
+    >
+      <div className="patient-table__modal modal__content">
+        <div className="patient-info">
+          <PatientView patient={this.state.patientToView} />
         </div>
-      </Modal>
-    );
-  }
+      </div>
+    </Modal>
+  );
 
   renderExecuteCQLModal() {
-    const fhirVersionMap = { '1.0.2': 'DSTU2', '3.0.0': 'STU3' };
+    const fhirVersionMap = { '1.0.2': 'DSTU2', '3.0.0': 'STU3', '4.0.0': 'R4' };
     const validArtifactsToExecute = this.props.artifacts.filter((a) => {
       const noFHIRVersion = a.fhirVersion === '';
       const sameFHIRVersion =
@@ -214,8 +217,8 @@ export default class PatientTable extends Component {
         submitDisabled={this.state.artifactToExecute == null}
         handleShowModal={this.state.showExecuteCQLModal}
         handleCloseModal={this.closeExecuteCQLModal}
-        handleSaveModal={this.handleExecuteCQL}>
-
+        handleSaveModal={this.handleExecuteCQL}
+      >
         <div className="patient-table__modal modal__content">
           <div className="select-label">FHIR Compatible Artifacts:</div>
           <StyledSelect
@@ -256,13 +259,13 @@ export default class PatientTable extends Component {
         <td className="patients__tablecell-tiny" data-th="Check Box">
           <button aria-label="View"
             id={`SelectPatientTooltip-${patient._id}`}
-            className={`button invisible-button ${
-              differentFHIRVersion ? 'disabled' : ''
-            }`}
-            onClick={() => { if (!differentFHIRVersion) this.updatePatientsToExecute(patient); }}>
-            <FontAwesome
-              name={patientSelected ? 'check-square' : 'square'}
-              className={`select-patient-checkbox ${patientSelected ? 'checked' : ''}`} />
+            className={classnames('button invisible-button', differentFHIRVersion && 'disabled')}
+            onClick={() => { if (!differentFHIRVersion) this.updatePatientsToExecute(patient); }}
+          >
+            <FontAwesomeIcon
+              icon={patientSelected ? faCheckSquare : faSquare}
+              className={classnames('select-patient-checkbox', patientSelected && 'checked')}
+            />
           </button>
         </td>
 
@@ -321,18 +324,20 @@ export default class PatientTable extends Component {
         <td data-th="">
           <button aria-label="View"
             className="button primary-button details-button"
-            onClick={() => this.openViewDetailsModal(patient)}>
-            <FontAwesome name='eye'/>
+            onClick={() => this.openViewDetailsModal(patient)}
+          >
+            <FontAwesomeIcon icon={faEye} /> View
           </button>
 
           <button
             id={`DeletePatientTooltip-${patient._id}`}
-            className={`button danger-button ${
-              patientSelected ? 'disabled' : ''
-            }`}
-            onClick={() => { if (!patientSelected) this.openConfirmDeleteModal(patient); }}>
-            Delete
+            className={classnames('button danger-button', patientSelected && 'disabled')}
+            onClick={() => { if (!patientSelected) this.openConfirmDeleteModal(patient); }}
+            aria-label="Delete"
+          >
+            <FontAwesomeIcon icon={faTimes} /> Delete
           </button>
+
           {patientSelected &&
             <UncontrolledTooltip target={`DeletePatientTooltip-${patient._id}`} placement="top">
               To delete this patient, first deselect it.
@@ -360,8 +365,8 @@ export default class PatientTable extends Component {
 
     return (
       <div className="vsac-authenticate">
-        <button className="disabled-button" disabled={true}>
-          <FontAwesome name="check" /> VSAC Authenticated
+        <button className="disabled-button" disabled={true} aria-label="VSAC Authenticated">
+          <FontAwesomeIcon icon={faCheck} /> VSAC Authenticated
         </button>
       </div>
     );
@@ -369,6 +374,7 @@ export default class PatientTable extends Component {
 
   render() {
     const patients = this.props.patients;
+    const loggedIn = this.props.vsacFHIRCredentials.username != null;
 
     return (
       <div className="patient-table">
@@ -380,10 +386,9 @@ export default class PatientTable extends Component {
               this.props.vsacFHIRCredentials.username == null
               || this.state.patientsToExecute.length === 0
             }
-            className={`button primary-button execute-button ${
-              this.props.vsacFHIRCredentials.username != null ? '' : 'disabled-button'
-            }`}
-            onClick={() => this.openExecuteCQLModal()}>
+            className={classnames('button primary-button execute-button', !loggedIn && 'disabled-button')}
+            onClick={() => this.openExecuteCQLModal()}
+          >
             Execute CQL on Selected Patients
           </button>
         </div>
@@ -397,7 +402,7 @@ export default class PatientTable extends Component {
               <th scope="col" className="patients__tablecell-short">Gender</th>
               <th scope="col" className="patients__tablecell-short">Version</th>
               <th scope="col" className="patients__tablecell-wide">Last Updated</th>
-              <th></th>
+              <th aria-label="buttons"></th>
             </tr>
           </thead>
 

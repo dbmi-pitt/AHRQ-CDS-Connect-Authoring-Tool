@@ -129,13 +129,20 @@ export default class ErrorStatement extends Component {
   }
 
   renderWarning = (statement) => {
-    if (statement.condition.value) { return null; }
-
-    if ((statement.thenClause !== '') || (statement.child && statement.child.statements
-        && statement.child.statements.some(val => this.renderWarning(val)))) {
-      return <div className="warning">You need an If statement</div>;
+    if (statement.condition.value && (_.isEmpty(statement.thenClause) )) {
+      return <div className="warning errorStatement">You need a Then statement</div>;
     }
 
+    if ( ((statement.thenClause !== '') && _.isEmpty(statement.condition.value))||
+      (statement.child && statement.child.statements  &&
+        statement.child.statements.some(val => this.renderWarning(val)))) {
+      return <div className="warning errorStatement">You need an If statement</div>;
+    }
+
+    console.log(_.isEmpty(statement.condition.value));
+    if ( !(_.isEmpty(this.props.errorStatement.elseClause)) && _.isEmpty(statement.condition.value)){
+      return <div className="warning errorStatement">You need an If statement</div>;
+    }
     return null;
   }
 
@@ -206,6 +213,10 @@ export default class ErrorStatement extends Component {
       <button
         disabled={!statement.condition.value}
         aria-disabled={!statement.condition.value}
+        aria-label={
+            this.props.errorStatement.statements[index].useThenClause ?
+                'And Also If...' : '(Remove nested statements)'
+        }
         className={`button primary-button ${statement.condition.value ? '' : 'disabled'}`}
         onClick={e => this.handleUseThenClause(index)}>
         {this.props.errorStatement.statements[index].useThenClause ? 'And Also If...' : '(Remove nested statements)'}
@@ -222,6 +233,7 @@ export default class ErrorStatement extends Component {
         <button
           disabled={disabled}
           aria-disabled={disabled}
+          aria-label="Or Else If"
           className="button primary-button"
           onClick={e => this.addStatement(parent)}>Or Else If...</button>
       </div>
@@ -233,6 +245,7 @@ export default class ErrorStatement extends Component {
     <div className="error-statement__action">
       <button
         className="button primary-button"
+        aria-label="Delete If Clause"
         onClick={e => this.deleteStatement(parent, index)}>Delete If Clause
       </button>
     </div>

@@ -130,14 +130,14 @@ module.exports = [
         ]
       },
       {
-        id: 'GenericMedicationOrder_vsac',
-        name: 'Medication Order',
-        returnType: 'list_of_medication_orders',
+        id: 'GenericMedicationRequest_vsac',
+        name: 'Medication Request',
+        returnType: 'list_of_medication_requests',
         suppress: true,
         extends: 'Base',
-        template: 'GenericMedicationOrder',
+        template: 'GenericMedicationRequest',
         fields: [
-          { id: 'medicationOrder', type: 'medicationOrder_vsac', name: 'Medication Order' }
+          { id: 'medicationRequest', type: 'medicationRequest_vsac', name: 'Medication Request' }
         ]
       },
     ]
@@ -252,4 +252,40 @@ module.exports = [
     name: 'External CQL',
     entries: []
   },
+  {
+    id: 13,
+    icon: 'syringe',
+    name: 'Immunizations',
+    entries: [
+      {
+        id: 'GenericImmunization_vsac',
+        name: 'Immunization',
+        returnType: 'list_of_immunizations',
+        suppress: true,
+        extends: 'Base',
+        template: 'GenericImmunization',
+        fields: [
+          { id: 'immunization', type: 'immunization_vsac', name: 'Immunization' }
+        ]
+      },
+    ]
+  },
+  {
+    id: 14,
+    icon: 'heartbeat',
+    name: 'Device',
+    entries: [
+      {
+        id: 'GenericDevice_vsac',
+        name: 'Device',
+        returnType: 'list_of_devices',
+        suppress: true,
+        extends: 'Base',
+        template: 'GenericDevice',
+        fields: [
+          { id: 'device', type: 'device_vsac', name: 'Device' }
+        ]
+      },
+    ]
+  }
 ];

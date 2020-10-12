@@ -56,7 +56,7 @@ function transformObservation(childInstance) {
         }
         break;
       }
-      case 'ValueComparisonDoseMedicationOrder':
+      case 'ValueComparisonDoseMedicationRequest':
       case 'ValueComparisonDoseMedicationStatement': {
         if (parameter.value) {
           modifier.values.unit = observationValueSets.units.code.replace(/'/g, '');

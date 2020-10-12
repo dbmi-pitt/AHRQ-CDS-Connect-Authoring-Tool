@@ -20,6 +20,7 @@ const app = express();
 const port = process.env.API_PORT || 3001;
 
 // MongoDB Configuration
+mongoose.Promise = global.Promise;
 mongoose.connect(config.get('mongo.url'));
 
 // Configure API to use BodyParser and handle json data
@@ -52,7 +53,7 @@ if (!module.parent) { // check if within a test or not.
     const migrator = new mm.Migrator(mmConfig);
     migrator.runFromDir(path.resolve(__dirname, 'migrations'), (err, results) => {
       if (err) {
-        console.err('Migration Error:', err);
+        console.error('Migration Error:', err);
         process.exit(1);
       }
       console.log('Migrations Complete');

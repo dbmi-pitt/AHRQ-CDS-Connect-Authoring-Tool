@@ -2,7 +2,8 @@
 
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import FontAwesome from 'react-fontawesome';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faExclamationCircle, faSpinner, faKey } from '@fortawesome/free-solid-svg-icons';
 
 import Modal from '../elements/Modal';
 
@@ -36,7 +37,7 @@ class VSACAuthenticationModal extends Component {
 
     return (
       <div className="login__auth-status">
-        <FontAwesome name="exclamation-circle" /> {vsacStatusText}
+        <FontAwesomeIcon icon={faExclamationCircle} /> {vsacStatusText}
       </div>
     );
   }
@@ -44,15 +45,15 @@ class VSACAuthenticationModal extends Component {
   renderButton = () => {
     if (this.props.vsacIsAuthenticating) {
       return (
-        <button className="disabled-button" disabled={true}>
-          <FontAwesome name="spinner" size="2x" spin />
+        <button className="disabled-button" disabled={true} aria-label="Authenticating">
+          <FontAwesomeIcon icon={faSpinner} size="2x" spin />
         </button>
       );
     }
 
     return (
-      <button className="primary-button" onClick={this.openVSACLoginModal}>
-        <FontAwesome name="key" />{' '}Authenticate VSAC
+      <button className="primary-button" onClick={this.openVSACLoginModal} aria-label="Authenticate VSAC">
+        <FontAwesomeIcon icon={faKey} />{' '}Authenticate VSAC
       </button>
     );
   }
@@ -69,26 +70,37 @@ class VSACAuthenticationModal extends Component {
           modalSubmitButtonText="Login"
           handleShowModal={this.state.showVSACAuthModal}
           handleCloseModal={this.closeVSACLoginModal}
-          handleSaveModal={this.loginToVSAC}>
+          handleSaveModal={this.loginToVSAC}
+        >
           <div className="login-modal modal__content">
             <div className="login-modal__disclaimer">
               Use your UMLS account to log in to VSAC to access value sets and codes within the CDS Authoring Tool.
             </div>
 
             <div className="login-modal__form">
+              <label htmlFor="username">Username</label>
               <input
                 type='text'
                 autoFocus
                 autoComplete="username"
                 ref='username'
+                id='username'
                 className="form-control col"
-                placeholder='username'/>
+                placeholder='username'
+                aria-labelledby="vsacUsernameLabel"
+              />
+
+              <label htmlFor="password">Password</label>
               <input
                 type='password'
                 autoComplete="current-password"
                 ref='password'
+                id='password'
                 className="form-control col"
-                placeholder='password'/>
+                placeholder='password'
+                aria-labelledby="vsacPasswordLabel"
+              />
+
               {this.renderedAuthStatusText()}
             </div>
           </div>
