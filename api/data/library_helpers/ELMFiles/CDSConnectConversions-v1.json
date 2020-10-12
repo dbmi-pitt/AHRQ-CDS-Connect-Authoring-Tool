@@ -1,7 +1,7 @@
 {
    "library" : {
       "identifier" : {
-         "id" : "CDS_Connect_Conversions",
+         "id" : "CDSConnectConversions",
          "version" : "1"
       },
       "schemaIdentifier" : {

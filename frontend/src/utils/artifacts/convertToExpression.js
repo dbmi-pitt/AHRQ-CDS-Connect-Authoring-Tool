@@ -34,6 +34,7 @@ function getExpressionSentenceValue(modifier) {
     WithUnit: { modifierText: '', leadingText: 'with unit', type: 'post-list' },
     ValueComparisonNumber: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' },
     ValueComparisonObservation: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' },
+    ValueComparisonObservationList: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' },
     QuantityValue: { modifierText: 'quantity value', leadingText: '', type: 'value' }, // Will not be displayed in phrase
     ConceptValue: { modifierText: 'concept value', leadingText: '', type: 'value' }, // Will not be displayed in phrase
     Qualifier: { modifierText: 'with a code', leadingText: '', type: 'post' },
@@ -81,7 +82,12 @@ function getExpressionSentenceValue(modifier) {
     BooleanNot: { modifierText: 'not', leadingText: '', type: 'not' },
     InProgress: { modifierText: 'in progress', leadingText: '', type: 'list' },
     AllTrue: { modifierText: 'all elements true', leadingText: 'with', type: 'post' },
-    AnyTrue: { modifierText: 'any element true', leadingText: 'with', type: 'post' }
+    AnyTrue: { modifierText: 'any element true', leadingText: 'with', type: 'post' },
+    DoseMedicationStatement: { modifierText: 'dose', leadingText: 'with dose', type: 'post'},
+    DoseMedicationOrder: { modifierText: 'dose', leadingText: 'with dose', type: 'post'},
+    ValueComparisonDoseMedicationStatement: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' },
+    ValueComparisonDoseMedicationOrder: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' }
+
   };
 
   // Don't display the expression if it is not filled out completely.
@@ -112,6 +118,7 @@ function getExpressionSentenceValue(modifier) {
         }
         break;
       }
+      case 'ValueComparisonObservationList':
       case 'ValueComparisonObservation': {
         const minOperatorWord = getOperation(modifier.values.minOperator);
         const maxOperatorWord = getOperation(modifier.values.maxOperator);
@@ -225,6 +232,23 @@ function getExpressionSentenceValue(modifier) {
       }
       case 'CheckExistence': {
         expressionSentenceValues[modifier.id].modifierText = modifier.values.value;
+        break;
+      }
+      case 'DoseMedicationOrder':
+      case 'DoseMedicationStatement': {
+        expressionSentenceValues[modifier.id].modifierText = `of  ${modifier.values.value} ${modifier.values.unit}`;
+        break;
+      }
+      case 'ValueComparisonDoseMedicationOrder':
+      case 'ValueComparisonDoseMedicationStatement': {
+        const minOperatorWord = getOperation(modifier.values.minOperator);
+        const maxOperatorWord = getOperation(modifier.values.maxOperator);
+        expressionSentenceValues[modifier.id].modifierText =
+          `is ${minOperatorWord} ${modifier.values.minValue} ${modifier.values.unit}`;
+        if (maxOperatorWord) {
+          expressionSentenceValues[modifier.id].modifierText +=
+            ` and is ${maxOperatorWord} ${modifier.values.maxValue} ${modifier.values.unit}`;
+        }
         break;
       }
       default: break;

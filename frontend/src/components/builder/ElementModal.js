@@ -174,6 +174,7 @@ export default class ElementModal extends Component {
 
       return (
         <table className="search__table">
+          <caption>Value Set Details List</caption>
           <thead>
             <tr>
               <th>Code</th>
@@ -222,7 +223,7 @@ export default class ElementModal extends Component {
         disabled={!this.state.selectedElement}
         className="primary-button element-modal__searchbutton"
         onClick={this.handleChosenVS}>
-        Select
+        Confirm
       </button>
     );
   }

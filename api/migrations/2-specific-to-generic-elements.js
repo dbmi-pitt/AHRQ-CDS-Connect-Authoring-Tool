@@ -48,7 +48,16 @@ function transformObservation(childInstance) {
     let modifier = modifierParam;
     let observationValueSets = ValueSets.observations[parameter.value];
     switch (modifier.id) {
+      case 'ValueComparisonObservationList':
       case 'ValueComparisonObservation': {
+        if (parameter.value) {
+          modifier.values.unit = observationValueSets.units.code.replace(/'/g, '');
+          if (modifier.validator) modifier.validator.fields.push('unit');
+        }
+        break;
+      }
+      case 'ValueComparisonDoseMedicationOrder':
+      case 'ValueComparisonDoseMedicationStatement': {
         if (parameter.value) {
           modifier.values.unit = observationValueSets.units.code.replace(/'/g, '');
           if (modifier.validator) modifier.validator.fields.push('unit');

@@ -3,7 +3,7 @@
 // - 1.0.1
 //   - Remove NullSafe conversion functions since FHIRHelpers now does null-safe conversions
 //   - Note functions that exist in DSTU2 version of commons, but not here in STU3 version
-library CDS_Connect_Commons_for_FHIRv300 version '1.0.1'
+library CDSConnectCommonsforFHIRv300 version '1.0.1'
 
 using FHIR version '3.0.0'
 
@@ -326,6 +326,12 @@ MedList M
 * @returns {List<MedicationStatement>} a list of Medications prescribed in the look back period, or null if null
 * was passed in
 */
+
+define function MedicationStatementDose(MedList List<MedicationStatement>, Unit System.Quantity):
+    MedList M
+        where (M.dosage[0].dose as FHIR.Quantity) = Unit
+
+
 define function MedicationStatementLookBack(MedList List<MedicationStatement>, LookBack System.Quantity):
 MedList M
   let LookBackInterval: Interval[Now() - LookBack, Now()]

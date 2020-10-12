@@ -26,7 +26,8 @@ const parameterTypeMap = {
   'Interval<Integer>': 'interval_of_integer',
   'Interval<DateTime>': 'interval_of_datetime',
   'Interval<Decimal>': 'interval_of_decimal',
-  'Interval<Quantity>': 'interval_of_quantity'
+  'Interval<Quantity>': 'interval_of_quantity',
+  'Dose': 'dose'
 };
 
 const parameterReturnTypeMap = {
@@ -42,7 +43,8 @@ const parameterReturnTypeMap = {
   'interval integer': 'interval_of_integer',
   'interval date time': 'interval_of_datetime',
   'interval decimal': 'interval_of_decimal',
-  'interval quantity': 'interval_of_quantity'
+  'interval quantity': 'interval_of_quantity',
+  'dose': 'dose',
 };
 
 function parseTree(element, parameterUsedByMap, parameters, baseElements) {

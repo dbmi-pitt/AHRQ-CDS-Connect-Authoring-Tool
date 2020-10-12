@@ -26,11 +26,13 @@ import {
 import BaseElements from '../components/builder/BaseElements';
 import ConjunctionGroup from '../components/builder/ConjunctionGroup';
 import EditArtifactModal from '../components/artifact/EditArtifactModal';
+import ArtifactPlanDefinitionModal from '../components/artifact/ArtifactPlanDefinitionModal'
 import ELMErrorModal from '../components/builder/ELMErrorModal';
 import ErrorStatement from '../components/builder/ErrorStatement';
 import ExternalCQL from '../components/builder/ExternalCQL';
 import Parameters from '../components/builder/Parameters';
 import Recommendations from '../components/builder/Recommendations';
+import PDDIRecommendations from "../components/builder/PDDIRecommendations";
 import RepoUploadModal from '../components/builder/RepoUploadModal';
 import Subpopulations from '../components/builder/Subpopulations';
 
@@ -38,6 +40,7 @@ import isBlankArtifact from '../utils/artifacts/isBlankArtifact';
 import { findValueAtPath } from '../utils/find';
 
 import artifactProps from '../prop-types/artifact';
+import {getReturnType} from "../utils/instances";
 
 // TODO: This is needed because the tree on this.state is not updated in time. Figure out a better way to handle this
 let localTree;
@@ -48,6 +51,7 @@ export class Builder extends Component {
 
     this.state = {
       showEditArtifactModal: false,
+      showArtifactPlanDefinitionModal: false,
       showPublishModal: false,
       showELMErrorModal: false,
       showMenu: false,
@@ -258,10 +262,27 @@ export class Builder extends Component {
     this.setState({ showEditArtifactModal: false });
   }
 
-
   handleSaveArtifact = (artifactPropsChanged) => {
     this.props.updateAndSaveArtifact(this.props.artifact, artifactPropsChanged);
     this.closeEditArtifactModal(false);
+  }
+
+
+  openArtifactPlanDefinitionModal = async() => {
+    this.setState({showArtifactPlanDefinitionModal: true});
+    await this.props.updateAndSaveArtifact(this.props.artifact, {planDefinitionRecommendations: []});
+    this.setState({artifact: this.props.artifact});
+  }
+
+  closeArtifactPlanDefinitionModal = () => {
+    this.setState({showArtifactPlanDefinitionModal: false});
+  }
+
+  handleSaveArtifactAndDownload = async (artifactPropsChanged) => {
+    await this.props.updateAndSaveArtifact(this.props.artifact, artifactPropsChanged);
+    this.downloadOptionSelected(false, '3.0.0');
+    this.closeArtifactPlanDefinitionModal(false);
+
   }
 
   // ----------------------- TREES ----------------------------------------- //
@@ -303,6 +324,19 @@ export class Builder extends Component {
       }
     }
     this.setState({ recommendations: recs });
+
+    const pddiRecs = _.cloneDeep(this.props.artifact.pddiRecommendations);
+    for (let i = 0; i < pddiRecs.length; i++) {
+      const subpops = pddiRecs[i].subpopulations;
+      for (let j = 0; j < subpops.length; j++) {
+        if (subpops[j].uniqueId === uniqueId) {
+          subpops[j].subpopulationName = newName;
+        }
+      }
+    }
+
+    this.setState({ pddiRecommendations: pddiRecs });
+
   }
 
   updateSubpopulations = (subpopulations, target = 'subpopulations') => {
@@ -311,6 +345,10 @@ export class Builder extends Component {
 
   updateRecommendations = (recommendations) => {
     this.props.updateArtifact(this.props.artifact, { recommendations });
+  }
+
+  updatePDDIRecommendations = (pddiRecommendations) => {
+    this.props.updateArtifact(this.props.artifact, { pddiRecommendations });
   }
 
   updateParameters = (parameters) => {
@@ -330,6 +368,15 @@ export class Builder extends Component {
         }
       }
     }
+    for (let i = 0; i < this.props.artifact.pddiRecommendations.length; i++) {
+      const subpops = this.props.artifact.pddiRecommendations[i].subpopulations;
+      for (let j = 0; j < subpops.length; j++) {
+        if (subpops[j].uniqueId === uniqueId) {
+          return true;
+        }
+      }
+    }
+
     return false;
   }
 
@@ -437,7 +484,8 @@ export class Builder extends Component {
                 <DropdownItem
                   id='stu3DownloadOption'
                   className={disableSTU3 ? 'disabled-dropdown' : ''}
-                  onClick={() => this.downloadOptionSelected(disableSTU3, '3.0.0')}>
+                  onClick={this.openArtifactPlanDefinitionModal}>
+                  {/*onClick={() => this.downloadOptionSelected(disableSTU3, '3.0.0')}>*/}
                   FHIR STU3
                 </DropdownItem>
                 {disableDSTU2 &&
@@ -498,10 +546,10 @@ export class Builder extends Component {
           <section className="builder__canvas">
             <Tabs selectedIndex={this.state.activeTabIndex} onSelect={tabIndex => this.setActiveTab(tabIndex)}>
               <TabList aria-label="Workspace Tabs">
+                <Tab>Base Elements</Tab>
                 <Tab>Inclusions</Tab>
                 <Tab>Exclusions</Tab>
                 <Tab>Subpopulations</Tab>
-                <Tab>Base Elements</Tab>
                 <Tab>Recommendations</Tab>
                 <Tab>Parameters</Tab>
                 <Tab>Handle Errors</Tab>
@@ -509,6 +557,54 @@ export class Builder extends Component {
               </TabList>
 
               <div className="tab-panel-container">
+                <TabPanel>
+                  <div className="workspace-blurb">
+                    Specify individual elements that can be re-used in the Inclusions, Exclusions, and Subpopulations,
+                    or should standalone as independent expressions in the resulting artifact. An example might be a lab
+                    result value that is referenced multiple times throughout the artifact.
+                  </div>
+                  <BaseElements
+                      treeName='baseElements'
+                      instance={artifact}
+                      addBaseElement={this.addBaseElement}
+                      loadValueSets={this.props.loadValueSets}
+                      getAllInstances={this.getAllInstances}
+                      getAllInstancesInAllTrees={this.getAllInstancesInAllTrees}
+                      addInstance={this.addInstance}
+                      editInstance={this.editInstance}
+                      updateInstanceModifiers={this.updateInstanceModifiers}
+                      deleteInstance={this.deleteInstance}
+                      updateBaseElementLists={this.updateSubpopulations}
+                      templates={templates}
+                      valueSets={this.props.valueSets}
+                      conversionFunctions={conversionFunctions}
+                      instanceNames={this.props.names}
+                      baseElements={artifact.baseElements}
+                      parameters={namedParameters}
+                      externalCqlList={this.props.externalCqlList}
+                      loadExternalCqlList={this.props.loadExternalCqlList}
+                      scrollToElement={this.scrollToElement}
+                      loginVSACUser={this.props.loginVSACUser}
+                      setVSACAuthStatus={this.props.setVSACAuthStatus}
+                      vsacStatus={this.props.vsacStatus}
+                      vsacStatusText={this.props.vsacStatusText}
+                      searchVSACByKeyword={this.props.searchVSACByKeyword}
+                      isSearchingVSAC={this.props.isSearchingVSAC}
+                      vsacSearchResults={this.props.vsacSearchResults}
+                      vsacSearchCount={this.props.vsacSearchCount}
+                      getVSDetails={this.props.getVSDetails}
+                      isRetrievingDetails={this.props.isRetrievingDetails}
+                      vsacDetailsCodes={this.props.vsacDetailsCodes}
+                      vsacDetailsCodesError={this.props.vsacDetailsCodesError}
+                      vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+                      isValidatingCode={this.props.isValidatingCode}
+                      isValidCode={this.props.isValidCode}
+                      codeData={this.props.codeData}
+                      validateCode={this.props.validateCode}
+                      resetCodeValidation={this.props.resetCodeValidation}
+                      validateReturnType={false}/>
+                </TabPanel>
+
                 <TabPanel>
                   <div className="workspace-blurb">
                     Specify criteria to identify a target population that should receive a recommendation from this
@@ -578,54 +674,6 @@ export class Builder extends Component {
 
                 <TabPanel>
                   <div className="workspace-blurb">
-                    Specify individual elements that can be re-used in the Inclusions, Exclusions, and Subpopulations,
-                    or should standalone as independent expressions in the resulting artifact. An example might be a lab
-                    result value that is referenced multiple times throughout the artifact.
-                  </div>
-                  <BaseElements
-                    treeName='baseElements'
-                    instance={artifact}
-                    addBaseElement={this.addBaseElement}
-                    loadValueSets={this.props.loadValueSets}
-                    getAllInstances={this.getAllInstances}
-                    getAllInstancesInAllTrees={this.getAllInstancesInAllTrees}
-                    addInstance={this.addInstance}
-                    editInstance={this.editInstance}
-                    updateInstanceModifiers={this.updateInstanceModifiers}
-                    deleteInstance={this.deleteInstance}
-                    updateBaseElementLists={this.updateSubpopulations}
-                    templates={templates}
-                    valueSets={this.props.valueSets}
-                    conversionFunctions={conversionFunctions}
-                    instanceNames={this.props.names}
-                    baseElements={artifact.baseElements}
-                    parameters={namedParameters}
-                    externalCqlList={this.props.externalCqlList}
-                    loadExternalCqlList={this.props.loadExternalCqlList}
-                    scrollToElement={this.scrollToElement}
-                    loginVSACUser={this.props.loginVSACUser}
-                    setVSACAuthStatus={this.props.setVSACAuthStatus}
-                    vsacStatus={this.props.vsacStatus}
-                    vsacStatusText={this.props.vsacStatusText}
-                    searchVSACByKeyword={this.props.searchVSACByKeyword}
-                    isSearchingVSAC={this.props.isSearchingVSAC}
-                    vsacSearchResults={this.props.vsacSearchResults}
-                    vsacSearchCount={this.props.vsacSearchCount}
-                    getVSDetails={this.props.getVSDetails}
-                    isRetrievingDetails={this.props.isRetrievingDetails}
-                    vsacDetailsCodes={this.props.vsacDetailsCodes}
-                    vsacDetailsCodesError={this.props.vsacDetailsCodesError}
-                    vsacFHIRCredentials={this.props.vsacFHIRCredentials}
-                    isValidatingCode={this.props.isValidatingCode}
-                    isValidCode={this.props.isValidCode}
-                    codeData={this.props.codeData}
-                    validateCode={this.props.validateCode}
-                    resetCodeValidation={this.props.resetCodeValidation}
-                    validateReturnType={false}/>
-                </TabPanel>
-
-                <TabPanel>
-                  <div className="workspace-blurb">
                     Specify the text-based recommendations that should be delivered to the clinician when a patient
                     meets the eligible criteria as defined in the artifact. Examples might include recommendations to
                     order a medication, perform a test, or provide the patient educational materials.
@@ -638,6 +686,15 @@ export class Builder extends Component {
                     setActiveTab={this.setActiveTab}
                     uniqueIdCounter={this.state.uniqueIdCounter}
                     incrementUniqueIdCounter={this.incrementUniqueIdCounter} />
+                  <br></br>
+                  <PDDIRecommendations
+                      artifact={artifact}
+                      templates={templates}
+                      updatePDDIRecommendations={this.updatePDDIRecommendations}
+                      updateSubpopulations={this.updateSubpopulations}
+                      setActiveTab={this.setActiveTab}
+                      uniqueIdCounter={this.state.uniqueIdCounter}
+                      incrementUniqueIdCounter={this.incrementUniqueIdCounter}/>
                 </TabPanel>
 
                 <TabPanel>
@@ -712,10 +769,16 @@ export class Builder extends Component {
           version={artifact.version} />
 
         <EditArtifactModal
-          artifactEditing={artifact}
-          showModal={this.state.showEditArtifactModal}
-          closeModal={this.closeEditArtifactModal}
-          saveModal={this.handleSaveArtifact} />
+            artifactEditing={artifact}
+            showModal={this.state.showEditArtifactModal}
+            closeModal={this.closeEditArtifactModal}
+            saveModal={this.handleSaveArtifact}/>
+
+        <ArtifactPlanDefinitionModal
+            artifact={artifact}
+            showModal={this.state.showArtifactPlanDefinitionModal}
+            closeModal={this.closeArtifactPlanDefinitionModal}
+            saveModal={this.handleSaveArtifactAndDownload}/>
 
         <ELMErrorModal
           isOpen={this.state.showELMErrorModal}

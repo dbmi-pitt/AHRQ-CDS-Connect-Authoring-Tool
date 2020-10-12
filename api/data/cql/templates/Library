@@ -1,0 +1,32 @@
+{
+    "resourceType": "Bundle",
+    "type": "transaction",
+    "entry": [
+	{
+	    "resource": {
+		"resourceType": "Library",
+		"id": "<%-element_id%>",
+		"version": "<%-element_version%>",
+		"status": "draft",
+		"url": "<%-element_library_url%>",
+		"type": {
+		    "coding": [
+			{
+			    "code": "logic-library"
+			}
+		    ]
+		},
+		"content": [
+		    {
+			"contentType": "text/cql",
+			"data": "<%-cql_base64_data%>"
+		    },
+		    {
+			"contentType": "application/elm+xml",
+			"data": "<%-elm_base64_data%>"
+		    }
+		]
+	    }
+	}
+    ]
+}

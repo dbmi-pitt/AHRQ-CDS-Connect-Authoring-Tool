@@ -9,10 +9,10 @@ const supportedFHIRVersions = ['1.0.2', '3.0.0'];
 const authoringToolExports = [
   { name: 'FHIRHelpers', version: '1.0.2' },
   { name: 'CDS_Connect_Commons_for_FHIRv102', version: '1.3.2' },
-  { name: 'CDS_Connect_Conversions', version: '1' },
+  { name: 'CDSConnectConversions', version: '1' },
   { name: 'FHIRHelpers', version: '3.0.0' },
-  { name: 'CDS_Connect_Commons_for_FHIRv300', version: '1.0.1' },
-  { name: 'CDS_Connect_Conversions', version: '1' }
+  { name: 'CDSConnectCommonsforFHIRv300', version: '1.0.1' },
+  { name: 'CDSConnectConversions', version: '1' }
 ];
 
 const singularReturnTypeMap = {

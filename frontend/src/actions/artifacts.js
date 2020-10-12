@@ -204,6 +204,7 @@ export function initializeArtifact(andTemplate, orTemplate) {
     expTreeInclude: newTrees.newExpTreeInclude,
     expTreeExclude: newTrees.newExpTreeExclude,
     recommendations: [],
+    pddiRecommendations: [],
     subpopulations: [
       {
         special: true,

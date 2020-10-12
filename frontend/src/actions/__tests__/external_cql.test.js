@@ -84,7 +84,7 @@ describe('external cql actions', () => {
             dependencies: [
               {
                 version: '2',
-                path: 'CDS_Connect_Conversions_New',
+                path: 'CDSConnectConversions_New',
                 localIdentifier: 'Convert'
               },
               {
@@ -101,7 +101,7 @@ describe('external cql actions', () => {
           }
         },
         {
-          name: 'CDS_Connect_Conversions_New',
+          name: 'CDSConnectConversions_New',
           version: '2',
           details: { dependencies: [] }
         },

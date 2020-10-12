@@ -11,6 +11,12 @@ const glob = require('glob');
 const request = require('request');
 const Busboy = require('busboy');
 
+const tmp = require('tmp');
+const { exec } = require("child_process");
+const propertiesReader = require('properties-reader');
+var root = path.dirname(require.main.filename)
+const properties = propertiesReader(path.join(root,'../authoring.properties') );
+
 const templatePath = './data/cql/templates';
 const specificPath = './data/cql/specificTemplates';
 const modifierPath = './data/cql/modifiers';
@@ -22,13 +28,13 @@ const modifierMap = loadTemplates(modifierPath);
 const includeLibrariesDstu2 = [
   { name: 'FHIRHelpers', version: '1.0.2', alias: 'FHIRHelpers' },
   { name: 'CDS_Connect_Commons_for_FHIRv102', version: '1.3.2', alias: 'C3F' },
-  { name: 'CDS_Connect_Conversions', version: '1', alias: 'Convert' }
+  { name: 'CDSConnectConversions', version: '1', alias: 'Convert' }
 ];
 
 const includeLibrariesStu3 = [
   { name: 'FHIRHelpers', version: '3.0.0', alias: 'FHIRHelpers' },
-  { name: 'CDS_Connect_Commons_for_FHIRv300', version: '1.0.1', alias: 'C3F' },
-  { name: 'CDS_Connect_Conversions', version: '1', alias: 'Convert' }
+  { name: 'CDSConnectCommonsforFHIRv300', version: '1.0.1', alias: 'C3F' },
+  { name: 'CDSConnectConversions', version: '1', alias: 'Convert' }
 ];
 
 // A flag to hold the FHIR version, so that it can be used
@@ -282,7 +288,10 @@ class CqlArtifact {
     this.exclusions = artifact.expTreeExclude;
     this.subpopulations = artifact.subpopulations;
     this.baseElements = artifact.baseElements;
-    this.recommendations = artifact.recommendations;
+    this.recommendations = artifact.recommendations.concat(artifact.pddiRecommendations);
+    this.pddiRecommendations = artifact.pddiRecommendations;
+    this.planDefinitionRecommendations = artifact.planDefinitionRecommendations;
+    this.planDefinition = artifact.planDefinition;
     this.errorStatement = artifact.errorStatement;
 
     fhirTarget = artifact.dataModel;
@@ -746,7 +755,12 @@ class CqlArtifact {
   }
 
   recommendation() {
-    let text = this.recommendations.map((recommendation) => {
+    let recommendations = this.recommendations;
+    if (this.recommendations.length > 0 && (this.recommendations[0].grade === 'A' && this.recommendations[0].text ===
+        '' && this.recommendations[0].rationale === '' && this.recommendations[0].subpopulations.length === 0)) {
+      recommendations.splice(0,1);
+    }
+    let text = recommendations.map((recommendation) => {
       const conditional = constructOneRecommendationConditional(recommendation);
       return `${conditional}'${sanitizeCQLString(recommendation.text)}'`;
     });
@@ -755,7 +769,12 @@ class CqlArtifact {
   }
 
   rationale() {
-    let rationaleText = this.recommendations.map((recommendation) => {
+    let recommendations = this.recommendations;
+    if (this.recommendations.length > 0 && (this.recommendations[0].grade === 'A' && this.recommendations[0].text ===
+        '' && this.recommendations[0].rationale === '' && this.recommendations[0].subpopulations.length === 0)) {
+      recommendations.splice(0,1);
+    }
+    let rationaleText = recommendations.map((recommendation) => {
       const conditional = constructOneRecommendationConditional(recommendation);
       return conditional + (_.isEmpty(recommendation.rationale)
         ? 'null'
@@ -763,6 +782,41 @@ class CqlArtifact {
     });
     rationaleText = _.isEmpty(rationaleText) ? 'null' : rationaleText.join('\n  else ').concat('\n  else null');
     return ejs.render(templateMap.BaseTemplate, { element_name: 'Rationale', cqlString: rationaleText });
+  }
+
+  classification() {
+    let classificationText = this.pddiRecommendations.map((recommendation) => {
+      const conditional = constructOneRecommendationConditional(recommendation);
+      return conditional + (_.isEmpty(recommendation.classification)
+        ? 'null'
+        : `'${sanitizeCQLString(recommendation.classification)}'`);
+    });
+
+    classificationText = _.isEmpty(classificationText) ? 'null' :
+        classificationText.join('\n  else ').concat('\n  else null');
+    return ejs.render(templateMap.BaseTemplate, { element_name: 'Classification', cqlString: classificationText });
+  }
+
+  indicator() {
+    let indicatorText = this.pddiRecommendations.map((recommendation) => {
+      let conditionalText = '';
+      if (recommendation.classification === 'Avoid Combination' ||
+          recommendation.classification === 'Usually Avoid Combination') {
+        conditionalText = 'critical';
+      } else if (recommendation.classification === 'Minimize Risk' || recommendation.classification === 'Monitor') {
+        conditionalText = 'warning';
+      } else {
+        conditionalText = 'info';
+      }
+      const conditional = constructOneRecommendationConditional(recommendation);
+      return conditional + (_.isEmpty(recommendation.classification)
+        ? 'null'
+        : `'${sanitizeCQLString(conditionalText)}'`);
+    });
+
+    indicatorText = _.isEmpty(indicatorText) ? 'null' :
+        indicatorText.join('\n  else ').concat('\n  else null');
+    return ejs.render(templateMap.BaseTemplate, { element_name: 'Indicator', cqlString: indicatorText });
   }
 
   errors() {
@@ -791,7 +845,7 @@ class CqlArtifact {
     const bodyString = this.body();
     const headerString = this.header();
     let fullString = `${headerString}${bodyString}\n${this.population()}\n${this.recommendation()}\n` +
-      `${this.rationale()}${this.errors()}`;
+      `${this.rationale()}\n${this.classification()}\n${this.indicator()}${this.errors()}`;
     fullString = fullString.replace(/\r\n|\r|\n/g, '\r\n'); // Make all line endings CRLF
     return fullString;
   }
@@ -1012,6 +1066,8 @@ function objToCql(req, res) {
         };
         externalLibs.push(libJson);
       });
+      console.log("Current artifact:");
+      console.log(artifactFromRequest);
       const artifact = new CqlArtifact(artifactFromRequest);
       res.attachment('archive-name.zip');
       writeZip(artifact, externalLibs, res, (err) => {
@@ -1082,35 +1138,73 @@ function validateELM(cqlArtifact, externalLibs, writeStream, callback) {
 function writeZip(cqlArtifact, externalLibs, writeStream, callback /* (error) */) {
   // Artifact JSON is generated first and passed in to avoid incorrect EJS rendering.
   // TODO: Consider separating EJS rendering from toJSON() or toString() methods.
+  let helperPath;
+  if (fhirTarget.version === '3.0.0') {
+    helperPath = `${__dirname}/../data/library_helpers/CQLFiles/STU3`;
+  } else {
+    helperPath = `${__dirname}/../data/library_helpers/CQLFiles/DSTU2`;
+  }
+
   const artifactJson = cqlArtifact.toJson();
   const artifacts = [artifactJson, ...externalLibs];
-  // We must first convert to ELM before packaging up
-  convertToElm(artifacts, (err, elmFiles) => {
-    if (err) {
-      callback(err);
-      return;
-    }
-    // Now build the zip, piping it to the writestream
-    const archive = archiver('zip', { zlib: { level: 9 } })
-      .on('error', callback);
-    writeStream.on('close', callback);
-    archive.pipe(writeStream);
-    externalLibs.forEach(artifact => {
-      archive.append(artifact.text, { name: `${artifact.filename}.cql` });
-    });
-    archive.append(artifactJson.text, { name: `${artifactJson.filename}.cql` });
-    elmFiles.forEach((e, i) => {
-      archive.append(e.content.replace(/\r\n|\r|\n/g, '\r\n'), { name: `${e.name}.json` });
-    });
-    let helperPath;
-    if (fhirTarget.version === '3.0.0') {
-      helperPath = `${__dirname}/../data/library_helpers/CQLFiles/STU3`;
-    } else {
-      helperPath = `${__dirname}/../data/library_helpers/CQLFiles/DSTU2`;
-    }
-    archive.directory(helperPath, '/');
-    archive.finalize();
-  });
+  const planDefinition = writePlanDefinition(cqlArtifact);
+
+  var cql_to_elm = properties.get('CQL_TO_ELM_BASE');
+  var tmpCQL = tmp.fileSync({postfix: '.cql' , dir: helperPath});
+  fs.writeSync(tmpCQL.fd, artifactJson.text);
+
+  var elm;
+  var library;
+  try {
+    exec(cql_to_elm + " -i " + tmpCQL.name + " -o " + helperPath + "/" + artifactJson.filename + ".xml",
+        (error, stdout, stderr) => {
+          if (error) {
+            console.log(`error: ${error.message}`);
+          }
+          if (stderr) {
+            console.log(`stderr: ${stderr}`);
+          }
+          elm = fs.readFileSync(helperPath + "/" + artifactJson.filename + ".xml", 'utf8');
+          library = writeLibrary(cqlArtifact, Buffer.from(artifactJson.text).toString('base64'),
+              Buffer.from(elm).toString('base64'));
+
+          // We must first convert to ELM before packaging up
+          convertToElm(artifacts, (err, elmFiles) => {
+            if (err) {
+              callback(err);
+              return;
+            }
+            // Now build the zip, piping it to the writestream
+            const archive = archiver('zip', {zlib: {level: 9}})
+                .on('error', callback);
+            writeStream.on('close', callback);
+            archive.pipe(writeStream);
+            externalLibs.forEach(artifact => {
+              archive.append(artifact.text, {name: `${artifact.filename}.cql`});
+            });
+            archive.append(artifactJson.text, {name: `${artifactJson.filename}.cql`});
+            archive.append(planDefinition, {name: `${artifactJson.filename}-PlanDefinition.json`});
+            archive.append(library, {name: `${artifactJson.filename}-Library-Bundle.json`});
+            archive.append(elm, {name: `${artifactJson.filename}.xml`});
+            elmFiles.forEach((e, i) => {
+              archive.append(e.content.replace(/\r\n|\r|\n/g, '\r\n'), {name: `${e.name}.json`});
+            });
+            archive.directory(helperPath, '/');
+            archive.finalize();
+          });
+
+          // Remove tmp file
+          tmpCQL.removeCallback();
+          fs.unlinkSync(helperPath + "/" + artifactJson.filename + ".xml")
+        });
+
+  } catch (error) {
+    // Remove tmp file
+    tmpCQL.removeCallback();
+    fs.unlinkSync(helperPath + "/" + artifactJson.filename + ".xml")
+    console.log("Error creating library bundle.");
+    console.log(error);
+  }
 }
 
 function convertToElm(artifacts, callback /* (error, elmFiles) */) {
@@ -1194,4 +1288,56 @@ function splitELM(body, contentType, callback /* (error, elmFiles) */) {
 
 function buildCQL(artifactBody) {
   return new CqlArtifact(artifactBody);
+}
+
+function writePlanDefinition(artifact) {
+  console.log(artifact.planDefinitionRecommendations);
+    if (artifact.pddiRecommendations != null) {
+        return ejs.render(
+            templateMap.PlanDefinition,
+            {
+                element_id: artifact.name.toLowerCase().replace(/\s/g , "-"),
+                element_name: artifact.name,
+                element_version: artifact.version,
+                element_url: artifact.planDefinition.planDefinitionURL,
+                element_library_url: artifact.planDefinition.planDefinitionLibraryURL,
+                element_topic: artifact.planDefinition.planDefinitionTopicText,
+                element_related_artifact_type: artifact.planDefinition.relatedArtifactType,
+                element_related_artifact_name: artifact.planDefinition.relatedArtifactName,
+                element_related_artifact_url: artifact.planDefinition.relatedArtifactURL,
+                planDefinitionRecommendations: artifact.planDefinitionRecommendations,
+                element_recommendations: artifact.pddiRecommendations
+            }
+        );
+    } else {
+        return ejs.render(
+            templateMap.PlanDefinition,
+            {
+                element_id: artifact.planDefinition.planDefinitionURL,
+                element_name: artifact.name,
+                element_version: artifact.version,
+                element_url: "PlanDefinition/" + artifact.planDefinition.planDefinitionURL,
+                element_library_url: artifact.planDefinition.planDefinitionLibraryURL,
+                element_topic: artifact.planDefinition.planDefinitionTopicText,
+                element_related_artifact_type: artifact.planDefinition.relatedArtifactType,
+                element_related_artifact_name: artifact.planDefinition.relatedArtifactName,
+                element_related_artifact_url: artifact.planDefinition.relatedArtifactURL,
+                planDefinitionRecommendations: artifact.planDefinitionRecommendations,
+                element_recommendations: artifact.recommendations
+            }
+        );
+    }
+}
+
+function writeLibrary(artifact, cql_base64_data, elm_base64_data) {
+    return ejs.render(
+        templateMap.Library,
+        {
+            element_id: artifact.planDefinition.planDefinitionLibraryURL,
+            element_version: artifact.version,
+            element_library_url: "Library/" + artifact.planDefinition.planDefinitionLibraryURL,
+            cql_base64_data: cql_base64_data,
+            elm_base64_data: elm_base64_data
+        }
+    );
 }
