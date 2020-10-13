@@ -1,11 +1,15 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import FontAwesome from 'react-fontawesome';
-import _ from 'lodash';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faCheckCircle, faExclamationTriangle, faSpinner, faMedkit, faTimes, faExclamationCircle
+} from '@fortawesome/free-solid-svg-icons';
 import Modal from 'react-modal';
+import _ from 'lodash';
 
 import StyledSelect from '../elements/StyledSelect';
 import { getFieldWithId, getFieldWithType } from '../../utils/instances';
+import { onVisitExternalLink } from '../../utils/handlers';
 
 export default class CodeSelectModal extends Component {
   constructor(props) {
@@ -72,6 +76,8 @@ export default class CodeSelectModal extends Component {
       let selectedCodeSystemId;
       if (!this.state.selectedCS) {
         selectedCodeSystemId = '';
+      } else if (this.state.selectedCS.value === 'Other') {
+        selectedCodeSystemId = this.state.codeSystemText;
       } else {
         selectedCodeSystemId = this.state.selectedCS.id;
       }
@@ -165,13 +171,13 @@ export default class CodeSelectModal extends Component {
     if (this.props.isValidCode === true) {
       return (
         <span className='modal__footer_status'>
-          <FontAwesome name='check-circle'/> Validation Successful!
+          <FontAwesomeIcon icon={faCheckCircle} /> Validation Successful!
         </span>
       );
     } else if (this.props.isValidCode === false) {
       return (
         <span className='modal__footer_status'>
-          <FontAwesome name='exclamation-triangle'/> Validation Error: Unable to validate code and/or code system.
+          <FontAwesomeIcon icon={faExclamationTriangle} /> Validation Error: Unable to validate code and/or code system.
           Please try again, or select this code without validation.
         </span>
       );
@@ -181,7 +187,7 @@ export default class CodeSelectModal extends Component {
 
   renderCodeData = () => {
     if (this.props.isValidatingCode) {
-      return <div className="loading-icon"><FontAwesome name="spinner" spin/></div>;
+      return <div className="loading-icon"><FontAwesomeIcon icon={faSpinner} spin/></div>;
     } else if (this.props.isValidCode) {
       return (
         <div className="code-display">
@@ -197,7 +203,7 @@ export default class CodeSelectModal extends Component {
 
   render() {
     const codeInputLabel = 'Enter code';
-    const otherInputLabel = 'Enter system URI or OID';
+    const otherInputLabel = 'Enter system canonical URL';
     let buttonLabels = {
       openButtonText: 'Add Code',
       closeButtonText: 'Close'
@@ -208,8 +214,8 @@ export default class CodeSelectModal extends Component {
 
     const codeSystemOptions = [
       { value: 'SNOMED', label: 'SNOMED', id: 'http://snomed.info/sct' },
-      { value: 'ICD-9', label: 'ICD-9', id: 'http://hl7.org/fhir/sid/icd-9-cm' },
-      { value: 'ICD-10', label: 'ICD-10', id: 'http://hl7.org/fhir/sid/icd-10' },
+      { value: 'ICD-9-CM', label: 'ICD-9-CM', id: 'http://hl7.org/fhir/sid/icd-9-cm' },
+      { value: 'ICD-10-CM', label: 'ICD-10-CM', id: 'http://hl7.org/fhir/sid/icd-10-cm' },
       { value: 'NCI', label: 'NCI', id: 'http://ncimeta.nci.nih.gov' },
       { value: 'LOINC', label: 'LOINC', id: 'http://loinc.org' },
       { value: 'RXNORM', label: 'RXNORM', id: 'http://www.nlm.nih.gov/research/umls/rxnorm' },
@@ -218,8 +224,11 @@ export default class CodeSelectModal extends Component {
 
     return (
       <span className="element-select__modal element-modal">
-        <button type="button" className="primary-button" onClick={this.openCodeSelectModal}>
-          <FontAwesome name="medkit" />{' '}{buttonLabels.openButtonText}
+        <button type="button"
+          className="primary-button"
+          onClick={this.openCodeSelectModal}
+          aria-label={buttonLabels.openButtonText}>
+          <FontAwesomeIcon icon={faMedkit} />{' '}{buttonLabels.openButtonText}
         </button>
 
         <Modal
@@ -228,7 +237,8 @@ export default class CodeSelectModal extends Component {
           shouldCloseOnOverlayClick={ true }
           contentLabel="Choose code"
           className="modal-style modal-style__light modal-style--full-height code-select-modal element-modal"
-          overlayClassName='modal-overlay modal-overlay__dark'>
+          overlayClassName='modal-overlay modal-overlay__dark'
+        >
           <div className="element-modal__container">
             <header className="modal__header">
               <span className="modal__heading">Choose Code</span>
@@ -236,12 +246,21 @@ export default class CodeSelectModal extends Component {
                 className="element__deletebutton transparent-button"
                 onClick={this.closeCodeSelectModal}
                 onKeyDown={e => this.enterKeyCheck(this.closeCodeSelectModal, null, e)}
-                aria-label={'Close Code Select Modal'}>
-                <FontAwesome name='close'/>
+                aria-label="Close Code Select Modal"
+              >
+                <FontAwesomeIcon icon={faTimes} />
               </button>
             </header>
 
             <main className="modal__body">
+              {this.state.displayOtherInput &&
+                <div className="notification">
+                  <FontAwesomeIcon icon={faExclamationCircle} />
+                  Code systems should use their canonical URL.
+                  See <a href="http://build.fhir.org/ig/HL7/cqf-recommendations/documentation-libraries.html" target="_blank" rel="noopener noreferrer" onClick={onVisitExternalLink}>FHIR® Clinical Guidelines</a> for more information.
+                </div>
+              }
+  
               <div className="element-modal__search">
                 <input
                   className="element-modal__search-code"
@@ -258,7 +277,7 @@ export default class CodeSelectModal extends Component {
                   <StyledSelect
                     className="element-modal__search-system"
                     placeholder={'Select code system'}
-                    aria-label={'Select code system'}
+                    aria-label="Select code system"
                     value={this.state.selectedCS}
                     options={codeSystemOptions}
                     onChange={this.onCodeSystemSelected}
@@ -280,7 +299,9 @@ export default class CodeSelectModal extends Component {
                   }
                 </div>
 
-                <button className="primary-button element-modal__search-button" onClick={this.validateCode}>
+                <button className="primary-button element-modal__search-button"
+                  onClick={this.validateCode}
+                  aria-label="Validate">
                   Validate
                 </button>
               </div>
@@ -291,7 +312,12 @@ export default class CodeSelectModal extends Component {
             <footer className="modal__footer">
               {this.renderCodeValidation()}
 
-              <button className="secondary-button" onClick={this.closeCodeSelectModal}>Cancel</button>
+              <button className="secondary-button"
+                onClick={this.closeCodeSelectModal}
+                aria-label="Cancel"
+              >
+                Cancel
+              </button>
 
               <button
                 className="primary-button element-modal__search-button"
@@ -300,7 +326,9 @@ export default class CodeSelectModal extends Component {
                   || !this.state.codeText
                   || (this.state.displayOtherInput && !this.state.codeSystemText)
                 }
-                onClick={this.chooseCode}>
+                onClick={this.chooseCode}
+                aria-label="Select"
+              >
                 Select
               </button>
             </footer>

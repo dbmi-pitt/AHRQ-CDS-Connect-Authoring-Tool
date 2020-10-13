@@ -6,12 +6,13 @@
 // NOTE -- Any modifier that requires text for an expression phrase will need to be added to the list in artifact.js
 
 const elementLists = ['list_of_observations', 'list_of_conditions', 'list_of_medication_statements',
-  'list_of_medication_orders', 'list_of_procedures', 'list_of_allergy_intolerances', 'list_of_encounters',
-  'list_of_any', 'list_of_booleans', 'list_of_system_quantities', 'list_of_system_concepts', 'list_of_system_codes',
-  'list_of_integers', 'list_of_datetimes', 'list_of_strings', 'list_of_decimals', 'list_of_times', 'list_of_others'];
+  'list_of_medication_requests', 'list_of_procedures', 'list_of_allergy_intolerances', 'list_of_encounters',
+  'list_of_immunizations', 'list_of_devices', 'list_of_any', 'list_of_booleans', 'list_of_system_quantities',
+  'list_of_system_concepts', 'list_of_system_codes', 'list_of_integers', 'list_of_datetimes', 'list_of_strings',
+  'list_of_decimals', 'list_of_times', 'list_of_others'];
 const everyElement = elementLists.concat(['boolean', 'system_quantity', 'system_concept', 'system_code',
-  'observation', 'condition', 'medication_statement', 'medication_order', 'procedure', 'allergy_intolerance',
-  'encounter', 'integer', 'datetime', 'decimal', 'string', 'time', 'interval_of_integer',
+  'observation', 'condition', 'medication_statement', 'medication_request', 'procedure', 'allergy_intolerance',
+  'encounter', 'immunization', 'device', 'integer', 'datetime', 'decimal', 'string', 'time', 'interval_of_integer',
   'interval_of_datetime', 'interval_of_decimal', 'interval_of_quantity', 'any', 'other', 'dose']);
 
 export default [
@@ -152,6 +153,7 @@ export default [
     cqlTemplate: 'BaseModifier',
     cqlLibraryFunction: 'C3F.ProcedureInProgress'
   },
+  // medications
   {
     id: 'ActiveMedicationStatement',
     name: 'Active',
@@ -161,12 +163,12 @@ export default [
     cqlLibraryFunction: 'C3F.ActiveMedicationStatement'
   },
   {
-    id: 'ActiveMedicationOrder',
+    id: 'ActiveMedicationRequest',
     name: 'Active',
-    inputTypes: ['list_of_medication_orders'],
-    returnType: 'list_of_medication_orders',
+    inputTypes: ['list_of_medication_requests'],
+    returnType: 'list_of_medication_requests',
     cqlTemplate: 'BaseModifier',
-    cqlLibraryFunction: 'C3F.ActiveMedicationOrder'
+    cqlLibraryFunction: 'C3F.ActiveMedicationRequest'
   },
   // allergy intolerances
   {
@@ -177,6 +179,25 @@ export default [
     cqlTemplate: 'BaseModifier',
     cqlLibraryFunction: 'C3F.ActiveOrConfirmedAllergyIntolerance'
   },
+  // immunizations
+  {
+    id: 'CompletedImmunization',
+    name: 'Completed',
+    inputTypes: ['list_of_immunizations'],
+    returnType: 'list_of_immunizations',
+    cqlTemplate: 'BaseModifier',
+    cqlLibraryFunction: 'C3F.CompletedImmunization'
+  },
+  // devices
+  {
+    id: 'ActiveDevice',
+    name: 'Active',
+    inputTypes: ['list_of_devices'],
+    returnType: 'list_of_devices',
+    cqlTemplate: 'BaseModifier',
+    cqlLibraryFunction: 'C3F.ActiveDevice'
+  },
+
   // strings
   {
     id: 'EqualsString',
@@ -387,14 +408,24 @@ export default [
     inputTypes: ['list_of_conditions'],
     returnType: 'condition',
     cqlTemplate: 'BaseModifier',
-    cqlLibraryFunction: 'C3F.MostRecentCondition' },
+    cqlLibraryFunction: 'C3F.MostRecentCondition'
+  },
   {
     id: 'MostRecentProcedure',
     name: 'Most Recent',
     inputTypes: ['list_of_procedures'],
     returnType: 'procedure',
     cqlTemplate: 'BaseModifier',
-    cqlLibraryFunction: 'C3F.MostRecentProcedure' },
+    cqlLibraryFunction: 'C3F.MostRecentProcedure'
+  },
+  {
+    id: 'MostRecentImmunization',
+    name: 'Most Recent',
+    inputTypes: ['list_of_immunizations'],
+    returnType: 'immunization',
+    cqlTemplate: 'BaseModifier',
+    cqlLibraryFunction: 'C3F.MostRecentImmunization'
+  },
   // Look Back
   {
     id: 'LookBackObservation',
@@ -417,14 +448,14 @@ export default [
     cqlTemplate: 'LookBackModifier',
     cqlLibraryFunction: 'C3F.ConditionLookBack' },
   {
-    id: 'LookBackMedicationOrder',
+    id: 'LookBackMedicationRequest',
     type: 'LookBack',
     name: 'Look Back',
-    inputTypes: ['list_of_medication_orders'],
-    returnType: 'list_of_medication_orders',
+    inputTypes: ['list_of_medication_requests'],
+    returnType: 'list_of_medication_requests',
     values: { value: undefined, unit: undefined },
     cqlTemplate: 'LookBackModifier',
-    cqlLibraryFunction: 'C3F.MedicationOrderLookBack' },
+    cqlLibraryFunction: 'C3F.MedicationRequestLookBack' },
   {
     id: 'LookBackMedicationStatement',
     type: 'LookBack',
@@ -444,6 +475,16 @@ export default [
     validator: { type: 'require', fields: ['value', 'unit'], args: null },
     cqlTemplate: 'LookBackModifier',
     cqlLibraryFunction: 'C3F.ProcedureLookBack' },
+  {
+    id: 'LookBackImmunization',
+    type: 'LookBack',
+    name: 'Look Back',
+    inputTypes: ['list_of_immunizations'],
+    returnType: 'list_of_immunizations',
+    values: { value: undefined, unit: undefined },
+    validator: { type: 'require', fields: ['value', 'unit'], args: null },
+    cqlTemplate: 'LookBackModifier',
+    cqlLibraryFunction: 'C3F.ImmunizationLookBack' },
   {
     id: 'Count',
     name: 'Count',
@@ -525,10 +566,10 @@ export default [
     cqlLibraryFunction: 'C3F.MedicationStatementDose'
   },
   {
-    id: 'DoseMedicationOrder',
+    id: 'DoseMedicationRequest',
     type: 'Dose',
     name: 'Dose',
-    inputTypes: ['list_of_medication_orders'],
+    inputTypes: ['list_of_medication_request'],
     returnType: 'dose',
     values: {value: undefined, unit: undefined},
     cqlTemplate: 'DoseModifier',
@@ -547,14 +588,14 @@ export default [
     comparisonOperator: null
   },
   {
-    id: 'ValueComparisonDoseMedicationOrder',
+    id: 'ValueComparisonDoseMedicationRequest',
     type: 'ValueComparisonDose',
     name: 'Value Comparison Dose',
-    inputTypes: ['list_of_medication_orders'],
+    inputTypes: ['list_of_medication_requests'],
     returnType: 'boolean',
     validator: {type: 'require', fields: ['minValue', 'minOperator', 'unit'], args: null},
     values: {minOperator: undefined, minValue: '', maxOperator: undefined, maxValue: '', unit: ''},
-    cqlTemplate: 'ValueComparisonDoseMedicationOrder',
+    cqlTemplate: 'ValueComparisonDoseMedicationRequest',
     comparisonOperator: null
   },
 ];

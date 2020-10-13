@@ -1,8 +1,18 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import FontAwesome from 'react-fontawesome';
+import classnames from 'classnames';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faTimes,
+  faExclamationCircle,
+  faLink,
+  faCheck,
+  faCommentDots,
+  faComment,
+  faAngleDoubleDown,
+  faAngleDoubleRight
+} from '@fortawesome/free-solid-svg-icons';
 import { UncontrolledTooltip } from 'reactstrap';
-import classNames from 'classnames';
 import _ from 'lodash';
 
 import VSACAuthenticationModal from './VSACAuthenticationModal';
@@ -63,6 +73,7 @@ export default class TemplateInstance extends Component {
 
     this.state = {
       showElement: true,
+      showComment: false,
       relevantModifiers: (this.modifersByInputType[props.templateInstance.returnType] || []),
       showModifiers: false,
       otherInstances: this.getOtherInstances(props),
@@ -143,10 +154,14 @@ export default class TemplateInstance extends Component {
   }
 
   deleteInstance = () => {
-    const baseElementIsInUse = this.isBaseElementUsed() || this.props.disableElement;
+    const baseElementIsInUse = this.isBaseElementUsed() || this.props.disableAddElement;
     if (!baseElementIsInUse) {
       this.props.deleteInstance(this.props.treeName, this.getPath());
     }
+  }
+
+  toggleComment = () => {
+    this.setState({ showComment: !this.state.showComment });
   }
 
   renderAppliedModifier = (modifier, index) => {
@@ -374,14 +389,18 @@ export default class TemplateInstance extends Component {
               onKeyPress={(e) => {
                 e.which = e.which || e.keyCode;
                 if (e.which === 13) this.removeLastModifier(canModifierBeRemoved);
-              }}>
+              }}
+            >
+              <FontAwesomeIcon icon={faTimes} className="delete-valueset-button" />
 
-              <FontAwesome name="close" className="delete-valueset-button" />
-              { !canModifierBeRemoved &&
+              {!canModifierBeRemoved &&
                 <UncontrolledTooltip
-                  target={`modifier-delete-${this.props.templateInstance.uniqueId}`} placement="left">
+                  target={`modifier-delete-${this.props.templateInstance.uniqueId}`}
+                  placement="left"
+                >
                   Cannot remove modifier because return type cannot change while in use.
-                </UncontrolledTooltip> }
+                </UncontrolledTooltip>
+              }
             </span>
           }
         </div>
@@ -447,7 +466,7 @@ export default class TemplateInstance extends Component {
   }
 
   canModifierBeRemoved = () => {
-    const baseElementIsInUse = this.isBaseElementUsed() || this.props.disableElement;
+    const baseElementIsInUse = this.isBaseElementUsed() || this.props.disableAddElement;
 
     if (baseElementIsInUse) {
       // If a base element is in use, need to make sure the modifiers removed don't change the return type.
@@ -484,7 +503,7 @@ export default class TemplateInstance extends Component {
   renderModifierSelect = () => {
     if (!this.props.templateInstance.cannotHaveModifiers
       && (this.state.relevantModifiers.length > 0 || (this.props.templateInstance.modifiers || []).length === 0)) {
-      const baseElementIsInUse = this.isBaseElementUsed() || this.props.disableElement;
+      const baseElementIsInUse = this.isBaseElementUsed() || this.props.disableAddElement;
 
       return (
         <div className="modifier-select">
@@ -493,7 +512,8 @@ export default class TemplateInstance extends Component {
               onClick={() => this.setState({ showModifiers: !this.state.showModifiers })}
               className="modifier__addbutton secondary-button"
               aria-label="add expression"
-              disabled={!allModifiersValid(this.props.templateInstance.modifiers)}>
+              disabled={!allModifiersValid(this.props.templateInstance.modifiers)}
+            >
               Add Expression
             </button>
 
@@ -508,13 +528,14 @@ export default class TemplateInstance extends Component {
                     className="modifier__button secondary-button"
                     aria-label={modifier.name}>
                     {modifier.name}
-                  </button>)
+                  </button>
+                )
             }
           </div>
 
           {this.state.showModifiers && baseElementIsInUse &&
             <div className="notification">
-              <FontAwesome name="exclamation-circle" />
+              <FontAwesomeIcon icon={faExclamationCircle} />
               Limited expressions displayed because return type cannot change while in use.
             </div>
           }
@@ -565,7 +586,6 @@ export default class TemplateInstance extends Component {
     if (baseUseTab === 'subpopulations') tabLabel = 'Subpopulations';
     if (baseUseTab === 'baseElements') tabLabel = 'Base Element';
 
-
     return (
       <div className="modifier__return__type" id="base-element-list" key={referenceField.value.id}>
         <div className="code-info">
@@ -576,23 +596,23 @@ export default class TemplateInstance extends Component {
               {referenceField.id === 'baseElementUse' && <span> &#8594; {tabLabel}</span>}
             </div>
 
-            {(referenceField.id !== 'externalCqlReference') &&
-            <div className="code-info__buttons align-right">
-              <span
-                role="button"
-                id={`definition-${this.props.templateInstance.uniqueId}`}
-                className="element__linkbutton"
-                aria-label="see element definition"
-                onClick={() => this.props.scrollToElement(scrollElementId, scrollReferenceType, tabIndex)}
-                tabIndex="0"
-                onKeyPress={(e) => {
-                  e.which = e.which || e.keyCode;
-                  if (e.which === 13) this.props.scrollToElement(scrollElementId, scrollReferenceType, tabIndex);
-                }}>
-
-                <FontAwesome name="link" className="delete-valueset-button" />
-              </span>
-            </div>}
+            {referenceField.id !== 'externalCqlReference' &&
+              <div className="code-info__buttons align-right">
+                <span
+                  role="button"
+                  id={`definition-${this.props.templateInstance.uniqueId}`}
+                  className="element__linkbutton"
+                  aria-label="see element definition"
+                  onClick={() => this.props.scrollToElement(scrollElementId, scrollReferenceType, tabIndex)}
+                  tabIndex="0"
+                  onKeyPress={(e) => {
+                    e.which = e.which || e.keyCode;
+                    if (e.which === 13) this.props.scrollToElement(scrollElementId, scrollReferenceType, tabIndex);
+                  }}>
+                  <FontAwesomeIcon icon={faLink} className="delete-valueset-button" />
+                </span>
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -622,13 +642,15 @@ export default class TemplateInstance extends Component {
                   isRetrievingDetails={this.props.isRetrievingDetails}
                   vsacDetailsCodes={this.props.vsacDetailsCodes}
                   vsacDetailsCodesError={this.props.vsacDetailsCodesError}
-                  vsacFHIRCredentials={this.props.vsacFHIRCredentials} />
+                  vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+                />
               </div>
             ))}
           </div>
         );
       }
     }
+
     return null;
   }
 
@@ -659,9 +681,9 @@ export default class TemplateInstance extends Component {
                       onKeyPress={(e) => {
                         e.which = e.which || e.keyCode;
                         if (e.which === 13) this.deleteCode(code);
-                      }}>
-
-                      <FontAwesome name="close" className="delete-code-button" />
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faTimes} className="delete-code-button" />
                     </span>
                   </div>
                 </div>
@@ -671,6 +693,7 @@ export default class TemplateInstance extends Component {
         );
       }
     }
+
     return null;
   }
 
@@ -691,8 +714,8 @@ export default class TemplateInstance extends Component {
 
     return (
       <div id="vsac-controls">
-        <button className="disabled-button" disabled={true}>
-          <FontAwesome name="check" /> VSAC Authenticated
+        <button className="disabled-button" disabled={true} aria-label="VSAC Authenticated">
+          <FontAwesomeIcon icon={faCheck} /> VSAC Authenticated
         </button>
 
         <ElementModal
@@ -730,7 +753,8 @@ export default class TemplateInstance extends Component {
       return (
         <StaticField
           key={field.id}
-          updateInstance={this.updateInstance} />
+          updateInstance={this.updateInstance}
+        />
       );
     }
 
@@ -742,34 +766,40 @@ export default class TemplateInstance extends Component {
             field={field}
             value={this.state[field.id]}
             typeOfNumber={field.typeOfNumber}
-            updateInstance={this.updateInstance} />
+            updateInstance={this.updateInstance}
+          />
         );
       case 'string':
         return (
           <StringField
             key={field.id}
             {...field}
-            updateInstance={this.updateInstance} />
+            updateInstance={this.updateInstance}
+          />
         );
       case 'textarea':
         return (
           <TextAreaField
             key={field.id}
             {...field}
-            updateInstance={this.updateInstance} />
+            updateInstance={this.updateInstance}
+          />
         );
       case 'observation_vsac':
       case 'condition_vsac':
       case 'medicationStatement_vsac':
-      case 'medicationOrder_vsac':
+      case 'medicationRequest_vsac':
       case 'procedure_vsac':
       case 'encounter_vsac':
       case 'allergyIntolerance_vsac':
+      case 'immunization_vsac':
+      case 'device_vsac':
         return (
           <StringField
             key={field.id}
             {...field}
-            updateInstance={this.updateInstance} />
+            updateInstance={this.updateInstance}
+          />
         );
       case 'valueset':
         return (
@@ -778,7 +808,8 @@ export default class TemplateInstance extends Component {
             field={field}
             valueSets={this.props.valueSets}
             loadValueSets={this.props.loadValueSets}
-            updateInstance={this.updateInstance}/>
+            updateInstance={this.updateInstance}
+          />
         );
       default:
         return undefined;
@@ -789,7 +820,7 @@ export default class TemplateInstance extends Component {
     this.setState({ showElement: !this.state.showElement });
   }
 
-  getPath = () => this.props.getPath(this.props.templateInstance.uniqueId)
+  getPath = () => this.props.getPath(this.props.templateInstance.uniqueId);
 
   hasBaseElementLinks = () => {
     const { baseElements, templateInstance } = this.props;
@@ -807,7 +838,6 @@ export default class TemplateInstance extends Component {
     const validationError = validateElement(this.props.templateInstance, this.state);
     const returnError = (!(validateReturnType !== false) || returnType === 'boolean') ? null
       : "Element must have return type 'boolean'. Add expression(s) to change the return type.";
-    const commentField = getFieldWithId(templateInstance.fields, 'comment');
 
     return (
       <div className="card-element__body">
@@ -819,13 +849,6 @@ export default class TemplateInstance extends Component {
           instance={templateInstance}
           baseElements={this.props.baseElements}
         />
-
-        {commentField &&
-          <TextAreaField
-            key={commentField.id}
-            {...commentField}
-            updateInstance={this.updateInstance} />
-        }
 
         {templateInstance.fields.map((field, index) => {
           if (field.id !== 'element_name' && field.id !== 'comment') {
@@ -865,7 +888,7 @@ export default class TemplateInstance extends Component {
             <div className="bold align-right return-type__label">Return Type:</div>
             <div className="return-type__value">
               { (validateReturnType === false || _.startCase(returnType) === 'Boolean') &&
-                <FontAwesome name="check" className="check" />}
+                <FontAwesomeIcon icon={faCheck} className="check" />}
               {_.startCase(returnType)}
             </div>
           </div>
@@ -893,11 +916,11 @@ export default class TemplateInstance extends Component {
 
   renderHeading = (elementNameField) => {
     const { templateInstance, instanceNames, baseElements, parameters, allInstancesInAllTrees } = this.props;
+    const { showComment } = this.state;
+    const commentField = getFieldWithId(templateInstance.fields, 'comment');
 
     if (elementNameField) {
       let elementType = (templateInstance.type === 'parameter') ? 'Parameter' : templateInstance.name;
-
-
       const referenceField = getFieldWithType(templateInstance.fields, 'reference');
 
       if (referenceField && (referenceField.id === 'baseElementReference')) {
@@ -922,22 +945,35 @@ export default class TemplateInstance extends Component {
             name={elementType}
             uniqueId={templateInstance.uniqueId}
           />
-          {doesHaveDuplicateName &&
-          !doesHaveBaseElementUseWarning &&
-          !doesHaveBaseElementInstanceWarning &&
-          !doesHaveParameterUseWarning &&
+
+          {
+            doesHaveDuplicateName &&
+            !doesHaveBaseElementUseWarning &&
+            !doesHaveBaseElementInstanceWarning &&
+            !doesHaveParameterUseWarning &&
             <div className="warning">Warning: Name already in use. Choose another name.</div>
           }
+
           {doesHaveBaseElementUseWarning &&
             <div className="warning">Warning: This use of the Base Element has changed. Choose another name.</div>
           }
+
           {doesHaveBaseElementInstanceWarning &&
             <div className="warning">
               Warning: One or more uses of this Base Element have changed. Choose another name.
             </div>
           }
+
           {doesHaveParameterUseWarning &&
             <div className="warning">Warning: This use of the Parameter has changed. Choose another name.</div>
+          }
+
+          {commentField && showComment &&
+            <TextAreaField
+              key={commentField.id}
+              {...commentField}
+              updateInstance={this.updateInstance}
+            />
           }
         </div>
       );
@@ -951,12 +987,13 @@ export default class TemplateInstance extends Component {
     const { templateInstance, renderIndentButtons } = this.props;
     const { showElement } = this.state;
     const elementNameField = getFieldWithId(templateInstance.fields, 'element_name');
-    const headerClass = classNames('card-element__header', { collapsed: !showElement });
-    const headerTopClass = classNames('card-element__header-top', { collapsed: !showElement });
-
+    const headerClass = classnames('card-element__header', { collapsed: !showElement });
+    const headerTopClass = classnames('card-element__header-top', { collapsed: !showElement });
     const baseElementUsed = this.isBaseElementUsed();
-    const baseElementInUsedList = this.props.disableElement;
+    const baseElementInUsedList = this.props.disableAddElement;
     const disabledClass = (baseElementUsed || baseElementInUsedList) ? 'disabled' : '';
+    const commentField = getFieldWithId(templateInstance.fields, 'comment');
+    const hasComment = commentField && commentField.value && commentField.value !== '';
 
     return (
       <div className={headerClass}>
@@ -967,38 +1004,55 @@ export default class TemplateInstance extends Component {
             :
               <div className="heading-name">
                 {elementNameField.value}: {this.hasWarnings() &&
-                  <div className="warning"><FontAwesome name="exclamation-circle" /> Has warnings</div>
+                  <div className="warning"><FontAwesomeIcon icon={faExclamationCircle} /> Has warnings</div>
                 }
               </div>
             }
           </div>
+
           <div className="card-element__buttons">
             {showElement && !this.props.disableIndent && renderIndentButtons(templateInstance)}
+
+            {showElement &&
+              <button
+                onClick={this.toggleComment}
+                className={classnames('element_hidebutton', 'transparent-button', hasComment && 'has-comment')}
+                aria-label="show comment"
+              >
+                <FontAwesomeIcon icon={hasComment ? faCommentDots : faComment} />
+              </button>
+            }
 
             <button
               onClick={this.showHideElementBody}
               className="element__hidebutton transparent-button"
-              aria-label={`hide ${templateInstance.name}`}>
-              <FontAwesome name={showElement ? 'angle-double-down' : 'angle-double-right'} />
+              aria-label={`hide ${templateInstance.name}`}
+            >
+              <FontAwesomeIcon icon={showElement ? faAngleDoubleDown : faAngleDoubleRight} />
             </button>
 
             <button
               id={`deletebutton-${templateInstance.uniqueId}`}
               onClick={this.deleteInstance}
               className={`element__deletebutton transparent-button ${disabledClass}`}
-              aria-label={`remove ${templateInstance.name}`}>
-              <FontAwesome name="close" />
+              aria-label={`remove ${templateInstance.name}`}
+            >
+              <FontAwesomeIcon icon={faTimes} />
             </button>
-            { baseElementUsed &&
+
+            {baseElementUsed &&
               <UncontrolledTooltip
                 target={`deletebutton-${templateInstance.uniqueId}`} placement="left">
                   To delete this Base Element, remove all references to it.
-              </UncontrolledTooltip> }
-            { baseElementInUsedList &&
+              </UncontrolledTooltip>
+            }
+
+            {baseElementInUsedList &&
               <UncontrolledTooltip
                 target={`deletebutton-${templateInstance.uniqueId}`} placement="left">
                 To delete this element, remove all references to the Base Element List.
-              </UncontrolledTooltip> }
+              </UncontrolledTooltip>
+            }
           </div>
         </div>
 
@@ -1035,7 +1089,7 @@ TemplateInstance.propTypes = {
   baseElements: PropTypes.array.isRequired,
   codeData: PropTypes.object,
   deleteInstance: PropTypes.func.isRequired,
-  disableElement: PropTypes.bool,
+  disableAddElement: PropTypes.bool,
   disableIndent: PropTypes.bool,
   editInstance: PropTypes.func.isRequired,
   getPath: PropTypes.func.isRequired,

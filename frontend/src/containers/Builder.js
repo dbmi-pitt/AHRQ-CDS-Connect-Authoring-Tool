@@ -1,11 +1,13 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import classnames from 'classnames';
+import withGracefulUnmount from 'react-graceful-unmount';
 import { Dropdown, DropdownToggle, DropdownMenu, DropdownItem, UncontrolledTooltip } from 'reactstrap';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import withGracefulUnmount from 'react-graceful-unmount';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
-import FontAwesome from 'react-fontawesome';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPencilAlt, faDownload, faSave, faAlignRight } from '@fortawesome/free-solid-svg-icons';
 import _ from 'lodash';
 
 import loadTemplates from '../actions/templates';
@@ -403,6 +405,7 @@ export class Builder extends Component {
       isValidatingCode, isValidCode, codeData
     } = this.props;
     const namedParameters = _.filter(artifact.parameters, p => (!_.isNull(p.name) && p.name.length));
+
     if (artifact && artifact[treeName].childInstances) {
       return (
         <ConjunctionGroup
@@ -443,7 +446,8 @@ export class Builder extends Component {
           isValidCode={isValidCode}
           codeData={codeData}
           validateCode={this.props.validateCode}
-          resetCodeValidation={this.props.resetCodeValidation} />
+          resetCodeValidation={this.props.resetCodeValidation}
+        />
       );
     }
 
@@ -455,16 +459,27 @@ export class Builder extends Component {
     const artifactName = artifact ? artifact.name : null;
     let disableDSTU2 = false;
     let disableSTU3 = false;
+    let disableR4 = false;
 
     const artifactFHIRVersion = artifact.fhirVersion;
-    if (artifactFHIRVersion === '1.0.2') disableSTU3 = true;
-    if (artifactFHIRVersion === '3.0.0') disableDSTU2 = true;
+    if (artifactFHIRVersion === '1.0.2') {
+      disableSTU3 = true;
+      disableR4 = true;
+    }
+    if (artifactFHIRVersion === '3.0.0') {
+      disableDSTU2 = true;
+      disableR4 = true;
+    }
+    if (artifactFHIRVersion === '4.0.0') {
+      disableDSTU2 = true;
+      disableSTU3 = true;
+    }
 
     return (
       <header className="builder__header" aria-label="Workspace Header">
         <h2 className="builder__heading">
           <button aria-label="Edit" className="secondary-button" onClick={this.openEditArtifactModal}>
-            <FontAwesome name="pencil" />
+            <FontAwesomeIcon icon={faPencilAlt} />
           </button>
 
           {artifactName}
@@ -473,21 +488,37 @@ export class Builder extends Component {
         <div className="builder__buttonbar">
           <div className="builder__buttonbar-menu" aria-label="Workspace Menu">
             <Dropdown isOpen={this.state.showMenu} toggle={this.toggleMenu} className="dropdown-button">
-              <DropdownToggle caret><FontAwesome name="download" className="icon" />Download CQL</DropdownToggle>
+              <DropdownToggle caret>
+                <FontAwesomeIcon icon={faDownload} className="icon" />Download CQL
+              </DropdownToggle>
+
               <DropdownMenu>
                 <DropdownItem
                   id='dstu2DownloadOption'
-                  className={disableDSTU2 ? 'disabled-dropdown' : ''}
-                  onClick={() => this.downloadOptionSelected(disableDSTU2, '1.0.2')}>
-                  FHIR DSTU2
+                  className={classnames(disableDSTU2 && 'disabled-dropdown')}
+                  onClick={() => this.downloadOptionSelected(disableDSTU2, '1.0.2')}
+                  role="menuitem"
+                >
+                  FHIR<sup>®</sup> DSTU2
                 </DropdownItem>
+
                 <DropdownItem
                   id='stu3DownloadOption'
-                  className={disableSTU3 ? 'disabled-dropdown' : ''}
-                  onClick={this.openArtifactPlanDefinitionModal}>
-                  {/*onClick={() => this.downloadOptionSelected(disableSTU3, '3.0.0')}>*/}
-                  FHIR STU3
+                  className={classnames(disableSTU3 && 'disabled-dropdown')}
+                  onClick={this.openArtifactPlanDefinitionModal}
+                  role="menuitem"
+                >
+                  FHIR<sup>®</sup> STU3
                 </DropdownItem>
+
+                <DropdownItem
+                  id='r4DownloadOption'
+                  className={classnames(disableR4 && 'disabled-dropdown')}
+                  onClick={() => this.downloadOptionSelected(disableR4, '4.0.0')}
+                >
+                  FHIR<sup>®</sup> R4
+                </DropdownItem>
+
                 {disableDSTU2 &&
                   <UncontrolledTooltip className='light-tooltip' target='dstu2DownloadOption' placement="left">
                     Downloading this FHIR version is disabled based on external library versions.
@@ -498,20 +529,30 @@ export class Builder extends Component {
                     Downloading this FHIR version is disabled based on external library versions.
                   </UncontrolledTooltip>
                 }
+                {disableR4 &&
+                  <UncontrolledTooltip className='light-tooltip' target='r4DownloadOption' placement="left">
+                    Downloading this FHIR version is disabled based on external library versions.
+                  </UncontrolledTooltip>
+                }
               </DropdownMenu>
             </Dropdown>
 
-            <button onClick={() => this.handleSaveArtifact(artifact)} className="secondary-button">
-              <FontAwesome name="save" className="icon" />Save
+            <button
+              onClick={() => this.handleSaveArtifact(artifact)}
+              className="secondary-button"
+              aria-label="Save"
+            >
+              <FontAwesomeIcon icon={faSave} className="icon" />Save
             </button>
 
-            { publishEnabled ?
+            {publishEnabled &&
               <button
                 onClick={() => { this.handleSaveArtifact(artifact); this.togglePublishModal(); }}
-                className="secondary-button">
-                <FontAwesome name="align-right" className="icon" />Publish
+                className="secondary-button"
+                aria-label="Publish"
+              >
+                <FontAwesomeIcon icon={faAlignRight} className="icon" />Publish
               </button>
-              : ''
             }
           </div>
 
@@ -669,7 +710,8 @@ export class Builder extends Component {
                     isValidCode={this.props.isValidCode}
                     codeData={this.props.codeData}
                     validateCode={this.props.validateCode}
-                    resetCodeValidation={this.props.resetCodeValidation} />
+                    resetCodeValidation={this.props.resetCodeValidation}
+                  />
                 </TabPanel>
 
                 <TabPanel>
@@ -717,7 +759,8 @@ export class Builder extends Component {
                     codeData={this.props.codeData}
                     validateCode={this.props.validateCode}
                     resetCodeValidation={this.props.resetCodeValidation}
-                    getAllInstancesInAllTrees={this.getAllInstancesInAllTrees} />
+                    getAllInstancesInAllTrees={this.getAllInstancesInAllTrees}
+                  />
                 </TabPanel>
 
                 <TabPanel>
@@ -730,7 +773,8 @@ export class Builder extends Component {
                     parameters={namedParameters}
                     subpopulations={this.props.artifact.subpopulations}
                     errorStatement={this.props.artifact.errorStatement}
-                    updateErrorStatement={this.updateErrorStatement} />
+                    updateErrorStatement={this.updateErrorStatement}
+                  />
                 </TabPanel>
 
                 <TabPanel>
@@ -755,7 +799,8 @@ export class Builder extends Component {
                     isLoadingExternalCqlDetails={this.props.isLoadingExternalCqlDetails}
                     addExternalCqlLibraryError={this.props.addExternalCqlLibraryError}
                     addExternalCqlLibraryErrorMessage={this.props.addExternalCqlLibraryErrorMessage}
-                    librariesInUse={this.props.librariesInUse} />
+                    librariesInUse={this.props.librariesInUse}
+                  />
                 </TabPanel>
               </div>
             </Tabs>
@@ -766,7 +811,8 @@ export class Builder extends Component {
           artifact={artifact}
           showModal={this.state.showPublishModal}
           closeModal={this.togglePublishModal}
-          version={artifact.version} />
+          version={artifact.version}
+        />
 
         <EditArtifactModal
             artifactEditing={artifact}

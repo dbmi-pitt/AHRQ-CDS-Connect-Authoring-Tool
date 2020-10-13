@@ -27,7 +27,14 @@
     }
   }
 
-  .dash { margin: 0 5px; }
+  .dash {
+    display: flex;
+    flex-grow: 1;
+    text-align: center;
+    flex-direction: column;
+    margin-left: 2px;
+    font-size: 1.5em;
+  }
 
   .quantity-unit-ucum,
   .interval-of-quantity-unit-ucum {
@@ -43,8 +50,26 @@
 .string-field,
 .number-field,
 .textarea-field,
-.value-set-field {
+.value-set-field,
+.parameter-field,
+.boolean-editor,
+.integer-editor,
+.date-time-editor,
+.decimal-editor,
+.quantity-editor,
+.string-editor,
+.time-editor,
+.interval-of-integer-editor,
+.interval-of-date-time-editor,
+.interval-of-decimal-editor,
+.interval-of-quantity-editor {
   margin: 10px 0;
+
+  .form__group,
+  .input textarea,
+  .input input[type="text"] {
+    width: 100%;
+  }
 
   label {
     display: flex;
@@ -55,8 +80,17 @@
     flex: 1;
     font-weight: bold;
     text-align: right;
+    white-space: nowrap;
     padding-right: 2em;
     white-space: nowrap;
+    &.conjunction_comment {
+      flex:none;
+      padding-right:6.25em;
+    }
+    &.base_comment {
+      flex:none;
+      padding-right:3.25em;
+    }
   }
 
   .Select {
@@ -64,7 +98,8 @@
     padding: 0;
   }
 
-  input {
+  input,
+  textarea {
     margin: 0;
     min-width: 300px;
   }
@@ -73,22 +108,55 @@
     flex: 4;
   }
 
+  .input-3 {
+    display: flex;
+    align-items: center;
+  }
+
+  .input-group {
+    display: flex;
+    align-items: center;
+    flex: 2;
+    margin-bottom: 10px;
+
+    .date-label {
+      margin-right: 10px;
+    }
+  }
+
+  .input-group-3 {
+    flex: 3;
+
+    input {
+      min-width: 200px;
+    }
+  }
+
+  textarea {
+    height: auto;
+    min-height: 50px;
+    padding: 8px 14px;
+    margin-bottom: -8px;
+
+    @include respond-to('1439px') {
+      min-height: 36px;
+    }
+  }
+
   .icon {
     padding: 10px;
   }
 }
 
-.textarea-field {
-  margin-bottom: -5px;
-
-  textarea {
-    width: 100%;
-    max-width: 100%;
-    padding: 10px 0.75em;
-    height: auto;
-  }
-}
-
 .value-set-field .Select {
   display: inline-block;
+}
+
+.code-editor {
+  padding: 20px;
+  background-color: #fff;
+}
+
+.interval-of-integer-editor {
+  position: relative;
 }

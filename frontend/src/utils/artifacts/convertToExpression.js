@@ -44,10 +44,12 @@ function getExpressionSentenceValue(modifier) {
     ActiveOrRecurring: { modifierText: 'active or recurring', leadingText: '', type: 'list' },
     ActiveConiditon: { modifierText: 'active', leadingText: '', type: 'list' },
     CompletedProcedure: { modifierText: 'completed', leadingText: '', type: 'list' },
+    CompletedImmunization: { modifierText: 'completed', leadingText: '', type: 'list' },
     InProgressProcedure: { modifierText: 'in progress', leadingText: '', type: 'list' },
     ActiveMedicationStatement: { modifierText: 'active', leadingText: '', type: 'list' },
-    ActiveMedicationOrder: { modifierText: 'active', leadingText: '', type: 'list' },
+    ActiveMedicationRequest: { modifierText: 'active', leadingText: '', type: 'list' },
     ActiveOrConfirmedAllergyIntolerance: { modifierText: 'active or confirmed', leadingText: '', type: 'list' },
+    ActiveDevice: { modifierText: 'active', leadingText: '', type: 'list' },
     EqualsString: { modifierText: 'equals', leadingText: '', type: 'post' },
     EndsWithString: { modifierText: 'ends with', leadingText: '', type: 'post' },
     StartsWithString: { modifierText: 'starts with', leadingText: '', type: 'post' },
@@ -70,9 +72,11 @@ function getExpressionSentenceValue(modifier) {
     MostRecentObservation: { modifierText: 'most recent', leadingText: '', type: 'descriptor' },
     MostRecentProcedure: { modifierText: 'most recent', leadingText: '', type: 'descriptor' },
     MostRecentCondition: { modifierText: 'most recent', leadingText: '', type: 'descriptor' },
+    MostRecentImmunization: { modifierText: 'most recent', leadingText: '', type: 'descriptor' },
+    LookBackImmunization: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
     LookBackObservation: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
     LookBackCondition: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
-    LookBackMedicationOrder: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
+    LookBackMedicationRequest: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
     LookBackMedicationStatement: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
     LookBackProcedure: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
     Count: { modifierText: 'count', leadingText: 'with a', type: 'Count' },
@@ -84,9 +88,9 @@ function getExpressionSentenceValue(modifier) {
     AllTrue: { modifierText: 'all elements true', leadingText: 'with', type: 'post' },
     AnyTrue: { modifierText: 'any element true', leadingText: 'with', type: 'post' },
     DoseMedicationStatement: { modifierText: 'dose', leadingText: 'with dose', type: 'post'},
-    DoseMedicationOrder: { modifierText: 'dose', leadingText: 'with dose', type: 'post'},
+    DoseMedicationRequest: { modifierText: 'dose', leadingText: 'with dose', type: 'post'},
     ValueComparisonDoseMedicationStatement: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' },
-    ValueComparisonDoseMedicationOrder: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' }
+    ValueComparisonDoseMedicationRequest: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' }
 
   };
 
@@ -219,7 +223,8 @@ function getExpressionSentenceValue(modifier) {
       }
       case 'LookBackObservation':
       case 'LookBackCondition':
-      case 'LookBackMedicationOrder':
+      case 'LookBackImmunization':
+      case 'LookBackMedicationRequest':
       case 'LookBackMedicationStatement':
       case 'LookBackProcedure': {
         expressionSentenceValues[modifier.id].modifierText =
@@ -234,12 +239,12 @@ function getExpressionSentenceValue(modifier) {
         expressionSentenceValues[modifier.id].modifierText = modifier.values.value;
         break;
       }
-      case 'DoseMedicationOrder':
+      case 'DoseMedicationRequest':
       case 'DoseMedicationStatement': {
         expressionSentenceValues[modifier.id].modifierText = `of  ${modifier.values.value} ${modifier.values.unit}`;
         break;
       }
-      case 'ValueComparisonDoseMedicationOrder':
+      case 'ValueComparisonDoseMedicationRequest':
       case 'ValueComparisonDoseMedicationStatement': {
         const minOperatorWord = getOperation(modifier.values.minOperator);
         const maxOperatorWord = getOperation(modifier.values.maxOperator);

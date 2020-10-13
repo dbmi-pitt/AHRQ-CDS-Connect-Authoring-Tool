@@ -13,6 +13,7 @@ export default class Parameters extends Component {
       uniqueId: _.uniqueId('parameter-'),
       comment: null
     };
+
     const parameters = _.clone(this.props.parameters);
     parameters.push(newParameter);
     this.props.updateParameters(parameters);
@@ -60,7 +61,10 @@ export default class Parameters extends Component {
           />
         ))}
 
-        <button className="button primary-button new-parameter" onClick={this.addParameter}>
+        <button
+            className="button primary-button new-parameter"
+            onClick={this.addParameter}
+            aria-label="New Parameter">
           New parameter
         </button>
       </div>

@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import FontAwesome from 'react-fontawesome';
-import { Button } from 'reactstrap';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFile } from '@fortawesome/free-solid-svg-icons';
 
 import Modal from '../elements/Modal';
 import renderDate from '../../utils/dates';
@@ -17,24 +17,8 @@ export default class ExternalCqlDetails extends Component {
   getFhirVersion = (version) => {
     if (version === '1.0.2') return '1.0.2 (DSTU2)';
     if (version.startsWith('3.0.')) return `${version} (STU3)`;
+    if (version.startsWith('4.0.')) return `${version} (R4)`;
     return version;
-  }
-
-  renderHeader = (title, data) => {
-    const chevronIcon = this.state.collapse ? 'chevron-down' : 'chevron-right';
-
-    return (
-      <div
-        className="external-cql-details__header"
-        onClick={event => this.toggle(event)}
-        onKeyPress={event => this.toggle(event)}
-        role="button"
-        tabIndex={0}>
-        <div className="header-title">{title} ({data.length})</div>
-        <div className="header-divider"></div>
-        <Button onClick={this.toggle} className="header-button"><FontAwesome name={chevronIcon} /></Button>
-      </div>
-    );
   }
 
   render() {
@@ -54,10 +38,11 @@ export default class ExternalCqlDetails extends Component {
         hasSecondaryButton={false}
         handleShowModal={openModal}
         handleCloseModal={closeModal}
-        handleSaveModal={closeModal}>
+        handleSaveModal={closeModal}
+      >
         <div className="external-cql-table__modal modal__content external-cql-details">
           <div className="library-name">
-            <FontAwesome name="file" className="library-name-icon" /> {externalCqlLibraryDetails.name}
+            <FontAwesomeIcon icon={faFile} className="library-name-icon" /> {externalCqlLibraryDetails.name}
           </div>
 
           <div className="library-meta">
@@ -72,7 +57,7 @@ export default class ExternalCqlDetails extends Component {
             </div>
 
             <div className="library-meta-item">
-              <div className="item-label">FHIR Version</div>
+              <div className="item-label">FHIR<sup>®</sup> Version</div>
               <div className="item-value">{this.getFhirVersion(externalCqlLibraryDetails.fhirVersion)}</div>
             </div>
           </div>

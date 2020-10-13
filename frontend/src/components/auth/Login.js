@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import FontAwesome from 'react-fontawesome';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
+import _ from 'lodash';
 
 import Modal from '../elements/Modal';
 import { onVisitExternalForm } from '../../utils/handlers';
@@ -9,7 +11,7 @@ export default class Login extends Component {
   constructor(props) {
     super(props);
 
-    this.state = { showLoginModal: false };
+    this.state = { showLoginModal: false, showLoginWarning: false };
   }
 
   openLoginModal = () => {
@@ -28,6 +30,12 @@ export default class Login extends Component {
     this.props.onLoginClick(username.value.trim(), password.value.trim());
   }
 
+  //going to check the username input, if it looks like an
+  //email address, warn the user to use username instead.
+  loginWatcher = (event) => {
+    this.setState({showLoginWarning: _.includes(event.target.value,"@")});
+  }
+
   renderedAuthStatusText() {
     const { authStatus, authStatusText } = this.props;
 
@@ -35,7 +43,7 @@ export default class Login extends Component {
 
     return (
       <div className="login__auth-status">
-        <FontAwesome name="exclamation-circle" /> {authStatusText}
+        <FontAwesomeIcon icon={faExclamationCircle} /> {authStatusText}
       </div>
     );
   }
@@ -43,7 +51,9 @@ export default class Login extends Component {
   render() {
     return (
       <div className="login">
-        <button onClick={this.openLoginModal} className="btn btn-primary login__button col">Login</button>
+        <button onClick={this.openLoginModal} className="btn btn-primary login__button col" aria-label="Login">
+          Login
+        </button>
 
         <Modal
           modalTitle="Login to your account"
@@ -66,10 +76,18 @@ export default class Login extends Component {
               Any communication or data transiting or stored on this system may be disclosed or used for any lawful
               Government purpose.
             </div>
-
+            {this.state.showLoginWarning &&
+              <div className="warning" aria-label="Username warning">
+                Please enter your username, not your email address.
+              </div>
+            }
             <div className="login-modal__form">
-              <input type='text' ref='username' className="form-control col" placeholder='username' />
-              <input type='password' ref='password' className="form-control col" placeholder='password' />
+              <label htmlFor='username'>Username</label>
+              <input type='text' id='username' ref='username'
+                className="form-control col" placeholder='username' onChange={this.loginWatcher} />
+              <label htmlFor='password'>Password</label>
+              <input type='password' id='password' ref='password'
+                className="form-control col" placeholder='password' />
               {this.renderedAuthStatusText()}
             </div>
 

@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import FontAwesome from 'react-fontawesome';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye } from '@fortawesome/free-solid-svg-icons';
 import { UncontrolledTooltip } from 'reactstrap';
 
 import Modal from '../elements/Modal';
@@ -25,6 +26,7 @@ export default class ExternalCqlTable extends Component {
   getFhirVersion = (version) => {
     if (version === '1.0.2') return '1.0.2 (DSTU2)';
     if (version.startsWith('3.0.')) return `${version} (STU3)`;
+    if (version.startsWith('4.0.')) return `${version} (R4)`;
     return version;
   }
 
@@ -57,9 +59,9 @@ export default class ExternalCqlTable extends Component {
   }
 
   handleDeleteExternalCqlLibrary = () => {
-    const { artifactId, deleteExternalCqlLibrary } = this.props;
+    const { artifact, deleteExternalCqlLibrary } = this.props;
     const { externalCqlLibraryToDelete } = this.state;
-    deleteExternalCqlLibrary(externalCqlLibraryToDelete._id, artifactId);
+    deleteExternalCqlLibrary(externalCqlLibraryToDelete._id, artifact);
     this.closeConfirmDeleteModal();
   }
 
@@ -82,8 +84,8 @@ export default class ExternalCqlTable extends Component {
           <div>{externalCqlLibrary.name}</div>
         </td>
 
-        <td className="external-cql-table__tablecell-short" data-th="Added">
-          <div>{renderDate(externalCqlLibrary.createdAt)}</div>
+        <td className="external-cql-table__tablecell-short" data-th="Updated">
+          <div>{renderDate(externalCqlLibrary.updatedAt)}</div>
         </td>
 
         <td className="external-cql-table__tablecell-short center" data-th="Version">
@@ -97,21 +99,26 @@ export default class ExternalCqlTable extends Component {
         <td className="external-cql-table__tablecell-button" data-th="">
           <button aria-label="View"
             className="button primary-button details-button"
-            onClick={() => this.openViewDetailsModal(externalCqlLibrary)}>
-            <FontAwesome name='eye'/>
+            onClick={() => this.openViewDetailsModal(externalCqlLibrary)}
+          >
+            <FontAwesomeIcon icon={faEye} />
           </button>
 
           <button
             className={`button danger-button ${disabledClass}`}
             id={`DeleteLibraryTooltip-${externalCqlLibrary._id}`}
-            onClick={() => { if (!disableDelete) this.openConfirmDeleteModal(externalCqlLibrary); }}>
+            aria-label="Delete"
+            onClick={() => { if (!disableDelete) this.openConfirmDeleteModal(externalCqlLibrary); }}
+          >
             Delete
           </button>
+
           {disableForUse &&
             <UncontrolledTooltip target={`DeleteLibraryTooltip-${externalCqlLibrary._id}`} placement="left">
               To delete this library, first remove all references to it.
             </UncontrolledTooltip>
           }
+
           {!disableForUse && disableForDependency &&
             <UncontrolledTooltip target={`DeleteLibraryTooltip-${externalCqlLibrary._id}`} placement="left">
               To delete this library, first remove all libraries that depend on it.
@@ -133,8 +140,8 @@ export default class ExternalCqlTable extends Component {
         modalSubmitButtonText="Delete"
         handleShowModal={this.state.showConfirmDeleteModal}
         handleCloseModal={this.closeConfirmDeleteModal}
-        handleSaveModal={this.handleDeleteExternalCqlLibrary}>
-
+        handleSaveModal={this.handleDeleteExternalCqlLibrary}
+      >
         <div className="delete-external-cql-library-confirmation-modal modal__content">
           <h5>Are you sure you want to permanently delete the following external CQL library?</h5>
 
@@ -159,9 +166,9 @@ export default class ExternalCqlTable extends Component {
           <thead>
             <tr>
               <th scope="col" className="external-cql-table__tablecell-wide">Library</th>
-              <th scope="col" className="external-cql-table__tablecell-short">Date Added</th>
+              <th scope="col" className="external-cql-table__tablecell-short">Last Updated</th>
               <th scope="col" className="external-cql-table__tablecell-short center">Version</th>
-              <th scope="col" className="external-cql-table__tablecell-short">FHIR Version</th>
+              <th scope="col" className="external-cql-table__tablecell-short">FHIR<sup>®</sup> Version</th>
               <th></th>
             </tr>
           </thead>
@@ -178,7 +185,8 @@ export default class ExternalCqlTable extends Component {
             externalCqlLibrary={externalCqlLibraryToView}
             externalCqlLibraryDetails={externalCqlLibraryDetails}
             loadExternalCqlLibraryDetails={loadExternalCqlLibraryDetails}
-            isLoadingExternalCqlDetails={isLoadingExternalCqlDetails} />
+            isLoadingExternalCqlDetails={isLoadingExternalCqlDetails}
+          />
         }
 
         {this.renderConfirmDeleteModal()}
@@ -188,7 +196,7 @@ export default class ExternalCqlTable extends Component {
 }
 
 ExternalCqlTable.propTypes = {
-  artifactId: PropTypes.string,
+  artifact: PropTypes.object,
   externalCqlList: PropTypes.array,
   externalCqlLibraryDetails: PropTypes.object,
   externalCQLLibraryParents: PropTypes.object.isRequired,
