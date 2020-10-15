@@ -121,18 +121,18 @@ class Landing extends Component {
     return (
       <div className="landing" id="maincontent">
         <div className="landing-wrapper">
-          <div className="home-banner">
-            <div className="home-banner__content">
-              <div className="home-banner__content-title">Create shareable standards-based CDS artifacts</div>
+          {/*<div className="home-banner">*/}
+          {/*  <div className="home-banner__content">*/}
+          {/*    <div className="home-banner__content-title">Create shareable standards-based CDS artifacts</div>*/}
 
-              <div className="home-banner__content-subtitle">
-                The <strong>Clinical Decision Support (CDS) Authoring Tool</strong> is a component of the <strong>CDS
-                Connect</strong> project.
-              </div>
+          {/*    <div className="home-banner__content-subtitle">*/}
+          {/*      The <strong>Clinical Decision Support (CDS) Authoring Tool</strong> is a component of the <strong>CDS*/}
+          {/*      Connect</strong> project.*/}
+          {/*    </div>*/}
 
-              {this.renderedButton()}
-            </div>
-          </div>
+          {/*    {this.renderedButton()}*/}
+          {/*  </div>*/}
+          {/*</div>*/}
 
           {this.renderedWhatsNew()}
 

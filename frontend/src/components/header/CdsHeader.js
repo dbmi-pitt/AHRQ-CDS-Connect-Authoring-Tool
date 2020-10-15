@@ -22,14 +22,14 @@ export default memo(function Header({
           <div className="cds-header__cdsbanner-text col-xs-12 col-md-5">
             <a href="/" alt="home">
               <div className="text-top">Patient-centered Outcomes Research</div>
-              <div className="text-bottom">Clinical Decision Support Authoring</div>
+              <div className="text-bottom">Drug-Drug Interaction Clinical Decision Support Authoring</div>
             </a>
           </div>
 
           <div className="cds-header__cdsbanner-auth col-xs-12 col-md-7">
-            <a href="https://cds.ahrq.gov" className="cds-home-link">
-              <FontAwesomeIcon icon={faLink} /> CDS Home
-            </a>
+            {/*<a href="https://cds.ahrq.gov" className="cds-home-link">*/}
+            {/*  <FontAwesomeIcon icon={faLink} /> CDS Home*/}
+            {/*</a>*/}
 
             {isAuthenticated ?
               <Logout

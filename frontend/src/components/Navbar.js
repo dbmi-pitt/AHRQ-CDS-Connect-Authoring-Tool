@@ -15,7 +15,7 @@ export default class Navbar extends Component {
             <li><NavLink to="/build">Workspace</NavLink></li>
             <li><NavLink to="/testing">Testing</NavLink></li>
             <li><NavLink to="/documentation">Documentation</NavLink></li>
-            <li><a href="https://cds.ahrq.gov/contact-us" onClick={onVisitExternalForm}>Feedback</a></li>
+            {/*<li><a href="https://cds.ahrq.gov/contact-us" onClick={onVisitExternalForm}>Feedback</a></li>*/}
           </ul>
       );
     }
@@ -25,7 +25,7 @@ export default class Navbar extends Component {
           <li><NavLink exact to="/">Home</NavLink></li>
           <li><NavLink to="/documentation">Documentation</NavLink></li>
           <li><a href="https://cds.ahrq.gov/form/cds-authoring-tool-sign-up" onClick={onVisitExternalForm}>Sign Up</a></li>
-          <li><a href="https://cds.ahrq.gov/contact-us" onClick={onVisitExternalForm}>Feedback</a></li>
+          {/*<li><a href="https://cds.ahrq.gov/contact-us" onClick={onVisitExternalForm}>Feedback</a></li>*/}
         </ul>
     );
   }

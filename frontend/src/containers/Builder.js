@@ -270,8 +270,8 @@ export class Builder extends Component {
   }
 
 
-  openArtifactPlanDefinitionModal = async() => {
-    this.setState({showArtifactPlanDefinitionModal: true});
+  openArtifactPlanDefinitionModal = async(disabled, version) => {
+    this.setState({showArtifactPlanDefinitionModal: true, disabled: disabled, version: version});
     await this.props.updateAndSaveArtifact(this.props.artifact, {planDefinitionRecommendations: []});
     this.setState({artifact: this.props.artifact});
   }
@@ -282,7 +282,7 @@ export class Builder extends Component {
 
   handleSaveArtifactAndDownload = async (artifactPropsChanged) => {
     await this.props.updateAndSaveArtifact(this.props.artifact, artifactPropsChanged);
-    this.downloadOptionSelected(false, '3.0.0');
+    this.downloadOptionSelected(this.state.disabled, this.state.version);
     this.closeArtifactPlanDefinitionModal(false);
 
   }
@@ -496,7 +496,7 @@ export class Builder extends Component {
                 <DropdownItem
                   id='dstu2DownloadOption'
                   className={classnames(disableDSTU2 && 'disabled-dropdown')}
-                  onClick={() => this.downloadOptionSelected(disableDSTU2, '1.0.2')}
+                  onClick={() => this.openArtifactPlanDefinitionModal(disableDSTU2, '1.0.2')}
                   role="menuitem"
                 >
                   FHIR<sup>®</sup> DSTU2
@@ -505,7 +505,7 @@ export class Builder extends Component {
                 <DropdownItem
                   id='stu3DownloadOption'
                   className={classnames(disableSTU3 && 'disabled-dropdown')}
-                  onClick={this.openArtifactPlanDefinitionModal}
+                  onClick={() => this.openArtifactPlanDefinitionModal(disableSTU3, '3.0.0')}
                   role="menuitem"
                 >
                   FHIR<sup>®</sup> STU3
@@ -514,7 +514,7 @@ export class Builder extends Component {
                 <DropdownItem
                   id='r4DownloadOption'
                   className={classnames(disableR4 && 'disabled-dropdown')}
-                  onClick={() => this.downloadOptionSelected(disableR4, '4.0.0')}
+                  onClick={() => this.openArtifactPlanDefinitionModal(disableR4, '4.0.0')}
                 >
                   FHIR<sup>®</sup> R4
                 </DropdownItem>
