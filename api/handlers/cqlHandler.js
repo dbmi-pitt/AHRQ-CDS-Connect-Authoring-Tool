@@ -28,18 +28,18 @@ const modifierMap = loadTemplates(modifierPath);
 // Each library will be included. Aliases are optional.
 const includeLibrariesDstu2 = [
     {name: 'FHIRHelpers', version: '1.0.2', alias: 'FHIRHelpers'},
-    // { name: 'AT_Internal_CDS_Connect_Commons_for_FHIRv102', version: '1.3.2', alias: 'C3F' },
-    // { name: 'AT_Internal_CDS_Connect_Conversions', version: '1', alias: 'Convert' }
-    {name: 'CDS_Connect_Commons_for_FHIRv102', version: '1.3.2', alias: 'C3F'},
-    {name: 'CDSConnectConversions', version: '1', alias: 'Convert'}
+    { name: 'AT_Internal_CDS_Connect_Commons_for_FHIRv102', version: '1.3.2', alias: 'C3F' },
+    { name: 'AT_Internal_CDS_Connect_Conversions', version: '1', alias: 'Convert' }
+    // {name: 'CDS_Connect_Commons_for_FHIRv102', version: '1.3.2', alias: 'C3F'},
+    // {name: 'CDSConnectConversions', version: '1', alias: 'Convert'}
 ];
 
 const includeLibrariesStu3 = [
     {name: 'FHIRHelpers', version: '3.0.0', alias: 'FHIRHelpers'},
-    // { name: 'AT_Internal_CDS_Connect_Commons_for_FHIRv300', version: '1.0.1', alias: 'C3F' },
-    // { name: 'AT_Internal_CDS_Connect_Conversions', version: '1', alias: 'Convert' }
-    {name: 'CDSConnectCommonsforFHIRv300', version: '1.0.1', alias: 'C3F'},
-    {name: 'CDSConnectConversions', version: '1', alias: 'Convert'}
+    { name: 'AT_Internal_CDS_Connect_Commons_for_FHIRv300', version: '1.0.1', alias: 'C3F' },
+    { name: 'AT_Internal_CDS_Connect_Conversions', version: '1', alias: 'Convert' }
+    // {name: 'CDSConnectCommonsforFHIRv300', version: '1.0.1', alias: 'C3F'},
+    // {name: 'CDSConnectConversions', version: '1', alias: 'Convert'}
 ];
 
 const includeLibrariesR4 = [
@@ -1445,6 +1445,7 @@ function writeLibrary(artifact, cql_base64_data, elm_base64_data) {
         templateMap.Library,
         {
             element_id: artifact.planDefinition.planDefinitionLibraryURL,
+            element_name: artifact.name,
             element_version: artifact.version,
             element_library_url: "Library/" + artifact.planDefinition.planDefinitionLibraryURL,
             cql_base64_data: cql_base64_data,

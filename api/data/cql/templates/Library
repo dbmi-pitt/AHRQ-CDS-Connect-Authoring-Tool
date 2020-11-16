@@ -7,6 +7,7 @@
 		"resourceType": "Library",
 		"id": "<%-element_id%>",
 		"version": "<%-element_version%>",
+		"name": "<%-element_name%>",
 		"status": "draft",
 		"url": "<%-element_library_url%>",
 		"type": {
