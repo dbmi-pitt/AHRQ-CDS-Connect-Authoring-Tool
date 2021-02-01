@@ -15,7 +15,7 @@ const everyElement = elementLists.concat(['boolean', 'system_quantity', 'system_
   'encounter', 'immunization', 'device', 'integer', 'datetime', 'decimal', 'string', 'time', 'interval_of_integer',
   'interval_of_datetime', 'interval_of_decimal', 'interval_of_quantity', 'any', 'other', 'dose']);
 
-export default [
+const modifiers = [
   // observations
   {
     id: 'VerifiedObservation',
@@ -599,3 +599,5 @@ export default [
     comparisonOperator: null
   },
 ];
+
+export default modifiers;

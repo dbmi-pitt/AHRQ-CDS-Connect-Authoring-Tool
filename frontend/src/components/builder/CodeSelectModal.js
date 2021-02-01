@@ -1,15 +1,14 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { Button, TextField } from '@material-ui/core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faCheckCircle, faExclamationTriangle, faSpinner, faMedkit, faTimes, faExclamationCircle
+  faCheckCircle, faExclamationTriangle, faSpinner, faMedkit, faExclamationCircle
 } from '@fortawesome/free-solid-svg-icons';
-import Modal from 'react-modal';
 import _ from 'lodash';
 
-import StyledSelect from '../elements/StyledSelect';
+import { Dropdown, Link, Modal } from 'components/elements';
 import { getFieldWithId, getFieldWithType } from '../../utils/instances';
-import { onVisitExternalLink } from '../../utils/handlers';
 
 export default class CodeSelectModal extends Component {
   constructor(props) {
@@ -42,12 +41,6 @@ export default class CodeSelectModal extends Component {
     this.props.resetCodeValidation();
   }
 
-  enterKeyCheck = (func, argument, event) => {
-    if (!event || event.type !== 'keydown' || event.key !== 'Enter') return;
-    event.preventDefault();
-    if (argument) { func(argument); } else { func(); }
-  }
-
   handleSearchValueChange = (event) => {
     const codeText = event.target.value;
     this.setState({ codeText });
@@ -58,7 +51,9 @@ export default class CodeSelectModal extends Component {
     this.setState({ codeSystemText });
   }
 
-  onCodeSystemSelected = (selectedCS) => {
+  onCodeSystemSelected = (event, codeSystemOptions) => {
+    const selectedCS = codeSystemOptions.find(option => option.value === event.target.value);
+
     if (!selectedCS) {
       this.setState({ selectedCS: null, displayOtherInput: false });
     } else if (selectedCS.value === 'Other') {
@@ -69,10 +64,7 @@ export default class CodeSelectModal extends Component {
   }
 
   validateCode = () => {
-    if (this.props.vsacFHIRCredentials) {
-      const username = this.props.vsacFHIRCredentials.username;
-      const password = this.props.vsacFHIRCredentials.password;
-
+    if (this.props.vsacApiKey) {
       let selectedCodeSystemId;
       if (!this.state.selectedCS) {
         selectedCodeSystemId = '';
@@ -82,7 +74,7 @@ export default class CodeSelectModal extends Component {
         selectedCodeSystemId = this.state.selectedCS.id;
       }
 
-      this.props.validateCode(this.state.codeText, selectedCodeSystemId, username, password);
+      this.props.validateCode(this.state.codeText, selectedCodeSystemId, this.props.vsacApiKey);
     }
   }
 
@@ -186,9 +178,10 @@ export default class CodeSelectModal extends Component {
   }
 
   renderCodeData = () => {
-    if (this.props.isValidatingCode) {
+    const { isValidCode, isValidatingCode } = this.props;
+    if (isValidatingCode) {
       return <div className="loading-icon"><FontAwesomeIcon icon={faSpinner} spin/></div>;
-    } else if (this.props.isValidCode) {
+    } else if (isValidCode) {
       return (
         <div className="code-display">
           <div className="code-display__code">{this.props.codeData.code}</div>
@@ -201,16 +194,8 @@ export default class CodeSelectModal extends Component {
     return null;
   }
 
-  render() {
-    const codeInputLabel = 'Enter code';
-    const otherInputLabel = 'Enter system canonical URL';
-    let buttonLabels = {
-      openButtonText: 'Add Code',
-      closeButtonText: 'Close'
-    };
-    if (this.props.labels) {
-      buttonLabels = this.props.labels;
-    }
+  renderModalHeader = () => {
+    const { codeSystemText, codeText, displayOtherInput, selectedCS } = this.state;
 
     const codeSystemOptions = [
       { value: 'SNOMED', label: 'SNOMED', id: 'http://snomed.info/sct' },
@@ -223,116 +208,95 @@ export default class CodeSelectModal extends Component {
     ];
 
     return (
-      <span className="element-select__modal element-modal">
-        <button type="button"
-          className="primary-button"
+      <div className="code-select-modal__header">
+        {displayOtherInput &&
+          <div className="notification">
+            <FontAwesomeIcon icon={faExclamationCircle} />
+            Code systems should use their canonical URL. See{' '}
+            <Link
+              external
+              href="http://build.fhir.org/ig/HL7/cqf-recommendations/documentation-libraries.html"
+              text="FHIR® Clinical Guidelines"
+            />
+            {' '}for more information.
+          </div>
+        }
+
+        <div className="code-select-modal__search-container">
+          <div className="code-select-modal__search">
+            <TextField
+              fullWidth
+              id="select-code-code"
+              label="Code"
+              onChange={this.handleSearchValueChange}
+              value={codeText}
+              variant="outlined"
+            />
+          </div>
+
+          <div className="code-select-modal__code-system">
+            <Dropdown
+              id="select-code-system"
+              label="Code system"
+              onChange={event => this.onCodeSystemSelected(event, codeSystemOptions)}
+              options={codeSystemOptions}
+              value={selectedCS ? selectedCS.value : ''}
+            />
+          </div>
+
+          {displayOtherInput &&
+            <div className="code-select-modal__search-other-system">
+              <TextField
+                fullWidth
+                id="select-code-system-url"
+                label="System canonical URL"
+                onChange={this.handleOtherCodeSystemChange}
+                value={codeSystemText}
+                variant="outlined"
+              />
+            </div>
+          }
+
+          <Button color="primary" onClick={this.validateCode} variant="contained">
+            Validate
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  render() {
+    const { codeSystemText, codeText, displayOtherInput, selectedCS, showCodeSelectModal } = this.state;
+    const { labels } = this.props;
+    let buttonLabels = { openButtonText: 'Add Code', closeButtonText: 'Close'};
+    if (labels) buttonLabels = labels;
+
+    return (
+      <span className="code-select-modal">
+        <Button
+          color="primary"
           onClick={this.openCodeSelectModal}
-          aria-label={buttonLabels.openButtonText}>
-          <FontAwesomeIcon icon={faMedkit} />{' '}{buttonLabels.openButtonText}
-        </button>
+          variant="contained"
+          startIcon={<FontAwesomeIcon icon={faMedkit} />}
+        >
+          {buttonLabels.openButtonText}
+        </Button>
 
         <Modal
-          isOpen={this.state.showCodeSelectModal}
-          onRequestClose={this.closeCodeSelectModal}
-          shouldCloseOnOverlayClick={ true }
-          contentLabel="Choose code"
-          className="modal-style modal-style__light modal-style--full-height code-select-modal element-modal"
-          overlayClassName='modal-overlay modal-overlay__dark'
+          Footer={this.renderCodeValidation()}
+          handleCloseModal={this.closeCodeSelectModal}
+          handleSaveModal={this.chooseCode}
+          handleShowModal={showCodeSelectModal}
+          hasCancelButton
+          Header={this.renderModalHeader()}
+          maxWidth="xl"
+          submitButtonText="Select"
+          submitDisabled={!selectedCS || !codeText || (displayOtherInput && !codeSystemText)}
+          title="Choose code"
         >
-          <div className="element-modal__container">
-            <header className="modal__header">
-              <span className="modal__heading">Choose Code</span>
-              <button
-                className="element__deletebutton transparent-button"
-                onClick={this.closeCodeSelectModal}
-                onKeyDown={e => this.enterKeyCheck(this.closeCodeSelectModal, null, e)}
-                aria-label="Close Code Select Modal"
-              >
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
-            </header>
-
-            <main className="modal__body">
-              {this.state.displayOtherInput &&
-                <div className="notification">
-                  <FontAwesomeIcon icon={faExclamationCircle} />
-                  Code systems should use their canonical URL.
-                  See <a href="http://build.fhir.org/ig/HL7/cqf-recommendations/documentation-libraries.html" target="_blank" rel="noopener noreferrer" onClick={onVisitExternalLink}>FHIR® Clinical Guidelines</a> for more information.
-                </div>
-              }
-  
-              <div className="element-modal__search">
-                <input
-                  className="element-modal__search-code"
-                  type="text"
-                  id="code-input"
-                  placeholder={codeInputLabel}
-                  aria-label={codeInputLabel}
-                  title={codeInputLabel}
-                  value={this.state.codeText}
-                  onChange={this.handleSearchValueChange}
-                />
-
-                <div>
-                  <StyledSelect
-                    className="element-modal__search-system"
-                    placeholder={'Select code system'}
-                    aria-label="Select code system"
-                    value={this.state.selectedCS}
-                    options={codeSystemOptions}
-                    onChange={this.onCodeSystemSelected}
-                    classNamePrefix="search-system-select"
-                  />
-
-                  {this.state.displayOtherInput &&
-                    <div className="element-modal__search-other-system">
-                      <input
-                        type="text"
-                        id="other-code-system"
-                        placeholder={otherInputLabel}
-                        aria-label={otherInputLabel}
-                        title={otherInputLabel}
-                        value={this.state.codeSystemText}
-                        onChange={this.handleOtherCodeSystemChange}
-                      />
-                    </div>
-                  }
-                </div>
-
-                <button className="primary-button element-modal__search-button"
-                  onClick={this.validateCode}
-                  aria-label="Validate">
-                  Validate
-                </button>
-              </div>
-
-              {this.renderCodeData()}
-            </main>
-
-            <footer className="modal__footer">
-              {this.renderCodeValidation()}
-
-              <button className="secondary-button"
-                onClick={this.closeCodeSelectModal}
-                aria-label="Cancel"
-              >
-                Cancel
-              </button>
-
-              <button
-                className="primary-button element-modal__search-button"
-                disabled={
-                  !this.state.selectedCS
-                  || !this.state.codeText
-                  || (this.state.displayOtherInput && !this.state.codeSystemText)
-                }
-                onClick={this.chooseCode}
-                aria-label="Select"
-              >
-                Select
-              </button>
-            </footer>
-          </div>
+          <main className="modal__body code-select-modal__body">
+            {this.renderCodeData()}
+          </main>
         </Modal>
       </span>
     );

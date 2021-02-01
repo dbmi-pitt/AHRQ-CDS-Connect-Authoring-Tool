@@ -1,46 +1,46 @@
-import React, { Component } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
-import _ from 'lodash';
+import { useQuery } from 'react-query';
+import axios from 'axios';
+import clsx from 'clsx';
 
-import StyledSelect from '../../elements/StyledSelect';
+import { Dropdown } from 'components/elements';
+import useStyles from './styles';
 
-export default class ValueSetField extends Component {
-  onFocus = () => {
-    this.props.loadValueSets(this.props.field.select);
-  }
+const fetchValueSets = (key, { type }) =>
+  axios.get(`${process.env.REACT_APP_API_URL}/config/valuesets/${type}`).then(({ data }) => data.expansion);
 
-  render() {
-    const id = _.uniqueId('field-');
-    return (
-      <div className="value-set-field">
-        <div className="form__group">
-          <label htmlFor={id}>
-            <div className="label">{this.props.field.name}:</div>
+const ValueSetField = ({ field, updateInstance }) => {
+  const styles = useStyles();
+  const { data } = useQuery(['valueSets', { type: field.select }], fetchValueSets);
+  const valueSets = data ?? [];
 
-            <div className="input">
-              <StyledSelect
-                className="Select"
-                classNamePrefix="value-set-field-select"
-                getOptionLabel={({ name }) => name}
-                placeholder={`Select ${this.props.field.name}`}
-                options={this.props.valueSets}
-                inputProps={{ id }}
-                name={this.props.field.id}
-                value={this.props.field.value}
-                onChange={(value) => { this.props.updateInstance({ [this.props.field.id]: value }); }}
-                onFocus={this.onFocus}
-                isSearchable={true} />
-              </div>
-          </label>
-        </div>
-      </div>
-    );
-  }
-}
+  const handleUpdateInstance = event => {
+    const value = valueSets.find(valueSet => valueSet.id === event.target.value);
+    updateInstance({ [field.id]: value });
+  };
+
+  return (
+    <div className={clsx('value-set-field', styles.field)}>
+      <div className={styles.fieldLabel}>{field.name}:</div>
+
+      <Dropdown
+        className={clsx(styles.fieldInput, styles.fieldInputMd)}
+        label={field.name}
+        onChange={handleUpdateInstance}
+        options={valueSets}
+        value={valueSets.length > 0 && field.value ? field.value.id : ''}
+        valueKey="id"
+        labelKey="name"
+        id={field.id}
+      />
+    </div>
+  );
+};
 
 ValueSetField.propTypes = {
   field: PropTypes.object,
-  valueSets: PropTypes.array,
-  loadValueSets: PropTypes.func.isRequired,
-  updateInstance: PropTypes.func.isRequired
+  updateInstance: PropTypes.func
 };
+
+export default ValueSetField;

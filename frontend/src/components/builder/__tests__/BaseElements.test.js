@@ -1,8 +1,7 @@
 import React from 'react';
 import BaseElements from '../BaseElements';
-import { render, openSelect } from '../../../utils/test-utils';
-import { elementGroups, genericBaseElementInstance, genericBaseElementListInstance }
-  from '../../../utils/test_fixtures';
+import { render, screen, userEvent } from 'utils/test-utils';
+import { elementGroups, genericBaseElementInstance, genericBaseElementListInstance } from 'utils/test_fixtures';
 
 describe('<BaseElements />', () => {
   const renderComponent = (props = {}) =>
@@ -19,12 +18,14 @@ describe('<BaseElements />', () => {
         getVSDetails={jest.fn()}
         instance={null}
         instanceNames={[]}
+        isLoadingModifiers={false}
         isRetrievingDetails={false}
         isSearchingVSAC={false}
         isValidatingCode={false}
         loadExternalCqlList={jest.fn()}
-        loadValueSets={jest.fn()}
         loginVSACUser={jest.fn()}
+        modifierMap={{}}
+        modifiersByInputType={{}}
         parameters={[]}
         resetCodeValidation={jest.fn()}
         scrollToElement={jest.fn()}
@@ -36,9 +37,10 @@ describe('<BaseElements />', () => {
         updateInstanceModifiers={jest.fn()}
         validateCode={jest.fn()}
         validateReturnType={false}
+        vsacApiKey={'key'}
         vsacDetailsCodes={[]}
         vsacDetailsCodesError=""
-        vsacFHIRCredentials={{ username: 'name', password: 'pass' }}
+        vsacIsAuthenticating={false}
         vsacSearchCount={0}
         vsacSearchResults={[]}
         {...props}
@@ -80,7 +82,6 @@ describe('<BaseElements />', () => {
     const [conjunctionGroup] = conjunctions;
     const expressPhrase = conjunctionGroup.querySelectorAll('.expression-item');
 
-    console.log('phrases');
     expect(expressPhrase[0]).toHaveTextContent('Union');
     expect(expressPhrase[1]).toHaveTextContent('of');
     expect(expressPhrase[2]).toHaveTextContent('VSAC Observation');
@@ -89,11 +90,10 @@ describe('<BaseElements />', () => {
     expect(elementSelects).toHaveLength(1);
 
     // The Type options in the Conjunction group match the List options, not the usual operations
-    const conjunctionSelect = conjunctionGroup.querySelector('.card-group__conjunction-select');
-    openSelect(conjunctionSelect);
+    userEvent.click(screen.getByRole('button', { name: 'Union' }));
 
     const listOperations = elementGroups[3].entries;
-    const menuOptions = conjunctionSelect.querySelectorAll('.conjunction-select__option');
+    const menuOptions = screen.getAllByRole('option');
     expect(menuOptions).toHaveLength(2);
     expect(menuOptions[0]).toHaveTextContent(listOperations[0].name);
     expect(menuOptions[1]).toHaveTextContent(listOperations[1].name);

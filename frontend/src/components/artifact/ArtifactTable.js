@@ -1,15 +1,15 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPencilAlt, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { Button } from '@material-ui/core';
+import { Delete as DeleteIcon, Edit as EditIcon } from '@material-ui/icons';
 
-import renderDate from '../../utils/dates';
-import { sortMostRecent } from '../../utils/sort';
-import artifactProps from '../../prop-types/artifact';
+import renderDate from 'utils/dates';
+import { sortMostRecent } from 'utils/sort';
+import artifactProps from 'prop-types/artifact';
 
-import Modal from '../elements/Modal';
-import EditArtifactModal from './EditArtifactModal';
+import { Modal }  from 'components/elements';
+import ArtifactModal from './ArtifactModal';
 
 export default class ArtifactTable extends Component {
   constructor(props) {
@@ -18,24 +18,19 @@ export default class ArtifactTable extends Component {
     this.state = {
       artifactEditing: null,
       artifactToDelete: null,
-      showEditArtifactModal: false,
+      showArtifactModal: false,
       showConfirmDeleteModal: false
     };
   }
 
   // ----------------------- EDIT ARTIFACT MODAL --------------------------- //
 
-  openEditArtifactModal = (artifact) => {
-    this.setState({ artifactEditing: artifact, showEditArtifactModal: true });
+  openArtifactModal = (artifact) => {
+    this.setState({ artifactEditing: artifact, showArtifactModal: true });
   }
 
-  closeEditArtifactModal = () => {
-    this.setState({ showEditArtifactModal: false });
-  }
-
-  handleEditArtifact = (props) => {
-    this.props.updateAndSaveArtifact(this.state.artifactEditing, props);
-    this.closeEditArtifactModal(false);
+  closeArtifactModal = () => {
+    this.setState({ showArtifactModal: false });
   }
 
   // ----------------------- CONFIRM DELETE MODAL -------------------------- //
@@ -58,13 +53,12 @@ export default class ArtifactTable extends Component {
   renderConfirmDeleteModal() {
     return (
       <Modal
-        modalTitle="Delete Artifact Confirmation"
-        modalId="confirm-delete-modal"
-        modalTheme="light"
-        modalSubmitButtonText="Delete"
+        title="Delete Artifact Confirmation"
+        submitButtonText="Delete"
         handleShowModal={this.state.showConfirmDeleteModal}
         handleCloseModal={this.closeConfirmDeleteModal}
-        handleSaveModal={this.handleDeleteArtifact}>
+        handleSaveModal={this.handleDeleteArtifact}
+      >
 
         <div className="delete-artifact-confirmation-modal modal__content">
           <h5>Are you sure you want to permanently delete the following CDS Artifact?</h5>
@@ -102,18 +96,24 @@ export default class ArtifactTable extends Component {
 
       <td data-th="Updated">{renderDate(artifact.updatedAt)}</td>
 
-      <td data-th="">
-        <button aria-label="Edit"
-          className="primary-button edit-artifact-button"
-          onClick={() => this.openEditArtifactModal(artifact)}>
-          <FontAwesomeIcon icon={faPencilAlt} /> Edit Info
-        </button>
+      <td data-th="" className="artifacts__tablecell-buttons">
+        <Button
+          color="primary"
+          onClick={() => this.openArtifactModal(artifact)}
+          startIcon={<EditIcon />}
+          variant="contained"
+        >
+          Edit Info
+        </Button>
 
-        <button aria-label="Delete"
-          className="danger-button"
-          onClick={() => this.openConfirmDeleteModal(artifact)}>
-          <FontAwesomeIcon icon={faTimes} /> Delete
-        </button>
+        <Button
+          color="secondary"
+          onClick={() => this.openConfirmDeleteModal(artifact)}
+          startIcon={<DeleteIcon />}
+          variant="contained"
+        >
+          Delete
+        </Button>
       </td>
     </tr>
   );
@@ -138,11 +138,10 @@ export default class ArtifactTable extends Component {
           </tbody>
         </table>
 
-        <EditArtifactModal
+        <ArtifactModal
           artifactEditing={this.state.artifactEditing}
-          showModal={this.state.showEditArtifactModal}
-          closeModal={this.closeEditArtifactModal}
-          saveModal={this.handleEditArtifact} />
+          showModal={this.state.showArtifactModal}
+          closeModal={this.closeArtifactModal} />
 
         {this.renderConfirmDeleteModal()}
       </div>
@@ -153,5 +152,4 @@ export default class ArtifactTable extends Component {
 ArtifactTable.propTypes = {
   artifacts: PropTypes.arrayOf(artifactProps),
   deleteArtifact: PropTypes.func.isRequired,
-  updateAndSaveArtifact: PropTypes.func.isRequired
 };

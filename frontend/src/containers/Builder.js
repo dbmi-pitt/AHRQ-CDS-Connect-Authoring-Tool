@@ -1,18 +1,22 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import classnames from 'classnames';
 import withGracefulUnmount from 'react-graceful-unmount';
-import { Dropdown, DropdownToggle, DropdownMenu, DropdownItem, UncontrolledTooltip } from 'reactstrap';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPencilAlt, faDownload, faSave, faAlignRight } from '@fortawesome/free-solid-svg-icons';
+import { faBook } from '@fortawesome/free-solid-svg-icons';
+import { Button, IconButton, Menu, MenuItem } from '@material-ui/core';
+import {
+  Edit as EditIcon,
+  GetApp as GetAppIcon,
+  Publish as PublishIcon,
+  Save as SaveIcon
+} from '@material-ui/icons';
 import _ from 'lodash';
 
 import loadTemplates from '../actions/templates';
-import loadValueSets from '../actions/value_sets';
-import loadConversionFunctions from '../actions/modifiers';
+import { loadConversionFunctions } from '../actions/modifiers';
 import {
   setStatusMessage, downloadArtifact, saveArtifact, loadArtifact, updateArtifact, initializeArtifact,
   updateAndSaveArtifact, publishArtifact, clearArtifactValidationWarnings
@@ -27,8 +31,8 @@ import {
 
 import BaseElements from '../components/builder/BaseElements';
 import ConjunctionGroup from '../components/builder/ConjunctionGroup';
-import EditArtifactModal from '../components/artifact/EditArtifactModal';
-import ArtifactPlanDefinitionModal from '../components/artifact/ArtifactPlanDefinitionModal'
+import ArtifactModal from '../components/artifact/ArtifactModal';
+import ArtifactPlanDefinitionModal from '../components/artifact/ArtifactPlanDefinitionModal';
 import ELMErrorModal from '../components/builder/ELMErrorModal';
 import ErrorStatement from '../components/builder/ErrorStatement';
 import ExternalCQL from '../components/builder/ExternalCQL';
@@ -42,7 +46,6 @@ import isBlankArtifact from '../utils/artifacts/isBlankArtifact';
 import { findValueAtPath } from '../utils/find';
 
 import artifactProps from '../prop-types/artifact';
-import {getReturnType} from "../utils/instances";
 
 // TODO: This is needed because the tree on this.state is not updated in time. Figure out a better way to handle this
 let localTree;
@@ -52,13 +55,14 @@ export class Builder extends Component {
     super(props);
 
     this.state = {
-      showEditArtifactModal: false,
+      showArtifactModal: false,
       showArtifactPlanDefinitionModal: false,
       showPublishModal: false,
       showELMErrorModal: false,
       showMenu: false,
       activeTabIndex: 0,
-      uniqueIdCounter: 0
+      uniqueIdCounter: 0,
+      downloadMenuAnchorElement: null
     };
   }
 
@@ -256,17 +260,17 @@ export class Builder extends Component {
 
   // ----------------------- ARTIFACTS ------------------------------------- //
 
-  openEditArtifactModal = () => {
-    this.setState({ showEditArtifactModal: true });
+  openArtifactModal = () => {
+    this.setState({ showArtifactModal: true });
   }
 
-  closeEditArtifactModal = () => {
-    this.setState({ showEditArtifactModal: false });
+  closeArtifactModal = () => {
+    this.setState({ showArtifactModal: false });
   }
 
   handleSaveArtifact = (artifactPropsChanged) => {
     this.props.updateAndSaveArtifact(this.props.artifact, artifactPropsChanged);
-    this.closeEditArtifactModal(false);
+    this.closeArtifactModal(false);
   }
 
 
@@ -386,22 +390,28 @@ export class Builder extends Component {
     this.setState({ showPublishModal: !this.state.showPublishModal });
   }
 
-  toggleMenu = () => {
-    this.setState({ showMenu: !this.state.showMenu });
-  }
+  handleClickDownloadMenu = event => {
+    this.setState({ downloadMenuAnchorElement: event.currentTarget });
+  };
+
+  handleCloseDownloadMenu = () => {
+    this.setState({ downloadMenuAnchorElement: null });
+  };
 
   downloadOptionSelected = (disabled, version) => {
     const { artifact } = this.props;
     if (!disabled) this.props.downloadArtifact(artifact, { name: 'FHIR', version });
+    this.handleCloseDownloadMenu();
   }
 
   // ----------------------- RENDER ---------------------------------------- //
 
   renderConjunctionGroup = (treeName) => {
     const {
-      artifact, templates, valueSets,
+      artifact, templates,
       vsacStatus, vsacStatusText,
-      isRetrievingDetails, vsacDetailsCodes, vsacDetailsCodesError, conversionFunctions,
+      isRetrievingDetails, vsacDetailsCodes, vsacDetailsCodesError,
+      modifierMap, modifiersByInputType, isLoadingModifiers, conversionFunctions,
       isValidatingCode, isValidCode, codeData
     } = this.props;
     const namedParameters = _.filter(artifact.parameters, p => (!_.isNull(p.name) && p.name.length));
@@ -409,44 +419,46 @@ export class Builder extends Component {
     if (artifact && artifact[treeName].childInstances) {
       return (
         <ConjunctionGroup
-          root={true}
-          treeName={treeName}
-          artifact={artifact}
-          templates={templates}
-          valueSets={valueSets}
-          loadValueSets={this.props.loadValueSets}
-          instance={artifact[treeName]}
           addInstance={this.addInstance}
-          editInstance={this.editInstance}
+          artifact={artifact}
+          baseElements={artifact.baseElements}
+          codeData={codeData}
+          conversionFunctions={conversionFunctions}
           deleteInstance={this.deleteInstance}
+          editInstance={this.editInstance}
+          externalCqlList={this.props.externalCqlList}
           getAllInstances={this.getAllInstances}
           getAllInstancesInAllTrees={this.getAllInstancesInAllTrees}
-          updateInstanceModifiers={this.updateInstanceModifiers}
-          parameters={namedParameters}
-          baseElements={artifact.baseElements}
-          externalCqlList={this.props.externalCqlList}
-          loadExternalCqlList={this.props.loadExternalCqlList}
-          conversionFunctions={conversionFunctions}
-          instanceNames={this.props.names}
-          scrollToElement={this.scrollToElement}
-          loginVSACUser={this.props.loginVSACUser}
-          setVSACAuthStatus={this.props.setVSACAuthStatus}
-          vsacStatus={vsacStatus}
-          vsacStatusText={vsacStatusText}
-          searchVSACByKeyword={this.props.searchVSACByKeyword}
-          isSearchingVSAC={this.props.isSearchingVSAC}
-          vsacSearchResults={this.props.vsacSearchResults}
-          vsacSearchCount={this.props.vsacSearchCount}
           getVSDetails={this.props.getVSDetails}
+          instance={artifact[treeName]}
+          instanceNames={this.props.names}
+          isLoadingModifiers={isLoadingModifiers}
           isRetrievingDetails={isRetrievingDetails}
-          vsacDetailsCodes={vsacDetailsCodes}
-          vsacDetailsCodesError={vsacDetailsCodesError}
-          vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+          isSearchingVSAC={this.props.isSearchingVSAC}
           isValidatingCode={isValidatingCode}
           isValidCode={isValidCode}
-          codeData={codeData}
-          validateCode={this.props.validateCode}
+          loadExternalCqlList={this.props.loadExternalCqlList}
+          loginVSACUser={this.props.loginVSACUser}
+          modifierMap={modifierMap}
+          modifiersByInputType={modifiersByInputType}
+          parameters={namedParameters}
           resetCodeValidation={this.props.resetCodeValidation}
+          root={true}
+          scrollToElement={this.scrollToElement}
+          searchVSACByKeyword={this.props.searchVSACByKeyword}
+          setVSACAuthStatus={this.props.setVSACAuthStatus}
+          templates={templates}
+          treeName={treeName}
+          updateInstanceModifiers={this.updateInstanceModifiers}
+          validateCode={this.props.validateCode}
+          vsacApiKey={this.props.vsacApiKey}
+          vsacDetailsCodes={vsacDetailsCodes}
+          vsacDetailsCodesError={vsacDetailsCodesError}
+          vsacIsAuthenticating={this.props.vsacIsAuthenticating}
+          vsacSearchCount={this.props.vsacSearchCount}
+          vsacSearchResults={this.props.vsacSearchResults}
+          vsacStatus={vsacStatus}
+          vsacStatusText={vsacStatusText}
         />
       );
     }
@@ -456,6 +468,7 @@ export class Builder extends Component {
 
   renderHeader() {
     const { statusMessage, artifact, publishEnabled } = this.props;
+    const { downloadMenuAnchorElement } = this.state;
     const artifactName = artifact ? artifact.name : null;
     let disableDSTU2 = false;
     let disableSTU3 = false;
@@ -478,81 +491,64 @@ export class Builder extends Component {
     return (
       <header className="builder__header" aria-label="Workspace Header">
         <h2 className="builder__heading">
-          <button aria-label="Edit" className="secondary-button" onClick={this.openEditArtifactModal}>
-            <FontAwesomeIcon icon={faPencilAlt} />
-          </button>
+          <IconButton aria-label="edit" onClick={this.openArtifactModal}>
+            <EditIcon />
+          </IconButton>
 
           {artifactName}
         </h2>
 
         <div className="builder__buttonbar">
           <div className="builder__buttonbar-menu" aria-label="Workspace Menu">
-            <Dropdown isOpen={this.state.showMenu} toggle={this.toggleMenu} className="dropdown-button">
-              <DropdownToggle caret>
-                <FontAwesomeIcon icon={faDownload} className="icon" />Download CQL
-              </DropdownToggle>
-
-              <DropdownMenu>
-                <DropdownItem
-                  id='dstu2DownloadOption'
-                  className={classnames(disableDSTU2 && 'disabled-dropdown')}
-                  onClick={() => this.openArtifactPlanDefinitionModal(disableDSTU2, '1.0.2')}
-                  role="menuitem"
-                >
-                  FHIR<sup>®</sup> DSTU2
-                </DropdownItem>
-
-                <DropdownItem
-                  id='stu3DownloadOption'
-                  className={classnames(disableSTU3 && 'disabled-dropdown')}
-                  onClick={() => this.openArtifactPlanDefinitionModal(disableSTU3, '3.0.0')}
-                  role="menuitem"
-                >
-                  FHIR<sup>®</sup> STU3
-                </DropdownItem>
-
-                <DropdownItem
-                  id='r4DownloadOption'
-                  className={classnames(disableR4 && 'disabled-dropdown')}
-                  onClick={() => this.openArtifactPlanDefinitionModal(disableR4, '4.0.0')}
-                >
-                  FHIR<sup>®</sup> R4
-                </DropdownItem>
-
-                {disableDSTU2 &&
-                  <UncontrolledTooltip className='light-tooltip' target='dstu2DownloadOption' placement="left">
-                    Downloading this FHIR version is disabled based on external library versions.
-                  </UncontrolledTooltip>
-                }
-                {disableSTU3 &&
-                  <UncontrolledTooltip className='light-tooltip' target='stu3DownloadOption' placement="left">
-                    Downloading this FHIR version is disabled based on external library versions.
-                  </UncontrolledTooltip>
-                }
-                {disableR4 &&
-                  <UncontrolledTooltip className='light-tooltip' target='r4DownloadOption' placement="left">
-                    Downloading this FHIR version is disabled based on external library versions.
-                  </UncontrolledTooltip>
-                }
-              </DropdownMenu>
-            </Dropdown>
-
-            <button
-              onClick={() => this.handleSaveArtifact(artifact)}
-              className="secondary-button"
-              aria-label="Save"
+            <Button
+              aria-controls="download-menu"
+              aria-haspopup="true"
+              onClick={this.handleClickDownloadMenu}
+              startIcon={<GetAppIcon />}
+              variant="contained"
             >
-              <FontAwesomeIcon icon={faSave} className="icon" />Save
-            </button>
+              Download CQL
+            </Button>
+
+            <Menu
+              anchorEl={downloadMenuAnchorElement}
+              id="download-menu"
+              keepMounted
+              onClose={this.handleCloseDownloadMenu}
+              open={Boolean(downloadMenuAnchorElement)}
+            >
+              <MenuItem disabled={disableDSTU2}
+                        onClick={() => this.openArtifactPlanDefinitionModal(disableDSTU2, '1.0.2')}>
+                FHIR<sup>®</sup> DSTU2
+              </MenuItem>
+
+              <MenuItem disabled={disableSTU3}
+                        onClick={() => this.openArtifactPlanDefinitionModal(disableSTU3, '3.0.0')}>
+                FHIR<sup>®</sup> STU3
+              </MenuItem>
+
+              <MenuItem disabled={disableR4}
+                        onClick={() => this.openArtifactPlanDefinitionModal(disableR4, '4.0.0')}>
+                FHIR<sup>®</sup> R4
+              </MenuItem>
+            </Menu>
+
+            <Button
+              onClick={() => this.handleSaveArtifact(artifact)}
+              startIcon={<SaveIcon />}
+              variant="contained"
+            >
+              Save
+            </Button>
 
             {publishEnabled &&
-              <button
+              <Button
                 onClick={() => { this.handleSaveArtifact(artifact); this.togglePublishModal(); }}
-                className="secondary-button"
-                aria-label="Publish"
+                startIcon={<PublishIcon />}
+                variant="contained"
               >
-                <FontAwesomeIcon icon={faAlignRight} className="icon" />Publish
-              </button>
+                Publish
+              </Button>
             }
           </div>
 
@@ -563,7 +559,9 @@ export class Builder extends Component {
   }
 
   render() {
-    const { artifact, templates, conversionFunctions } = this.props;
+    const {
+      artifact, templates, modifierMap, modifiersByInputType, isLoadingModifiers, conversionFunctions
+    } = this.props;
     let namedParameters = [];
     if (artifact) {
       namedParameters = _.filter(artifact.parameters, p => (!_.isNull(p.name) && p.name.length));
@@ -594,7 +592,9 @@ export class Builder extends Component {
                 <Tab>Recommendations</Tab>
                 <Tab>Parameters</Tab>
                 <Tab>Handle Errors</Tab>
-                <Tab>External CQL</Tab>
+                <Tab>
+                  <FontAwesomeIcon icon={faBook} /> External CQL
+                </Tab>
               </TabList>
 
               <div className="tab-panel-container">
@@ -674,8 +674,6 @@ export class Builder extends Component {
                   <Subpopulations
                     name={'subpopulations'}
                     artifact={artifact}
-                    valueSets={this.props.valueSets}
-                    loadValueSets={this.props.loadValueSets}
                     updateSubpopulations={this.updateSubpopulations}
                     parameters={namedParameters}
                     baseElements={artifact.baseElements}
@@ -690,6 +688,9 @@ export class Builder extends Component {
                     templates={templates}
                     checkSubpopulationUsage={this.checkSubpopulationUsage}
                     updateRecsSubpop={this.updateRecsSubpop}
+                    modifierMap={modifierMap}
+                    modifiersByInputType={modifiersByInputType}
+                    isLoadingModifiers={isLoadingModifiers}
                     conversionFunctions={conversionFunctions}
                     instanceNames={this.props.names}
                     scrollToElement={this.scrollToElement}
@@ -705,12 +706,64 @@ export class Builder extends Component {
                     isRetrievingDetails={this.props.isRetrievingDetails}
                     vsacDetailsCodes={this.props.vsacDetailsCodes}
                     vsacDetailsCodesError={this.props.vsacDetailsCodesError}
-                    vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+                    vsacApiKey={this.props.vsacApiKey}
                     isValidatingCode={this.props.isValidatingCode}
                     isValidCode={this.props.isValidCode}
                     codeData={this.props.codeData}
                     validateCode={this.props.validateCode}
                     resetCodeValidation={this.props.resetCodeValidation}
+                    vsacIsAuthenticating={this.props.vsacIsAuthenticating}
+                  />
+                </TabPanel>
+
+                <TabPanel>
+                  <div className="workspace-blurb">
+                    Specify individual elements that can be re-used in the Inclusions, Exclusions, and Subpopulations,
+                    or should standalone as independent expressions in the resulting artifact. An example might be a lab
+                    result value that is referenced multiple times throughout the artifact.
+                  </div>
+                  <BaseElements
+                    treeName='baseElements'
+                    instance={artifact}
+                    addBaseElement={this.addBaseElement}
+                    getAllInstances={this.getAllInstances}
+                    getAllInstancesInAllTrees={this.getAllInstancesInAllTrees}
+                    addInstance={this.addInstance}
+                    editInstance={this.editInstance}
+                    updateInstanceModifiers={this.updateInstanceModifiers}
+                    deleteInstance={this.deleteInstance}
+                    updateBaseElementLists={this.updateSubpopulations}
+                    templates={templates}
+                    modifierMap={modifierMap}
+                    modifiersByInputType={modifiersByInputType}
+                    isLoadingModifiers={isLoadingModifiers}
+                    conversionFunctions={conversionFunctions}
+                    instanceNames={this.props.names}
+                    baseElements={artifact.baseElements}
+                    parameters={namedParameters}
+                    externalCqlList={this.props.externalCqlList}
+                    loadExternalCqlList={this.props.loadExternalCqlList}
+                    scrollToElement={this.scrollToElement}
+                    loginVSACUser={this.props.loginVSACUser}
+                    setVSACAuthStatus={this.props.setVSACAuthStatus}
+                    vsacStatus={this.props.vsacStatus}
+                    vsacStatusText={this.props.vsacStatusText}
+                    searchVSACByKeyword={this.props.searchVSACByKeyword}
+                    isSearchingVSAC={this.props.isSearchingVSAC}
+                    vsacSearchResults={this.props.vsacSearchResults}
+                    vsacSearchCount={this.props.vsacSearchCount}
+                    getVSDetails={this.props.getVSDetails}
+                    isRetrievingDetails={this.props.isRetrievingDetails}
+                    vsacDetailsCodes={this.props.vsacDetailsCodes}
+                    vsacDetailsCodesError={this.props.vsacDetailsCodesError}
+                    vsacApiKey={this.props.vsacApiKey}
+                    isValidatingCode={this.props.isValidatingCode}
+                    isValidCode={this.props.isValidCode}
+                    codeData={this.props.codeData}
+                    validateCode={this.props.validateCode}
+                    resetCodeValidation={this.props.resetCodeValidation}
+                    validateReturnType={false}
+                    vsacIsAuthenticating={this.props.vsacIsAuthenticating}
                   />
                 </TabPanel>
 
@@ -749,7 +802,7 @@ export class Builder extends Component {
                     parameters={this.props.artifact.parameters}
                     updateParameters={this.updateParameters}
                     instanceNames={this.props.names}
-                    vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+                    vsacApiKey={this.props.vsacApiKey}
                     loginVSACUser={this.props.loginVSACUser}
                     setVSACAuthStatus={this.props.setVSACAuthStatus}
                     vsacStatus={this.props.vsacStatus}
@@ -760,6 +813,7 @@ export class Builder extends Component {
                     validateCode={this.props.validateCode}
                     resetCodeValidation={this.props.resetCodeValidation}
                     getAllInstancesInAllTrees={this.getAllInstancesInAllTrees}
+                    vsacIsAuthenticating={this.props.vsacIsAuthenticating}
                   />
                 </TabPanel>
 
@@ -769,6 +823,7 @@ export class Builder extends Component {
                     artifact is executed. An example might be to deliver an error message if the patient would normally
                     receive the recommendation but has been excluded.
                   </div>
+
                   <ErrorStatement
                     parameters={namedParameters}
                     subpopulations={this.props.artifact.subpopulations}
@@ -809,16 +864,17 @@ export class Builder extends Component {
 
         <RepoUploadModal
           artifact={artifact}
-          showModal={this.state.showPublishModal}
           closeModal={this.togglePublishModal}
+          hasCancelButton
+          showModal={this.state.showPublishModal}
           version={artifact.version}
         />
 
-        <EditArtifactModal
-            artifactEditing={artifact}
-            showModal={this.state.showEditArtifactModal}
-            closeModal={this.closeEditArtifactModal}
-            saveModal={this.handleSaveArtifact}/>
+        <ArtifactModal
+          artifactEditing={artifact}
+          closeModal={this.closeArtifactModal}
+          showModal={this.state.showArtifactModal}
+        />
 
         <ArtifactPlanDefinitionModal
             artifact={artifact}
@@ -827,116 +883,122 @@ export class Builder extends Component {
             saveModal={this.handleSaveArtifactAndDownload}/>
 
         <ELMErrorModal
-          isOpen={this.state.showELMErrorModal}
           closeModal={this.closeELMErrorModal}
           errors={this.props.downloadedArtifact.elmErrors}/>
+          isOpen={this.state.showELMErrorModal}
+        />
       </div>
     );
   }
 }
 
 Builder.propTypes = {
+  addExternalCqlLibraryError: PropTypes.number,
+  addExternalCqlLibraryErrorMessage: PropTypes.string,
+  addExternalLibrary: PropTypes.func.isRequired,
   artifact: artifactProps,
-  statusMessage: PropTypes.string,
-  templates: PropTypes.array,
-  loadTemplates: PropTypes.func.isRequired,
-  loadValueSets: PropTypes.func.isRequired,
-  loadArtifact: PropTypes.func.isRequired,
-  initializeArtifact: PropTypes.func.isRequired,
-  updateArtifact: PropTypes.func.isRequired,
-  setStatusMessage: PropTypes.func.isRequired,
-  downloadArtifact: PropTypes.func.isRequired,
-  saveArtifact: PropTypes.func.isRequired,
-  updateAndSaveArtifact: PropTypes.func.isRequired,
-  conversionFunctions: PropTypes.array,
-  validateCode: PropTypes.func.isRequired,
-  resetCodeValidation: PropTypes.func.isRequired,
-  isValidatingCode: PropTypes.bool.isRequired,
-  isValidCode: PropTypes.bool,
   codeData: PropTypes.object,
-  names: PropTypes.array.isRequired,
-  librariesInUse: PropTypes.array.isRequired,
-  externalCqlList: PropTypes.array,
-  externalCQLLibraryParents: PropTypes.object.isRequired,
+  conversionFunctions: PropTypes.array,
+  deleteExternalCqlLibrary: PropTypes.func.isRequired,
+  downloadArtifact: PropTypes.func.isRequired,
+  externalCqlErrors: PropTypes.array,
+  externalCqlFhirVersion: PropTypes.string,
   externalCqlLibrary: PropTypes.object,
   externalCqlLibraryDetails: PropTypes.object,
-  externalCqlFhirVersion: PropTypes.string,
-  externalCqlErrors: PropTypes.array,
+  externalCQLLibraryParents: PropTypes.object.isRequired,
+  externalCqlList: PropTypes.array,
+  initializeArtifact: PropTypes.func.isRequired,
   isAddingExternalCqlLibrary: PropTypes.bool.isRequired,
-  deleteExternalCqlLibrary: PropTypes.func.isRequired,
-  addExternalLibrary: PropTypes.func.isRequired,
-  loadExternalCqlList: PropTypes.func.isRequired,
-  loadExternalCqlLibraryDetails: PropTypes.func.isRequired,
   isLoadingExternalCqlDetails: PropTypes.bool.isRequired,
-  addExternalCqlLibraryError: PropTypes.number,
-  addExternalCqlLibraryErrorMessage: PropTypes.string
+  isLoadingModifiers: PropTypes.bool,
+  isValidatingCode: PropTypes.bool.isRequired,
+  isValidCode: PropTypes.bool,
+  librariesInUse: PropTypes.array.isRequired,
+  loadArtifact: PropTypes.func.isRequired,
+  loadExternalCqlLibraryDetails: PropTypes.func.isRequired,
+  loadExternalCqlList: PropTypes.func.isRequired,
+  loadTemplates: PropTypes.func.isRequired,
+  modifierMap: PropTypes.object.isRequired,
+  modifiersByInputType: PropTypes.object.isRequired,
+  names: PropTypes.array.isRequired,
+  resetCodeValidation: PropTypes.func.isRequired,
+  saveArtifact: PropTypes.func.isRequired,
+  setStatusMessage: PropTypes.func.isRequired,
+  statusMessage: PropTypes.string,
+  templates: PropTypes.array,
+  updateAndSaveArtifact: PropTypes.func.isRequired,
+  updateArtifact: PropTypes.func.isRequired,
+  validateCode: PropTypes.func.isRequired,
+  vsacIsAuthenticating: PropTypes.bool.isRequired
 };
 
 // these props are used for dispatching actions
 function mapDispatchToProps(dispatch) {
   return bindActionCreators({
-    loadTemplates,
-    loadValueSets,
-    loadArtifact,
-    initializeArtifact,
-    updateArtifact,
-    setStatusMessage,
-    downloadArtifact,
-    saveArtifact,
-    updateAndSaveArtifact,
-    publishArtifact,
-    loginVSACUser,
-    setVSACAuthStatus,
-    searchVSACByKeyword,
-    getVSDetails,
-    validateCode,
-    resetCodeValidation,
-    clearArtifactValidationWarnings,
-    loadConversionFunctions,
-    deleteExternalCqlLibrary,
     addExternalLibrary,
-    loadExternalCqlList,
-    clearExternalCqlValidationWarnings,
     clearAddLibraryErrorsAndMessages,
-    loadExternalCqlLibraryDetails
+    clearArtifactValidationWarnings,
+    clearExternalCqlValidationWarnings,
+    deleteExternalCqlLibrary,
+    downloadArtifact,
+    getVSDetails,
+    initializeArtifact,
+    loadArtifact,
+    loadConversionFunctions,
+    loadExternalCqlLibraryDetails,
+    loadExternalCqlList,
+    loadTemplates,
+    loginVSACUser,
+    publishArtifact,
+    resetCodeValidation,
+    saveArtifact,
+    searchVSACByKeyword,
+    setStatusMessage,
+    setVSACAuthStatus,
+    updateAndSaveArtifact,
+    updateArtifact,
+    validateCode
   }, dispatch);
 }
 
 // these props come from the application's state when it is started
 function mapStateToProps(state) {
   return {
-    artifact: state.artifacts.artifact,
-    downloadedArtifact: state.artifacts.downloadArtifact,
-    statusMessage: state.artifacts.statusMessage,
-    templates: state.templates.templates,
-    valueSets: state.valueSets.valueSets,
-    publishEnabled: state.artifacts.publishEnabled,
-    names: state.artifacts.names,
-    librariesInUse: state.artifacts.librariesInUse,
-    vsacStatus: state.vsac.authStatus,
-    vsacStatusText: state.vsac.authStatusText,
-    isSearchingVSAC: state.vsac.isSearchingVSAC,
-    vsacSearchResults: state.vsac.searchResults,
-    vsacSearchCount: state.vsac.searchCount,
-    isRetrievingDetails: state.vsac.isRetrievingDetails,
-    isValidatingCode: state.vsac.isValidatingCode,
-    isValidCode: state.vsac.isValidCode,
-    codeData: state.vsac.codeData,
-    vsacDetailsCodes: state.vsac.detailsCodes,
-    vsacDetailsCodesError: state.vsac.detailsCodesErrorMessage,
-    vsacFHIRCredentials: { username: state.vsac.username, password: state.vsac.password },
-    conversionFunctions: state.modifiers.conversionFunctions,
-    isLoggingOut: state.auth.isLoggingOut,
-    externalCqlList: state.externalCQL.externalCqlList,
-    externalCqlLibrary: state.externalCQL.externalCqlLibrary,
-    externalCQLLibraryParents: state.externalCQL.externalCQLLibraryParents,
-    externalCqlLibraryDetails: state.externalCQL.externalCqlLibraryDetails,
-    externalCqlFhirVersion: state.externalCQL.fhirVersion,
-    externalCqlErrors: state.externalCQL.externalCqlErrors,
-    isAddingExternalCqlLibrary: state.externalCQL.addExternalCqlLibrary.isAdding,
-    isLoadingExternalCqlDetails: state.externalCQL.loadExternalCqlLibraryDetails.isLoading,
-    addExternalCqlLibraryError: state.externalCQL.addExternalCqlLibrary.error,
-    addExternalCqlLibraryErrorMessage: state.externalCQL.addExternalCqlLibrary.message
+     addExternalCqlLibraryError: state.externalCQL.addExternalCqlLibrary.error,
+     addExternalCqlLibraryErrorMessage: state.externalCQL.addExternalCqlLibrary.message,
+     artifact: state.artifacts.artifact,
+     codeData: state.vsac.codeData,
+     conversionFunctions: state.modifiers.conversionFunctions,
+     downloadedArtifact: state.artifacts.downloadArtifact,
+     externalCqlErrors: state.externalCQL.externalCqlErrors,
+     externalCqlFhirVersion: state.externalCQL.fhirVersion,
+     externalCqlLibrary: state.externalCQL.externalCqlLibrary,
+     externalCqlLibraryDetails: state.externalCQL.externalCqlLibraryDetails,
+     externalCQLLibraryParents: state.externalCQL.externalCQLLibraryParents,
+     externalCqlList: state.externalCQL.externalCqlList,
+     isAddingExternalCqlLibrary: state.externalCQL.addExternalCqlLibrary.isAdding,
+     isLoadingExternalCqlDetails: state.externalCQL.loadExternalCqlLibraryDetails.isLoading,
+     isLoadingModifiers: state.modifiers.loadModifiers.isLoadingModifiers,
+     isLoggingOut: state.auth.isLoggingOut,
+     isRetrievingDetails: state.vsac.isRetrievingDetails,
+     isSearchingVSAC: state.vsac.isSearchingVSAC,
+     isValidatingCode: state.vsac.isValidatingCode,
+     isValidCode: state.vsac.isValidCode,
+     librariesInUse: state.artifacts.librariesInUse,
+     modifierMap: state.modifiers.modifierMap,
+     modifiersByInputType: state.modifiers.modifiersByInputType,
+     names: state.artifacts.names,
+     publishEnabled: state.artifacts.publishEnabled,
+     statusMessage: state.artifacts.statusMessage,
+     templates: state.templates.templates,
+     vsacApiKey: state.vsac.apiKey,
+     vsacDetailsCodes: state.vsac.detailsCodes,
+     vsacDetailsCodesError: state.vsac.detailsCodesErrorMessage,
+     vsacIsAuthenticating: state.vsac.isAuthenticating,
+     vsacSearchCount: state.vsac.searchCount,
+     vsacSearchResults: state.vsac.searchResults,
+     vsacStatus: state.vsac.authStatus,
+     vsacStatusText: state.vsac.authStatusText
   };
 }
 

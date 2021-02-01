@@ -1,13 +1,13 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye } from '@fortawesome/free-solid-svg-icons';
+import { IconButton } from '@material-ui/core';
+import { Visibility as VisibilityIcon } from '@material-ui/icons';
 import { UncontrolledTooltip } from 'reactstrap';
 
 import VSACAuthenticationModal from '../VSACAuthenticationModal';
 import ElementModal from '../ElementModal';
 import CodeSelectModal from '../CodeSelectModal';
-import StyledSelect from '../../elements/StyledSelect';
+import { Dropdown } from 'components/elements';
 
 const options = [
   { value: 'value is a code from', label: 'value is a code from' },
@@ -17,22 +17,22 @@ const options = [
 /* eslint-disable jsx-a11y/no-onchange */
 export default class Qualifier extends Component {
   viewValueSetDetails = (valueSet) => {
-    if (!this.props.vsacFHIRCredentials.password) {
+    if (!this.props.vsacApiKey) {
       return (
         <span className='element-select__modal element-modal disabled'>
-          <span>
-            <span
-              id={`LoginTooltip-${this.props.template.uniqueId}-qualifier`}>
-              <FontAwesomeIcon icon={faEye} />
-            </span>
-
-            <UncontrolledTooltip target={`LoginTooltip-${this.props.template.uniqueId}-qualifier`} placement="left">
-              Authenticate VSAC to view details
-            </UncontrolledTooltip>
+          <span id={`LoginTooltip-${this.props.template.uniqueId}-qualifier`}>
+            <IconButton aria-label="view" disabled color="primary">
+              <VisibilityIcon fontSize="small" />
+            </IconButton>
           </span>
+
+          <UncontrolledTooltip target={`LoginTooltip-${this.props.template.uniqueId}-qualifier`} placement="left">
+            Authenticate VSAC to view details
+          </UncontrolledTooltip>
         </span>
       );
     }
+
     return (
       <ElementModal
         className="element-select__modal"
@@ -46,7 +46,7 @@ export default class Qualifier extends Component {
         isRetrievingDetails={this.props.isRetrievingDetails}
         vsacDetailsCodes={this.props.vsacDetailsCodes}
         vsacDetailsCodesError={this.props.vsacDetailsCodesError}
-        vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+        vsacApiKey={this.props.vsacApiKey}
         selectedElement={valueSet}
         useIconButton={true}
         viewOnly={true}
@@ -54,7 +54,9 @@ export default class Qualifier extends Component {
     );
   }
 
-  handleChange = (selectedOption) => {
+  handleChange = event => {
+    const selectedOption = options.find(option => option.value === event.target.value);
+
     this.props.updateAppliedModifier(this.props.index, {
       qualifier: selectedOption ? selectedOption.value : null,
       valueSet: null,
@@ -77,12 +79,13 @@ export default class Qualifier extends Component {
     const hasSelectedVS = qualifierMod.values.valueSet != null;
     const hasSelectedCode = qualifierMod.values.code != null;
 
-    if (this.props.vsacFHIRCredentials.username == null && !hasSelectedCode && !hasSelectedVS) {
+    if (!this.props.vsacApiKey && !hasSelectedCode && !hasSelectedVS) {
       return (
-        <div id="vsac-controls">
+        <div className="modifier-button">
           <VSACAuthenticationModal
             loginVSACUser={this.props.loginVSACUser}
             setVSACAuthStatus={this.props.setVSACAuthStatus}
+            vsacIsAuthenticating={this.props.vsacIsAuthenticating}
             vsacStatus={this.props.vsacStatus}
             vsacStatusText={this.props.vsacStatusText}
           />
@@ -90,33 +93,37 @@ export default class Qualifier extends Component {
       );
     } else if (this.props.qualifier === 'value is a code from' && !hasSelectedVS) {
       return (
-        <ElementModal
-          className="element-select__modal"
-          updateModifier={this.handleVSAdded}
-          searchVSACByKeyword={this.props.searchVSACByKeyword}
-          isSearchingVSAC={this.props.isSearchingVSAC}
-          vsacSearchResults={this.props.vsacSearchResults}
-          vsacSearchCount={this.props.vsacSearchCount}
-          getVSDetails={this.props.getVSDetails}
-          isRetrievingDetails={this.props.isRetrievingDetails}
-          vsacDetailsCodes={this.props.vsacDetailsCodes}
-          vsacDetailsCodesError={this.props.vsacDetailsCodesError}
-          vsacFHIRCredentials={this.props.vsacFHIRCredentials}
-        />
+        <div className="modifier-button">
+          <ElementModal
+            className="element-select__modal"
+            updateModifier={this.handleVSAdded}
+            searchVSACByKeyword={this.props.searchVSACByKeyword}
+            isSearchingVSAC={this.props.isSearchingVSAC}
+            vsacSearchResults={this.props.vsacSearchResults}
+            vsacSearchCount={this.props.vsacSearchCount}
+            getVSDetails={this.props.getVSDetails}
+            isRetrievingDetails={this.props.isRetrievingDetails}
+            vsacDetailsCodes={this.props.vsacDetailsCodes}
+            vsacDetailsCodesError={this.props.vsacDetailsCodesError}
+            vsacApiKey={this.props.vsacApiKey}
+          />
+        </div>
       );
     } else if (this.props.qualifier === 'value is the code' && !hasSelectedCode) {
       return (
-        <CodeSelectModal
-          className="element-select__modal"
-          template={this.props.template}
-          vsacFHIRCredentials={this.props.vsacFHIRCredentials}
-          isValidatingCode={this.props.isValidatingCode}
-          isValidCode={this.props.isValidCode}
-          codeData={this.props.codeData}
-          validateCode={this.props.validateCode}
-          resetCodeValidation={this.props.resetCodeValidation}
-          updateModifier={this.handleCodeAdded}
-        />
+        <div className="modifier-button">
+          <CodeSelectModal
+            className="element-select__modal"
+            template={this.props.template}
+            vsacApiKey={this.props.vsacApiKey}
+            isValidatingCode={this.props.isValidatingCode}
+            isValidCode={this.props.isValidCode}
+            codeData={this.props.codeData}
+            validateCode={this.props.validateCode}
+            resetCodeValidation={this.props.resetCodeValidation}
+            updateModifier={this.handleCodeAdded}
+          />
+        </div>
       );
     }
 
@@ -143,7 +150,7 @@ export default class Qualifier extends Component {
     }
 
     return (
-      <div className="selected-qualifier">{selection}</div>
+      <div className="element-field-display">{selection}</div>
     );
   }
 
@@ -155,7 +162,7 @@ export default class Qualifier extends Component {
 
     if (hasSelectedVS) {
       return (
-        <div className="vs-info__buttons align-right col-2">
+        <div className="element-field-buttons">
           {this.viewValueSetDetails(qualifierMod.values.valueSet)}
         </div>
       );
@@ -165,24 +172,21 @@ export default class Qualifier extends Component {
   }
 
   render() {
+    const { qualifier } = this.props;
+
     return (
-      <div className="qualifier row">
-        <div className="d-flex flex-wrap col-10">
-          <StyledSelect
-            className="Select"
-            name="Qualifier"
-            aria-label="Qualifier"
-            title="Qualifier"
-            placeholder="choose qualifier"
-            value={options.find(({ value }) => value === this.props.qualifier)}
-            onChange={this.handleChange}
-            options={options}
-          />
+      <div className="modifier qualifier-modifier">
+        <Dropdown
+          className="field-input field-input-lg"
+          id="qualifier"
+          label="Qualifier"
+          onChange={this.handleChange}
+          options={options}
+          value={qualifier}
+        />
 
-          {this.renderButton()}
-          {this.renderQualifierSelection()}
-        </div>
-
+        {this.renderButton()}
+        {this.renderQualifierSelection()}
         {this.renderValueSetViewButton()}
       </div>
     );
@@ -190,27 +194,28 @@ export default class Qualifier extends Component {
 }
 
 Qualifier.propTypes = {
-  index: PropTypes.number.isRequired,
-  qualifier: PropTypes.string,
-  updateAppliedModifier: PropTypes.func.isRequired,
-  updateInstance: PropTypes.func.isRequired,
-  searchVSACByKeyword: PropTypes.func.isRequired,
-  isSearchingVSAC: PropTypes.bool.isRequired,
-  vsacSearchResults: PropTypes.array.isRequired,
-  vsacSearchCount: PropTypes.number.isRequired,
-  template: PropTypes.object.isRequired,
+  codeData: PropTypes.object,
   getVSDetails: PropTypes.func.isRequired,
+  index: PropTypes.number.isRequired,
   isRetrievingDetails: PropTypes.bool.isRequired,
-  vsacDetailsCodes: PropTypes.array.isRequired,
-  vsacDetailsCodesError: PropTypes.string.isRequired,
-  loginVSACUser: PropTypes.func.isRequired,
-  setVSACAuthStatus: PropTypes.func.isRequired,
-  vsacStatus: PropTypes.string,
-  vsacStatusText: PropTypes.string,
-  vsacFHIRCredentials: PropTypes.object,
+  isSearchingVSAC: PropTypes.bool.isRequired,
   isValidatingCode: PropTypes.bool.isRequired,
   isValidCode: PropTypes.bool,
-  codeData: PropTypes.object,
+  loginVSACUser: PropTypes.func.isRequired,
+  qualifier: PropTypes.string,
+  resetCodeValidation: PropTypes.func.isRequired,
+  searchVSACByKeyword: PropTypes.func.isRequired,
+  setVSACAuthStatus: PropTypes.func.isRequired,
+  template: PropTypes.object.isRequired,
+  updateAppliedModifier: PropTypes.func.isRequired,
+  updateInstance: PropTypes.func.isRequired,
   validateCode: PropTypes.func.isRequired,
-  resetCodeValidation: PropTypes.func.isRequired
+  vsacApiKey: PropTypes.string,
+  vsacDetailsCodes: PropTypes.array.isRequired,
+  vsacDetailsCodesError: PropTypes.string.isRequired,
+  vsacIsAuthenticating: PropTypes.bool.isRequired,
+  vsacSearchCount: PropTypes.number.isRequired,
+  vsacSearchResults: PropTypes.array.isRequired,
+  vsacStatus: PropTypes.string,
+  vsacStatusText: PropTypes.string
 };

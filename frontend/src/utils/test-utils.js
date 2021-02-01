@@ -1,20 +1,24 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react'; // eslint-disable-line import/no-extraneous-dependencies
+import { Provider } from 'react-redux';
+import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { MuiPickersUtilsProvider } from '@material-ui/pickers';
+import DateFnsUtils from '@date-io/date-fns';
+import configureStore from '../store/configureStore';
 
 const ProviderWrapper = ({ children }) => (
   <MemoryRouter>
-    {children}
+    <Provider store={configureStore()}>
+      <MuiPickersUtilsProvider utils={DateFnsUtils}>
+        {children}
+      </MuiPickersUtilsProvider>
+    </Provider>
   </MemoryRouter>
 );
 
-const customRender = (ui, options) =>
-  render(ui, { wrapper: ProviderWrapper, ...options });
+const customRender = (ui, options) => render(ui, { wrapper: ProviderWrapper, ...options });
 
-const openSelect = (node) => fireEvent.keyDown(node, { keyCode: 40 });
-
-export { act, fireEvent, wait, prettyDOM } from '@testing-library/react';
-export {
-  customRender as render,
-  openSelect
-};
+export { getRoles, logRoles } from '@testing-library/dom';
+export { act, fireEvent, waitFor, prettyDOM, screen, within } from '@testing-library/react';
+export { default as userEvent } from '@testing-library/user-event';
+export { customRender as render };

@@ -1,15 +1,18 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye } from '@fortawesome/free-solid-svg-icons';
+import { Button } from '@material-ui/core';
+import {
+  Delete as DeleteIcon,
+  Visibility as VisibilityIcon
+} from '@material-ui/icons';
 import { UncontrolledTooltip } from 'reactstrap';
 
-import Modal from '../elements/Modal';
+import { Modal }  from 'components/elements';
 import ExternalCqlDetails from './ExternalCqlDetails';
 
-import { sortMostRecent } from '../../utils/sort';
-import renderDate from '../../utils/dates';
-import changeToCase from '../../utils/strings';
+import { sortMostRecent } from 'utils/sort';
+import renderDate from 'utils/dates';
+import changeToCase from 'utils/strings';
 
 export default class ExternalCqlTable extends Component {
   constructor(props) {
@@ -48,7 +51,8 @@ export default class ExternalCqlTable extends Component {
 
   // ----------------------- DELETE MODAL ---------------------------------- //
 
-  openConfirmDeleteModal = (externalCqlLibrary) => {
+  openConfirmDeleteModal = (disableDelete, externalCqlLibrary) => {
+    if (disableDelete) return;
     const { clearAddLibraryErrorsAndMessages } = this.props;
     clearAddLibraryErrorsAndMessages();
     this.setState({ showConfirmDeleteModal: true, externalCqlLibraryToDelete: externalCqlLibrary });
@@ -69,7 +73,6 @@ export default class ExternalCqlTable extends Component {
 
   renderTableRow = (externalCqlLibrary) => {
     const { librariesInUse } = this.props;
-
     const libName = changeToCase(externalCqlLibrary.name, 'paramCase');
     const libVersion = externalCqlLibrary.version;
     const currentLibraryParents =
@@ -77,7 +80,7 @@ export default class ExternalCqlTable extends Component {
     const disableForDependency = currentLibraryParents.length > 0;
     const disableForUse = librariesInUse.includes(externalCqlLibrary.name);
     const disableDelete = disableForDependency || disableForUse;
-    const disabledClass = disableDelete ? 'disabled' : '';
+
     return (
       <tr key={externalCqlLibrary._id}>
         <td className="external-cql-table__tablecell-wide" data-th="Library">
@@ -97,21 +100,26 @@ export default class ExternalCqlTable extends Component {
         </td>
 
         <td className="external-cql-table__tablecell-button" data-th="">
-          <button aria-label="View"
-            className="button primary-button details-button"
+          <Button
+            color="primary"
             onClick={() => this.openViewDetailsModal(externalCqlLibrary)}
+            startIcon={<VisibilityIcon />}
+            variant="contained"
           >
-            <FontAwesomeIcon icon={faEye} />
-          </button>
+            View
+          </Button>
 
-          <button
-            className={`button danger-button ${disabledClass}`}
-            id={`DeleteLibraryTooltip-${externalCqlLibrary._id}`}
-            aria-label="Delete"
-            onClick={() => { if (!disableDelete) this.openConfirmDeleteModal(externalCqlLibrary); }}
-          >
-            Delete
-          </button>
+          <span id={`DeleteLibraryTooltip-${externalCqlLibrary._id}`}>
+            <Button
+              color="secondary"
+              disabled={disableForUse || disableForDependency}
+              onClick={() => this.openConfirmDeleteModal(disableDelete, externalCqlLibrary)}
+              startIcon={<DeleteIcon />}
+              variant="contained"
+            >
+              Delete
+            </Button>
+          </span>
 
           {disableForUse &&
             <UncontrolledTooltip target={`DeleteLibraryTooltip-${externalCqlLibrary._id}`} placement="left">
@@ -134,10 +142,8 @@ export default class ExternalCqlTable extends Component {
 
     return (
       <Modal
-        modalTitle="Delete External CQL Library Confirmation"
-        modalId="confirm-delete-modal"
-        modalTheme="light"
-        modalSubmitButtonText="Delete"
+        title="Delete External CQL Library Confirmation"
+        submitButtonText="Delete"
         handleShowModal={this.state.showConfirmDeleteModal}
         handleCloseModal={this.closeConfirmDeleteModal}
         handleSaveModal={this.handleDeleteExternalCqlLibrary}

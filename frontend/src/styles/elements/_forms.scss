@@ -26,7 +26,7 @@
   &-inline { display: inline-block; }
 
   label { margin: 0; }
-  input { margin-left: 0.5em; }
+
   .form__caption { font-size: 0.9em; }
 
   > span {
@@ -42,13 +42,17 @@
   &.form__group-invalid {
     @include state-color($form-validation-error-color);
   }
+
+  .required {
+    color: $red;
+  }
 }
 
 // ------------------------- CHECKBOXES ------------------------------------ //
 // From: http://doodlenerd.com/html-control/css-checkbox-generator
 
 .html-control {
-  font-family: arial;
+  font-family: Arial, sans-serif;
   display: block;
   position: relative;
   padding-left: 30px;
@@ -123,59 +127,56 @@
   border-color: #7b7b7b;
 }
 
-// ------------------------- SELECT ---------------------------------------- //
-// Relevant to the react-select plugin
+.artifact-form .input-checkbox {
+  justify-content: flex-start;
+  margin: 0;
 
-.Select {
-  .Select-control {
-    color: $black;
-    border: $border-global;
-    border-radius: $border-radius;
-    box-shadow: $box-shadow;
-    min-width: 200px;
+  input[type="checkbox"] {
+    width: auto;
+    margin-right: 10px;
+  }
 
-    &:hover {
-      box-shadow: $box-shadow;
+  &-text {
+    white-space: nowrap;
+  }
+}
+
+// ------------------------- GROUPED FIELDS -------------------------------- //
+
+.grouped-fields {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+
+  &.has-grouped-fields {
+    flex-direction: column;
+  }
+
+  .grouped-field.form__group {
+    position: relative;
+    padding: 0;
+  }
+
+  .delete-grouped-field-button {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    cursor: pointer;
+  }
+
+  .grouped-field {
+    > div {
+      flex-wrap: wrap;
+      padding: 20px;
+      margin: 5px 0;
+      background-color: $gray-blue;
     }
   }
+}
 
-  .Select-placeholder,
-  .Select--single > .Select-control .Select-value {
-    color: $form-input-placeholder-color;
-  }
+// ------------------------- SELECT CONDITIONAL FIELDS --------------------- //
 
-  .Select-menu-outer {
-    box-shadow: $box-shadow;
-    overflow: hidden;
-  }
-
-  .Select-option {
-    color: $black;
-  }
-
-  .Select-clear {
-    color: #333;
-  }
-
-  &.is-open > .Select-control {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-  }
-
-  &.is-searchable {
-    .Select-control,
-    .Select-control:hover {
-      box-shadow: $box-shadow-inset;
-    }
-  }
-
-  &.is-focused {
-    .Select-control {
-      @include native-focus();
-    }
-  }
-
-  &.is-focused:not(.is-open) > .Select-control {
-    box-shadow: none;
-  }
+div.form__group.select-conditional-field {
+  flex-direction: column;
+  align-items: flex-start;
 }

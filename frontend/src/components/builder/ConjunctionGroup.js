@@ -1,24 +1,25 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { IconButton } from '@material-ui/core';
 import {
-  faOutdent,
-  faIndent,
-  faExclamationCircle,
-  faCommentDots,
-  faComment,
-  faAngleDoubleDown,
-  faAngleDoubleRight,
-  faTimes
-} from '@fortawesome/free-solid-svg-icons';
+  ChatBubble as ChatBubbleIcon,
+  Close as CloseIcon,
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
+  FormatIndentDecrease as FormatIndentDecreaseIcon,
+  FormatIndentIncrease as FormatIndentIncreaseIcon,
+  Sms as SmsIcon
+} from '@material-ui/icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
 import { UncontrolledTooltip } from 'reactstrap';
-import classnames from 'classnames';
+import clsx from 'clsx';
 
+import { Dropdown, Modal } from 'components/elements';
 import TemplateInstance from './TemplateInstance';
 import ElementSelect from './ElementSelect';
 import StringField from './fields/StringField';
 import TextAreaField from './fields/TextAreaField';
-import StyledSelect from '../elements/StyledSelect';
 import ExpressionPhrase from './modifiers/ExpressionPhrase';
 
 import createTemplateInstance from '../../utils/templates';
@@ -38,11 +39,13 @@ export default class ConjunctionGroup extends Component {
 
     this.state = {
       showGroup: true,
-      showComment: false
+      showComment: false,
+      showConfirmDeleteModal: false
     };
   }
 
-  handleTypeChange = (type) => {
+  handleTypeChange = (event, selectOptions) => {
+    const type = selectOptions.find(option => option.name === event.target.value);
     this.props.editInstance(this.props.treeName, type, this.getPath(), true);
   }
 
@@ -150,9 +153,47 @@ export default class ConjunctionGroup extends Component {
   }
 
   deleteInstance = () => {
+    this.props.deleteInstance(this.props.treeName, this.getPath());
+  }
+
+  openConfirmDeleteModal = () => {
     if (!this.props.disableAddElement) {
-      this.props.deleteInstance(this.props.treeName, this.getPath());
+      this.setState({ showConfirmDeleteModal: true });
     }
+  }
+
+  closeConfirmDeleteModal = () => {
+    this.setState({ showConfirmDeleteModal: false });
+  }
+
+  handleDeleteInstance = () => {
+    this.deleteInstance();
+    this.closeConfirmDeleteModal();
+  }
+
+  renderConfirmDeleteModal() {
+    const elementName = getFieldWithId(this.props.instance.fields, 'element_name').value;
+
+    return (
+      <Modal
+        title="Delete Group Confirmation"
+        submitButtonText="Delete"
+        handleShowModal={this.state.showConfirmDeleteModal}
+        handleCloseModal={this.closeConfirmDeleteModal}
+        handleSaveModal={this.handleDeleteInstance}
+      >
+        <div className="delete-group-confirmation-modal modal__content">
+          <h5>
+            {`Are you sure you want to permanently delete ${elementName ? 'the following' : 'this unnamed'} group?`}
+          </h5>
+
+          {elementName && <div className="group-info">
+            <span>Group: </span>
+            <span>{elementName}</span>
+          </div>}
+        </div>
+      </Modal>
+    );
   }
 
   conjunctionHasDuplicateName = (child) => {
@@ -194,47 +235,55 @@ export default class ConjunctionGroup extends Component {
     </UncontrolledTooltip>
   );
 
-  renderConjunctionSelect = i => (
-    <StyledSelect
-      className="card-group__conjunction-select"
-      name={`conjunction-select-${i}`}
-      value={this.props.instance}
-      getOptionValue={({ name }) => name}
-      getOptionLabel={({ name }) => name}
-      placeholder="Select one"
-      isSearchable={false}
-      isClearable={false}
-      options={this.props.options === 'listOperations' ? this.listOperations : this.types}
-      onChange={this.handleTypeChange}
-      inputProps={{ 'aria-label': 'Select conjunction type', title: 'Select conjunction type' }}
-      classNamePrefix="conjunction-select"
-    />
-  )
+  renderConjunctionSelect = () => {
+    const { options, instance } = this.props;
+    const selectOptions = options === 'listOperations' ? this.listOperations : this.types;
+
+    return (
+      <div className="card-group__conjunction-select">
+        <Dropdown
+          id="conjunction-select"
+          label={instance.name ? null : "Select one"}
+          onChange={event => this.handleTypeChange(event, selectOptions)}
+          options={selectOptions}
+          value={instance.name}
+          valueKey="id"
+          labelKey="name"
+        />
+      </div>
+    );
+  };
 
   renderIndentButtons = instance => (
     // Indenting is always possible, outdent only possible when not at root already
     <span className="indent-outdent-container">
       {this.getPath() !== '' &&
-        <span>
-          <button
+        <span id={`outdentbutton-${instance.uniqueId}`}>
+          <IconButton
             aria-label="outdent"
-            className={`element__hidebutton transparent-button ${this.props.disableAddElement ? 'disabled' : ''}`}
-            id={`outdentbutton-${instance.uniqueId}`}
-            onClick={() => this.outdentClickHandler(instance)}>
-            <FontAwesomeIcon icon={faOutdent} />
-          </button>
-          {this.props.disableAddElement && this.renderDisabledTooltip(`outdentbutton-${instance.uniqueId}`) }
+            color="primary"
+            disabled={this.props.disableAddElement}
+            onClick={() => this.outdentClickHandler(instance)}
+          >
+            <FormatIndentDecreaseIcon fontSize="small" />
+          </IconButton>
+
+          {this.props.disableAddElement && this.renderDisabledTooltip(`outdentbutton-${instance.uniqueId}`)}
         </span>
       }
 
-      <button
-        aria-label="indent"
-        className={`element__hidebutton transparent-button ${this.props.disableAddElement ? 'disabled' : ''}`}
-        id={`indentbutton-${instance.uniqueId}`}
-        onClick={() => this.indentClickHandler(instance)}>
-        <FontAwesomeIcon icon={faIndent} />
-      </button>
-      { this.props.disableAddElement && this.renderDisabledTooltip(`indentbutton-${instance.uniqueId}`) }
+      <span id={`indentbutton-${instance.uniqueId}`}>
+        <IconButton
+          aria-label="indent"
+          color="primary"
+          disabled={this.props.disableAddElement}
+          onClick={() => this.indentClickHandler(instance)}
+        >
+          <FormatIndentIncreaseIcon fontSize="small" />
+        </IconButton>
+
+        {this.props.disableAddElement && this.renderDisabledTooltip(`indentbutton-${instance.uniqueId}`)}
+      </span>
     </span>
   )
 
@@ -253,7 +302,7 @@ export default class ConjunctionGroup extends Component {
       return (
         <div className="card-group__top">
           <div className="card-group__header">
-            <div className="card-group__header-title">
+            <div className="card-group__title">
               {showGroup ?
                 <>
                   <StringField
@@ -271,10 +320,6 @@ export default class ConjunctionGroup extends Component {
                       updateInstance={this.handleCommentChange}
                     />
                   }
-
-                  {conjunctionHasDuplicateName &&
-                    <div className="warning">Warning: Name already in use. Choose another name.</div>
-                  }
                 </>
               :
                 <div className="group-heading-name">
@@ -290,34 +335,43 @@ export default class ConjunctionGroup extends Component {
               {showGroup && this.renderIndentButtons(this.props.instance)}
 
               {showGroup &&
-                <button
-                  onClick={this.toggleComment}
-                  className={classnames('element_hidebutton', 'transparent-button', hasComment && 'has-comment')}
+                <IconButton
                   aria-label="show comment"
+                  className={clsx(hasComment && 'has-comment')}
+                  color="primary"
+                  onClick={this.toggleComment}
                 >
-                  <FontAwesomeIcon icon={hasComment ? faCommentDots : faComment} />
-                </button>
+                  {hasComment ? <SmsIcon fontSize="small" /> : <ChatBubbleIcon fontSize="small" />}
+                </IconButton>
               }
 
-              <button
-                onClick={this.showHideGroupBody}
-                className="element__hidebutton transparent-button"
+              <IconButton
                 aria-label={`hide ${elementNameField.name}`}
+                color="primary"
+                onClick={this.showHideGroupBody}
               >
-                <FontAwesomeIcon icon={showGroup ? faAngleDoubleDown : faAngleDoubleRight} />
-              </button>
+                {showGroup ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+              </IconButton>
 
-              <button
-                className={`element__deletebutton transparent-button ${disableAddElement ? 'disabled' : ''}`}
-                id={`deletebutton-${this.props.instance.uniqueId}`}
-                onClick={this.deleteInstance}
-                aria-label={`remove ${this.props.instance.name}`}
-              >
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
+              <span id={`deletebutton-${this.props.instance.uniqueId}`}>
+                <IconButton
+                  aria-label={`remove ${this.props.instance.name}`}
+                  color="primary"
+                  disabled={disableAddElement}
+                  onClick={this.openConfirmDeleteModal}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </span>
 
               {disableAddElement && this.renderDisabledTooltip(`deletebutton-${this.props.instance.uniqueId}`)}
             </div>
+          </div>
+
+          <div className="card-group__warnings">
+            {conjunctionHasDuplicateName && showGroup &&
+              <div className="warning">Warning: Name already in use. Choose another name.</div>
+            }
           </div>
 
           <ExpressionPhrase
@@ -334,7 +388,7 @@ export default class ConjunctionGroup extends Component {
 
   renderChildren() {
     const {
-      artifact, treeName, templates, valueSets, addInstance, editInstance, deleteInstance
+      artifact, treeName, templates, addInstance, editInstance, deleteInstance
     } = this.props;
 
     return this.props.instance.childInstances.map((instance, i) => {
@@ -347,8 +401,6 @@ export default class ConjunctionGroup extends Component {
               treeName={treeName}
               artifact={artifact}
               templates={templates}
-              valueSets={valueSets}
-              loadValueSets={this.props.loadValueSets}
               instance={instance}
               addInstance={addInstance}
               editInstance={editInstance}
@@ -361,6 +413,9 @@ export default class ConjunctionGroup extends Component {
               externalCqlList={this.props.externalCqlList}
               loadExternalCqlList={this.props.loadExternalCqlList}
               getPath={this.getChildsPath}
+              modifierMap={this.props.modifierMap}
+              modifiersByInputType={this.props.modifiersByInputType}
+              isLoadingModifiers={this.props.isLoadingModifiers}
               conversionFunctions={this.props.conversionFunctions}
               instanceNames={this.props.instanceNames}
               subPopulationIndex={this.props.subPopulationIndex}
@@ -377,7 +432,7 @@ export default class ConjunctionGroup extends Component {
               isRetrievingDetails={this.props.isRetrievingDetails}
               vsacDetailsCodes={this.props.vsacDetailsCodes}
               vsacDetailsCodesError={this.props.vsacDetailsCodesError}
-              vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+              vsacApiKey={this.props.vsacApiKey}
               validateReturnType={this.props.validateReturnType}
               isValidatingCode={this.props.isValidatingCode}
               isValidCode={this.props.isValidCode}
@@ -386,6 +441,7 @@ export default class ConjunctionGroup extends Component {
               resetCodeValidation={this.props.resetCodeValidation}
               disableAddElement={this.props.disableAddElement}
               elementUniqueId={this.props.elementUniqueId}
+              vsacIsAuthenticating={this.props.vsacIsAuthenticating}
             />
 
             {this.renderConjunctionSelect(i)}
@@ -403,44 +459,47 @@ export default class ConjunctionGroup extends Component {
     return (
       <div key={instance.uniqueId} className="card-group-section" id={instance.uniqueId}>
         <TemplateInstance
-          valueSets={this.props.valueSets}
-          loadValueSets={this.props.loadValueSets}
-          getPath={this.getChildsPath}
-          treeName={this.props.treeName}
-          templateInstance={instance}
-          otherInstances={this.props.getAllInstances(this.props.treeName)}
           allInstancesInAllTrees={allInstancesInAllTrees}
-          editInstance={this.props.editInstance}
-          updateInstanceModifiers={this.props.updateInstanceModifiers}
-          deleteInstance={this.props.deleteInstance}
-          subpopulationIndex={this.props.subPopulationIndex}
-          renderIndentButtons={this.renderIndentButtons}
-          conversionFunctions={this.props.conversionFunctions}
-          instanceNames={this.props.instanceNames}
-          parameters={this.props.parameters}
           baseElements={this.props.baseElements}
-          scrollToElement={this.props.scrollToElement}
-          loginVSACUser={this.props.loginVSACUser}
-          setVSACAuthStatus={this.props.setVSACAuthStatus}
-          vsacStatus={this.props.vsacStatus}
-          vsacStatusText={this.props.vsacStatusText}
-          searchVSACByKeyword={this.props.searchVSACByKeyword}
-          isSearchingVSAC={this.props.isSearchingVSAC}
-          vsacSearchResults={this.props.vsacSearchResults}
-          vsacSearchCount={this.props.vsacSearchCount}
+          codeData={this.props.codeData}
+          conversionFunctions={this.props.conversionFunctions}
+          deleteInstance={this.props.deleteInstance}
+          disableAddElement={this.props.disableAddElement}
+          disableIndent={this.props.disableIndent}
+          editInstance={this.props.editInstance}
+          getPath={this.getChildsPath}
           getVSDetails={this.props.getVSDetails}
+          instanceNames={this.props.instanceNames}
+          isLoadingModifiers={this.props.isLoadingModifiers}
           isRetrievingDetails={this.props.isRetrievingDetails}
-          vsacDetailsCodes={this.props.vsacDetailsCodes}
-          vsacDetailsCodesError={this.props.vsacDetailsCodesError}
-          vsacFHIRCredentials={this.props.vsacFHIRCredentials}
-          validateReturnType={this.props.validateReturnType}
+          isSearchingVSAC={this.props.isSearchingVSAC}
           isValidatingCode={this.props.isValidatingCode}
           isValidCode={this.props.isValidCode}
-          codeData={this.props.codeData}
-          validateCode={this.props.validateCode}
+          loginVSACUser={this.props.loginVSACUser}
+          modifierMap={this.props.modifierMap}
+          modifiersByInputType={this.props.modifiersByInputType}
+          otherInstances={this.props.getAllInstances(this.props.treeName)}
+          parameters={this.props.parameters}
+          renderIndentButtons={this.renderIndentButtons}
           resetCodeValidation={this.props.resetCodeValidation}
-          disableAddElement={this.props.disableAddElement}
-          disableIndent={this.props.disableIndent} />
+          scrollToElement={this.props.scrollToElement}
+          searchVSACByKeyword={this.props.searchVSACByKeyword}
+          setVSACAuthStatus={this.props.setVSACAuthStatus}
+          subpopulationIndex={this.props.subPopulationIndex}
+          templateInstance={instance}
+          treeName={this.props.treeName}
+          updateInstanceModifiers={this.props.updateInstanceModifiers}
+          validateCode={this.props.validateCode}
+          validateReturnType={this.props.validateReturnType}
+          vsacApiKey={this.props.vsacApiKey}
+          vsacDetailsCodes={this.props.vsacDetailsCodes}
+          vsacDetailsCodesError={this.props.vsacDetailsCodesError}
+          vsacIsAuthenticating={this.props.vsacIsAuthenticating}
+          vsacSearchCount={this.props.vsacSearchCount}
+          vsacSearchResults={this.props.vsacSearchResults}
+          vsacStatus={this.props.vsacStatus}
+          vsacStatusText={this.props.vsacStatusText}
+        />
 
         {this.renderConjunctionSelect(instance)}
       </div>
@@ -478,7 +537,7 @@ export default class ConjunctionGroup extends Component {
               isRetrievingDetails={this.props.isRetrievingDetails}
               vsacDetailsCodes={this.props.vsacDetailsCodes}
               vsacDetailsCodesError={this.props.vsacDetailsCodesError}
-              vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+              vsacApiKey={this.props.vsacApiKey}
               isValidatingCode={this.props.isValidatingCode}
               isValidCode={this.props.isValidCode}
               codeData={this.props.codeData}
@@ -490,6 +549,7 @@ export default class ConjunctionGroup extends Component {
             />
           </div>
         }
+        {this.renderConfirmDeleteModal()}
       </div>
     );
   }
@@ -509,13 +569,15 @@ ConjunctionGroup.propTypes = {
   getPath: requiredIf(PropTypes.func, props => !props.root), // path needed for children
   getVSDetails: PropTypes.func.isRequired,
   instanceNames: PropTypes.array.isRequired,
+  isLoadingModifiers: PropTypes.bool,
   isRetrievingDetails: PropTypes.bool.isRequired,
   isSearchingVSAC: PropTypes.bool.isRequired,
   isValidatingCode: PropTypes.bool.isRequired,
   isValidCode: PropTypes.bool,
   loadExternalCqlList: PropTypes.func.isRequired,
-  loadValueSets: PropTypes.func.isRequired,
   loginVSACUser: PropTypes.func.isRequired,
+  modifierMap: PropTypes.object.isRequired,
+  modifiersByInputType: PropTypes.object.isRequired,
   options: PropTypes.string,
   resetCodeValidation: PropTypes.func.isRequired,
   root: PropTypes.bool.isRequired,
@@ -526,10 +588,10 @@ ConjunctionGroup.propTypes = {
   treeName: PropTypes.string.isRequired,
   validateCode: PropTypes.func.isRequired,
   validateReturnType: PropTypes.bool,
-  valueSets: PropTypes.array,
+  vsacApiKey: PropTypes.string,
   vsacDetailsCodes: PropTypes.array.isRequired,
   vsacDetailsCodesError: PropTypes.string.isRequired,
-  vsacFHIRCredentials: PropTypes.object,
+  vsacIsAuthenticating: PropTypes.bool.isRequired,
   vsacSearchCount: PropTypes.number.isRequired,
   vsacSearchResults: PropTypes.array.isRequired,
   vsacStatus: PropTypes.string,

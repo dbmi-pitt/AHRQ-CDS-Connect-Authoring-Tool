@@ -37,7 +37,12 @@ export default function AhrqHeader() {
 
       <div role="main" className="container-fluid js-quickedit-main-content">
         <div className="row">
-          <header id="primary-header" className="header row-side-margins mobile-row-side-margins" role="heading">
+          <header
+            id="primary-header"
+            className="header row-side-margins mobile-row-side-margins"
+            role="heading"
+            aria-level="1"
+          >
             <div className="col-md-12">
               <div className="primary-header-wrapper">
                 <div className="row">
@@ -60,19 +65,19 @@ export default function AhrqHeader() {
                     {/*        Search All AHRQ Sites*/}
                     {/*      </a>*/}
                     {/*    </li>*/}
-                    
+
                     {/*    <li>*/}
                     {/*      <a href="https://www.ahrq.gov/cpi/about/careers/index.html" target="_blank" rel="noopener noreferrer">*/}
                     {/*        Careers*/}
                     {/*      </a>*/}
                     {/*    </li>*/}
-                    
+
                     {/*    <li>*/}
                     {/*      <a href="https://www.ahrq.gov/contact/index.html" target="_blank" rel="noopener noreferrer">*/}
                     {/*        Contact Us*/}
                     {/*      </a>*/}
                     {/*    </li>*/}
-                    
+
                     {/*    <li>*/}
                     {/*      <a*/}
                     {/*        href="https://www.ahrq.gov/topics/informacion-en-espanol/index.html"*/}
@@ -82,11 +87,11 @@ export default function AhrqHeader() {
                     {/*        Español*/}
                     {/*      </a>*/}
                     {/*    </li>*/}
-                    
+
                     {/*    <li className="last">*/}
                     {/*      <a href="https://info.ahrq.gov/" target="_blank" rel="noopener noreferrer">FAQs</a>*/}
                     {/*    </li>*/}
-                    
+
                     {/*    <li>*/}
                     {/*      <a*/}
                     {/*        href="https://subscriptions.ahrq.gov/accounts/USAHRQ/subscriber/new"*/}

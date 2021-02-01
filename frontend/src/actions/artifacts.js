@@ -84,6 +84,18 @@ function parseConjunction(childInstances, names, baseElementsInUse, parametersIn
       }
     }
 
+    if (child.modifiers) {
+      child.modifiers.forEach((modifier) => {
+        if (modifier.type === 'ExternalModifier') {
+          const libraryAlreadyInUse = librariesInUse.find(l => l === modifier.libraryName);
+          if (libraryAlreadyInUse === undefined) {
+            // Add the library name
+            librariesInUse.push(modifier.libraryName);
+          }
+        }
+      });
+    }
+
     if (child.type === 'parameter' && child.returnType !== _.toLower(child.returnType)) {
       child.returnType = _.toLower(child.returnType);
     }
@@ -487,7 +499,7 @@ function executeArtifactFailure(error) {
   };
 }
 
-function performExecuteArtifact(elmFiles, artifactName, params, patients, vsacCredentials, codeService, dataModel) {
+function performExecuteArtifact(elmFiles, artifactName, params, patients, vsacApiKey, codeService, dataModel) {
   // Set up the library
   const elmFile = JSON.parse(_.find(elmFiles, f =>
     f.name.replace(/[\s-\\/]/g, '') === artifactName.replace(/[\s-\\/]/g, '')).content);
@@ -517,7 +529,7 @@ function performExecuteArtifact(elmFiles, artifactName, params, patients, vsacCr
   }
 
   // Ensure value sets, downloading any missing value sets
-  return codeService.ensureValueSets(valueSets, vsacCredentials.username, vsacCredentials.password)
+  return codeService.ensureValueSets(valueSets, vsacApiKey)
     .then(() => {
       // Value sets are loaded, so execute!
       const executor = new cql.Executor(library, codeService, cqlExecParams);
@@ -605,9 +617,9 @@ function convertParameters(params = []) {
   return paramsObj;
 }
 
-export function executeCQLArtifact(artifact, params, patients, vsacCredentials, codeService, dataModel) {
+export function executeCQLArtifact(artifact, params, patients, vsacApiKey, codeService, dataModel) {
   artifact.dataModel = dataModel;
-  const artifactName = `${slug(artifact.name ? artifact.name : 'untitled')}`;
+  const artifactName = `${slug(artifact.name ? artifact.name : 'untitled', { lower: false })}`;
 
   return (dispatch) => {
     dispatch(requestExecuteArtifact());
@@ -628,7 +640,7 @@ export function executeCQLArtifact(artifact, params, patients, vsacCredentials, 
       artifactName,
       params,
       patients,
-      vsacCredentials,
+      vsacApiKey,
       codeService,
       dataModel
     ))
