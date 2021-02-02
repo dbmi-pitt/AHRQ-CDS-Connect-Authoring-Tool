@@ -1,8 +1,13 @@
-import React, { Component } from 'react';
+import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import update from 'immutability-helper';
+import {Button} from '@material-ui/core';
 
 import PDDIRecommendation from "./PDDIRecommendation";
+import Modal from "../elements/Modal";
+
+const UP = -1;
+const DOWN = 1;
 
 export default class PDDIRecommendations extends Component {
   constructor(props) {
@@ -10,6 +15,8 @@ export default class PDDIRecommendations extends Component {
 
     this.state = {
       mode: 'every',
+      showConfirmDeleteModal: false,
+
     };
   }
 
@@ -20,7 +27,30 @@ export default class PDDIRecommendations extends Component {
   }
 
   handleModeChange = (event) => {
-    this.setState({ mode: event.target.value });
+    this.setState({mode: event.target.value});
+  }
+
+  handleMove = (uid, direction) => {
+    const {pddiRecommendations} = this.props.artifact;
+    const position = pddiRecommendations.findIndex(index => index.uid === uid);
+    if (position < 0) {
+      throw new Error("Given recommendation not found.");
+    } else if (
+      (direction === UP && position === 0)
+      || (direction === DOWN && position === pddiRecommendations.length - 1)) {
+      return; // canot move outside of array
+    }
+
+    const recommendation = pddiRecommendations[position]; // save recommendation for later
+    const newPDDIRecommendations = pddiRecommendations.filter(rec => rec.uid !== uid); // remove recommendation from array
+    newPDDIRecommendations.splice(position + direction, 0, recommendation);
+
+    this.props.updatePDDIRecommendations(newPDDIRecommendations);
+
+    // will run after updated recommendatons rerender
+    setTimeout(() => {
+      document.getElementById(uid).scrollIntoView({behavior: 'smooth'});
+    });
   }
 
   addPDDIRecommendation = () => {
@@ -29,7 +59,9 @@ export default class PDDIRecommendations extends Component {
       grade: 'A',
       subpopulations: [],
       text: '',
-      rationale: ''
+      rationale: '',
+      comment: ''
+
     };
     const newRecs = this.props.artifact.pddiRecommendations.concat([newRec]);
 
@@ -39,7 +71,7 @@ export default class PDDIRecommendations extends Component {
   updatePDDIRecommendation = (uid, newValues) => {
     const index = this.props.artifact.pddiRecommendations.findIndex(rec => rec.uid === uid);
     const newRecs = update(this.props.artifact.pddiRecommendations, {
-      [index]: { $merge: newValues }
+      [index]: {$merge: newValues}
     });
     this.props.updatePDDIRecommendations(newRecs);
   }
@@ -79,32 +111,64 @@ export default class PDDIRecommendations extends Component {
         */}
 
         {this.props.artifact.pddiRecommendations && this.props.artifact.pddiRecommendations.length > 1 &&
-          <div className="pddiRecommendations__deliver-text">Deliver first recommendation</div>
+        <div className="pddiRecommendations__deliver-text">Deliver first recommendation</div>
         }
 
         {this.props.artifact.pddiRecommendations && this.props.artifact.pddiRecommendations.map(rec => (
-          <PDDIRecommendation
-            key={rec.uid}
-            artifact={this.props.artifact}
-            templates={this.props.templates}
-            rec={rec}
-            onUpdate={this.updatePDDIRecommendation}
-            onRemove={this.removePDDIRecommendation}
-            updatePDDIRecommendations={this.props.updatePDDIRecommendations}
-            updateSubpopulations={this.props.updateSubpopulations}
-            setActiveTab={this.props.setActiveTab}
+          <div id={rec.uid} key={rec.uid}>
+            <PDDIRecommendation
+              key={rec.uid}
+              artifact={this.props.artifact}
+              templates={this.props.templates}
+              rec={rec}
+              onUpdate={this.updatePDDIRecommendation}
+              onRemove={() => this.openConfirmDeleteModal(rec.uid)}
+              onMoveRecUp={() => this.handleMove(rec.uid, UP)}
+              onMoveRecDown={() => this.handleMove(rec.uid, DOWN)}
+              updatePDDIRecommendations={this.props.updatePDDIRecommendations}
+              updateSubpopulations={this.props.updateSubpopulations}
+              setActiveTab={this.props.setActiveTab}
 
-          />
+            />
+          </div>
         ))}
 
-        <button
-          className="button primary-button"
-          aria-label="New PDDI recommendation"
-          onClick={this.addPDDIRecommendation}
-        >
+        <Button color="primary" onClick={this.addPDDIRecommendation} variant="contained">
           New PDDI recommendation
-        </button>
+        </Button>
+        {this.renderConfirmDeleteModal()}
       </div>
+    );
+  }
+
+  //DELETE MODAL
+  openConfirmDeleteModal = (uid) => {
+    this.setState({showConfirmDeleteModal: true, recommendationToDelete: uid});
+  }
+
+  closeConfirmDeleteModal = () => {
+    this.setState({showConfirmDeleteModal: false});
+  }
+
+  handleDeleteRecommendation = (uid) => {
+    this.removePDDIRecommendation(this.state.recommendationToDelete);
+    this.closeConfirmDeleteModal();
+  }
+
+  renderConfirmDeleteModal() {
+
+    return (
+      <Modal
+        title="Delete Recommendation"
+        submitButtonText="Delete"
+        handleShowModal={this.state.showConfirmDeleteModal}
+        handleCloseModal={this.closeConfirmDeleteModal}
+        handleSaveModal={this.handleDeleteRecommendation}>
+
+        <div className="delete-external-cql-library-confirmation-modal modal__content">
+          <h5>Are you sure you want to permanently delete the PDDIRecommendation?</h5>
+        </div>
+    </Modal>
     );
   }
 }

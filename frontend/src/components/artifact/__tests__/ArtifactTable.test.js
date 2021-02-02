@@ -1,6 +1,6 @@
 import React from 'react';
+import { render, screen, userEvent, waitFor, within } from 'utils/test-utils';
 import ArtifactTable from '../ArtifactTable';
-import { render, fireEvent } from '../../../utils/test-utils';
 
 describe('<ArtifactTable />', () => {
   const match = {
@@ -9,105 +9,96 @@ describe('<ArtifactTable />', () => {
 
   const artifactsMock = [
     {
-      _id: 'blah',
+      _id: 'artifact1',
       name: 'My CDS Artifact',
-      version: 'Alpha',
-      updatedAt: '2012-10-15T21:26:17Z'
+      version: '1.0.0',
+      updatedAt: '2012-10-15T21:26:17Z',
+      description: '',
+      url: '',
+      status: null,
+      experimental: null,
+      publisher: '',
+      context: [],
+      purpose: '',
+      usage: '',
+      copyright: '',
+      approvalDate: null,
+      lastReviewDate: null,
+      effectivePeriod: { start: null, end: null },
+      topic: [],
+      author: [],
+      reviewer: [],
+      endorser: [],
+      relatedArtifact: []
     },
     {
-      _id: 'blah2',
+      _id: 'artifact2',
       name: 'My Second CDS Artifact',
-      version: 'Alpha',
-      updatedAt: '2012-11-15T21:26:17Z'
+      version: '1.0.1',
+      updatedAt: '2012-11-15T21:26:17Z',
+      description: '',
+      url: '',
+      status: null,
+      experimental: null,
+      publisher: '',
+      context: [],
+      purpose: '',
+      usage: '',
+      copyright: '',
+      approvalDate: null,
+      lastReviewDate: null,
+      effectivePeriod: { start: null, end: null },
+      topic: [],
+      author: [],
+      reviewer: [],
+      endorser: [],
+      relatedArtifact: []
     }
   ];
 
+  const renderComponent = (props = {}) =>
+    render(
+      <ArtifactTable
+        match={match}
+        artifacts={artifactsMock}
+        afterAddArtifact={jest.fn()}
+        deleteArtifact={jest.fn()}
+        {...props}
+      />
+    );
+
   it('renders artifacts', () => {
-    const { container } = render(
-      <ArtifactTable
-        match={match}
-        artifacts={artifactsMock}
-        afterAddArtifact={jest.fn()}
-        deleteArtifact={jest.fn()}
-        updateAndSaveArtifact={jest.fn()}
-      />
-    );
+    renderComponent();
 
-    expect(container.querySelectorAll('tbody tr')).toHaveLength(artifactsMock.length);
+    expect(screen.getByText('My Second CDS Artifact')).toBeInTheDocument();
+    expect(screen.getByText('My CDS Artifact')).toBeInTheDocument();
   });
 
-  it('allows editing of artifacts', () => {
-    const updateAndSaveArtifact = jest.fn();
-    const { container } = render(
-      <ArtifactTable
-        match={match}
-        artifacts={artifactsMock}
-        afterAddArtifact={jest.fn()}
-        deleteArtifact={jest.fn()}
-        updateAndSaveArtifact={updateAndSaveArtifact}
-      />
-    );
+  it('allows opening and closing of the edit modal', async () => {
+    renderComponent();
 
-    fireEvent.click(container.querySelector('button.edit-artifact-button'));
+    userEvent.click(screen.getAllByRole('button', { name: 'Edit Info' })[0]);
+    expect(screen.getByText('Edit Artifact Details')).toBeInTheDocument();
 
-    fireEvent.change(
-      document.body.querySelector('input[name="name"]'),
-      { target: { name: 'name', value: 'Edited Artifact Name' } }
-    );
-    fireEvent.change(
-      document.body.querySelector('input[name="version"]'),
-      { target: { name: 'version', value: 'Edited Artifact Version' } }
-    );
-    fireEvent.click(document.body.querySelector('button[type="submit"]'));
-
-    expect(updateAndSaveArtifact).toBeCalledWith(
-      artifactsMock[0],
-      { name: 'Edited Artifact Name', version: 'Edited Artifact Version' }
-    );
-  });
-
-  it('allows closing of the edit modal', () => {
-    const { container } = render(
-      <ArtifactTable
-        match={match}
-        artifacts={artifactsMock}
-        afterAddArtifact={jest.fn()}
-        deleteArtifact={jest.fn()}
-        updateAndSaveArtifact={jest.fn()}
-      />
-    );
-
-    fireEvent.click(container.querySelector('button.edit-artifact-button'));
-    expect(document.querySelector('.artifact-table__modal')).not.toBeEmpty();
-
-    fireEvent.click(document.querySelector('.modal__deletebutton'));
-    expect(document.querySelector('.artifact-table__modal')).toBeNull();
+    userEvent.click(screen.getByRole('button', { name: 'close' }));
+    await waitFor(() => {
+      expect(screen.queryByText('Edit Artifact Details')).not.toBeInTheDocument();
+    });
   });
 
   it('allows deleting of artifacts', () => {
     const deleteArtifact = jest.fn();
+    renderComponent({ deleteArtifact });
 
-    const { container } = render(
-      <ArtifactTable
-        match={match}
-        artifacts={artifactsMock}
-        afterAddArtifact={jest.fn()}
-        deleteArtifact={deleteArtifact}
-        updateAndSaveArtifact={jest.fn()}
-      />
-    );
+    userEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0]);
+    expect(screen.getByText('Delete Artifact Confirmation')).toBeInTheDocument();
 
-    fireEvent.click(container.querySelector('button.danger-button'));
+    const dialog = within(screen.getByRole('dialog'));
 
-    expect(document.querySelector('.modal__heading')).toHaveTextContent('Delete Artifact Confirmation');
+    expect(dialog.getByText(artifactsMock[0].name)).toBeInTheDocument();
+    expect(dialog.getByText(artifactsMock[0].version)).toBeInTheDocument();
 
-    const [artifactName, artifactVersion] =
-      document.querySelectorAll('.delete-artifact-confirmation-modal .artifact-info');
-
-    expect(artifactName).toHaveTextContent(`Name: ${artifactsMock[0].name}`);
-    expect(artifactVersion).toHaveTextContent(`Version: ${artifactsMock[0].version}`);
-
-    fireEvent.click(document.body.querySelector('button[type="submit"]'));
+    userEvent.click(dialog.getByRole('button', {name: 'Delete'}));
 
     expect(deleteArtifact).toBeCalledWith(artifactsMock[0]);
   });

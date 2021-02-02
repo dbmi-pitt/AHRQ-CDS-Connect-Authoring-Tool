@@ -5,7 +5,8 @@ import _ from 'lodash';
 import changeToCase from '../utils/strings';
 
 import * as types from './types';
-import { loadArtifact } from './artifacts';
+import { saveArtifact, loadArtifact } from './artifacts';
+import { loadModifiers } from './modifiers';
 
 const API_BASE = process.env.REACT_APP_API_URL;
 
@@ -28,6 +29,7 @@ function calculateParentsOfAllLibraries(libraries) {
   });
   return parentsOfLibraries;
 }
+
 
 // ------------------------- LOAD EXTERNAL CQL LIST ------------------------ //
 
@@ -68,7 +70,8 @@ export function loadExternalCqlList(artifactId) {
 
     return sendExternalCqlListRequest(artifactId)
       .then(data => dispatch(loadExternalCqlListSuccess(data)))
-      .catch(error => dispatch(loadExternalCqlListFailure(error)));
+      .catch(error => dispatch(loadExternalCqlListFailure(error)))
+      .then(() => dispatch(loadModifiers()));
   };
 }
 
@@ -191,13 +194,16 @@ function sendAddExternalCqlLibraryRequest(library) {
 
 export function addExternalLibrary(library) {
   return (dispatch) => {
+    //save the artifact BEFORE making external CQL changes
+    //other wise the fhirVersion gets overwritten
+    dispatch(saveArtifact(library.artifact));
     dispatch(requestAddExternalCqlLibrary());
 
     return sendAddExternalCqlLibraryRequest(library)
       .then(data => dispatch(addExternalCqlLibrarySuccess(data)))
       .catch(error => dispatch(addExternalCqlLibraryFailure(error)))
-      .then(() => dispatch(loadExternalCqlList(library.artifactId)))
-      .then(() => dispatch(loadArtifact(library.artifactId)));
+      .then(() => dispatch(loadExternalCqlList(library.artifact._id)))
+      .then(() => dispatch(loadArtifact(library.artifact._id)));
   };
 }
 
@@ -243,14 +249,17 @@ function sendDeleteExternalCqlLibraryRequest(libraryId) {
   });
 }
 
-export function deleteExternalCqlLibrary(libraryId, artifactId) {
+export function deleteExternalCqlLibrary(libraryId, artifact) {
   return (dispatch) => {
+    //save the artifact BEFORE making external CQL changes
+    //other wise the fhirVersion gets overwritten
+    dispatch(saveArtifact(artifact));
     dispatch(requestDeleteExternalCqlLibrary());
 
     return sendDeleteExternalCqlLibraryRequest(libraryId)
       .then(data => dispatch(deleteExternalCqlLibrarySuccess()))
       .catch(error => dispatch(deleteExternalCqlLibraryFailure(error)))
-      .then(() => dispatch(loadExternalCqlList(artifactId)))
-      .then(() => dispatch(loadArtifact(artifactId)));
+      .then(() => dispatch(loadExternalCqlList(artifact._id)))
+      .then(() => dispatch(loadArtifact(artifact._id)));
   };
 }

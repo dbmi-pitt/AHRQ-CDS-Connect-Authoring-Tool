@@ -37,7 +37,11 @@
   }
 
   &__tablecell-button {
-    white-space: nowrap; 
+    white-space: nowrap;
+
+    button {
+      margin-left: 10px;
+    }
   }
 
   .external-cql-library-info {

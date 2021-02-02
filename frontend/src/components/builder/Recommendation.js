@@ -1,11 +1,15 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import _ from 'lodash';
-import FontAwesome from 'react-fontawesome';
 import update from 'immutability-helper';
+import { Button, IconButton, TextField } from '@material-ui/core';
+import {
+  ArrowDropDown as ArrowDropDownIcon,
+  ArrowDropUp as ArrowDropUpIcon,
+  Close as CloseIcon
+} from '@material-ui/icons';
+import _ from 'lodash';
 
-import StyledSelect from '../elements/StyledSelect';
-
+import { Dropdown } from 'components/elements';
 import createTemplateInstance from '../../utils/templates';
 
 /* eslint-disable jsx-a11y/label-has-for */
@@ -22,8 +26,11 @@ export default class Recommendation extends Component {
       grade: props.rec.grade,
       text: props.rec.text,
       rationale: props.rec.rationale,
+      comment: props.rec.comment,
       showSubpopulations: !!((props.rec.subpopulations && props.rec.subpopulations.length)),
       showRationale: !!props.rec.rationale.length,
+      showComment: !!((props.rec.comment && props.rec.comment.length)),
+      showReordering: (props.rec.length > 1)
     };
   }
 
@@ -51,7 +58,8 @@ export default class Recommendation extends Component {
     this.setState({ showSubpopulations: true });
   }
 
-  applySubpopulation = (subpop) => {
+  applySubpopulation = (event, subpopulationOptions) => {
+    const subpop = subpopulationOptions.find(option => option.uniqueId === event.target.value);
     const refSubpop = {
       uniqueId: subpop.uniqueId,
       subpopulationName: subpop.subpopulationName
@@ -80,6 +88,9 @@ export default class Recommendation extends Component {
       }
     });
 
+    if(this.props.rec.subpopulations.length === 1){
+      this.setState({showSubpopulations:false});
+    }
     this.props.updateRecommendations(newRecs);
   }
 
@@ -95,8 +106,8 @@ export default class Recommendation extends Component {
     return !match;
   })
 
-  handleChange = (event) => {
-    const newValues = { [event.target.name]: event.target.value };
+  handleChange = (name, value) => {
+    const newValues = { [name]: value };
     this.props.onUpdate(this.state.uid, newValues);
     const newState = update(this.state, {
       $merge: newValues
@@ -105,138 +116,212 @@ export default class Recommendation extends Component {
     this.setState(newState);
   }
 
-  shouldShowSubpopulations = () => this.state.showSubpopulations || this.props.rec.subpopulations.length;
+  handleShowRationale = () => {
+    this.setState({ showRationale: !this.state.showRationale });
+  }
 
-  renderSubpopulations = () => (
-    <div className="recommendation__subpopulations">
-      {/* TODO: The following should have options: any/all */}
-      <div className="card-element__label">If all of the following apply...</div>
+  removeRationale = () => {
+    this.handleChange('rationale', '');
+    this.handleShowRationale();
+  }
 
-      <div className="recommendation__subpopulation-pills">
-        {this.props.rec.subpopulations.map((subpop, i) => (
-          <div key={subpop.uniqueId} className="recommendation__subpopulation-pill">
-            {subpop.subpopulationName}
+  removeComment = () => {
+    this.handleChange('comment', '');
+    this.handleShowComment();
+  }
 
-            <button
-              className="transparent-button"
-              aria-label={`Remove ${subpop.subpopulationName}`}
-              onClick={() => this.removeSubpopulation(i)}>
-              <FontAwesome fixedWidth name='times'/>
-            </button>
+  handleShowComment = () => {
+    this.setState({ showComment: !this.state.showComment });
+  }
+
+  shouldShowSubpopulations = () => Boolean(this.state.showSubpopulations || this.props.rec.subpopulations.length);
+
+  shouldShowReorderingButtons = () => this.props.artifact.recommendations.length > 1;
+
+  renderSubpopulations = () => {
+    const subpopulationOptions = this.getRelevantSubpopulations();
+
+    return (
+      <div className="recommendation__subpopulations">
+        {/* TODO: The following should have options: any/all */}
+        <div className="card-element__label">If all of the following apply...</div>
+
+        <div className="recommendation__subpopulation-pills">
+          {this.props.rec.subpopulations.map((subpop, i) => (
+            <div key={subpop.uniqueId} className="recommendation__subpopulation-pill">
+              {subpop.subpopulationName}
+
+              <IconButton
+                aria-label={`remove ${subpop.subpopulationName}`}
+                color="primary"
+                onClick={() => this.removeSubpopulation(i)}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          ))}
+        </div>
+
+        <div className="recommendation__add-subpopulation">
+          <div className="recommendation__subpopulation-select">
+            <Dropdown
+              id="subpopulation-select"
+              label="Add a subpopulation"
+              onChange={event => this.applySubpopulation(event, subpopulationOptions)}
+              options={subpopulationOptions}
+              value=""
+              valueKey="uniqueId"
+              labelKey="subpopulationName"
+            />
           </div>
-        ))}
-      </div>
 
-      <div className="recommendation__add-subpopulation">
-        <StyledSelect
-          className="recommendation__subpopulation-select"
-          classNamePrefix="subpopulation-select"
-          name="recommendation__subpopulation-select"
-          value="start"
-          placeholder="Add a subpopulation"
-          aria-label="Add a subpopulation"
-          options={this.getRelevantSubpopulations()}
-          onChange={this.applySubpopulation}
-          getOptionValue={({ subpopulationName }) => subpopulationName}
-          getOptionLabel={({ subpopulationName }) => subpopulationName}
-        />
-
-        <a
-          className="recommendation__new-subpopulation"
-          aria-label="New subpopulation"
-          tabIndex="0"
-          role="button"
-          onClick={this.addBlankSubpopulation}
-          onKeyPress={(e) => {
-            e.which = e.which || e.keyCode;
-            if (e.which === 13) this.addBlankSubpopulation(e);
-          }}
-        >
-          New subpopulation
-        </a>
+          <Button
+            color="primary"
+            onClick={this.addBlankSubpopulation}
+            variant="contained"
+          >
+            New subpopulation
+          </Button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   render() {
     return (
       <div className="recommendation card-group card-group__top">
         <div className="card-element">
-          {this.shouldShowSubpopulations() ? this.renderSubpopulations() : null}
+          <div className="recommendation__title">
+            <div className="card-element__label"></div>
+            <div>
+              {this.shouldShowReorderingButtons() &&
+                <span>
+                  <IconButton
+                    aria-label="move up recommendation"
+                    color="primary"
+                    onClick={() => this.props.onMoveRecUp(this.props.rec.uid)}
+                  >
+                    <ArrowDropUpIcon fontSize="small" />
+                  </IconButton>
+
+                  <IconButton
+                    aria-label="move down recommendation"
+                    color="primary"
+                    onClick={() => this.props.onMoveRecDown(this.props.rec.uid)}
+                  >
+                    <ArrowDropDownIcon fontSize="small" />
+                  </IconButton>
+                </span>
+              }
+
+              <IconButton
+                aria-label="remove recommendation"
+                color="primary"
+                onClick={() => this.props.onRemove(this.props.rec.uid)}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </div>
+          </div>
+
+          {this.shouldShowSubpopulations() && this.renderSubpopulations()}
 
           <div className="recommendation__title">
             <div className="card-element__label">Recommend...</div>
-
-            {/* <StyledSelect
-              className="recommendation__grade"
-              name="recommendation__grade"
-              aria-label="Recommendation Grade"
-              title="Recommendation Grade"
-              placeholder="Choose grade"
-              value={this.state.grade}
-              onChange={this.handleChange}
-              options={[
-                { value: 'A', label: 'Grade A' },
-                { value: 'B', label: 'Grade B' },
-                { value: 'C', label: 'Grade C' }
-              ]}
-              getOptionLabel={({recommendationGrade}) => recommendationGrade}
-            /> */}
-
-            {/* <button className="button" aria-label="copy recommendation">
-              <FontAwesome fixedWidth name='copy' />
-            </button> */}
-
-            <button
-              className="recommendation__remove transparent-button"
-              aria-label="remove recommendation"
-              onClick={() => this.props.onRemove(this.props.rec.uid)}>
-              <FontAwesome fixedWidth name='times' />
-            </button>
           </div>
 
-          <textarea
-            className="card-element__textarea"
-            name="text"
-            aria-label="Recommendation"
-            title="Recommendation text"
-            placeholder='Describe your recommendation'
+          <TextField
+            className="recommendation-input"
+            fullWidth
+            label={null}
+            multiline
+            onChange={event => this.handleChange('text', event.target.value)}
+            placeholder="Describe your recommendation"
             value={this.state.text}
-            onChange={this.handleChange}
+            variant="outlined"
           />
 
-          {this.state.showRationale ?
+          {this.state.showRationale &&
             <div className="recommendation__rationale">
-              <div className="card-element__label">Rationale...</div>
+              <div className="card-element__label">Rationale...
+                <IconButton
+                  aria-label="remove rationale"
+                  color="primary"
+                  onClick={() => this.removeRationale()}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </div>
 
-              <textarea
-                className="card-element__textarea"
-                name="rationale"
-                aria-label="Rationale"
-                title="Rationale text"
-                placeholder='Describe the rationale for your recommendation'
+              <TextField
+                className="recommendation-input"
+                fullWidth
+                label={null}
+                multiline
+                onChange={event => this.handleChange('rationale', event.target.value)}
+                placeholder="Describe the rationale for your recommendation"
                 value={this.state.rationale}
-                onChange={this.handleChange}
+                variant="outlined"
               />
             </div>
-          :
-            <button
-              className="button primary-button recommendation__add-rationale"
-              aria-label="Add rationale"
-              onClick={() => this.setState({ showRationale: !this.state.showRationale })}>
-              Add rationale
-            </button>
           }
 
-          {this.shouldShowSubpopulations() ? null :
-            <button
-              className="button primary-button pull-right"
-              aria-label="Add subpopulation"
-              name="subpopulation"
-              onClick={this.revealSubpopulations}>
-              Add subpopulation
-            </button>
+          {this.state.showComment &&
+            <div className="recommendation__comment">
+              <div className="card-element__label">Comment...
+                <IconButton
+                  aria-label="remove comment"
+                  color="primary"
+                  onClick={() => this.removeComment()}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </div>
+
+              <TextField
+                className="recommendation-input"
+                fullWidth
+                label={null}
+                multiline
+                onChange={event => this.handleChange('comment', event.target.value)}
+                placeholder="Add an optional comment"
+                value={this.state.comment}
+                variant="outlined"
+              />
+            </div>
           }
+
+          <div className="recommendation__buttons">
+            {!this.state.showRationale &&
+              <Button
+                color="primary"
+                onClick={this.handleShowRationale}
+                variant="contained"
+              >
+                Add rationale
+              </Button>
+            }
+
+            {!this.shouldShowSubpopulations() &&
+              <Button
+                color="primary"
+                onClick={this.revealSubpopulations}
+                variant="contained"
+              >
+                Add subpopulation
+              </Button>
+            }
+
+            {!this.state.showComment &&
+              <Button
+                color="primary"
+                onClick={this.handleShowComment}
+                variant="contained"
+              >
+                Add comments
+              </Button>
+            }
+          </div>
         </div>
       </div>
     );

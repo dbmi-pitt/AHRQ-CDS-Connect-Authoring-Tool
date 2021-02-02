@@ -1,8 +1,6 @@
 import React from 'react';
+import { render, userEvent, screen } from 'utils/test-utils';
 import Parameters from '../Parameters';
-import { render, fireEvent, openSelect } from '../../../utils/test-utils';
-
-jest.mock('../fields/TextAreaField', () => () => <div>TextAreaField</div>);
 
 describe('<Parameters />', () => {
   const renderComponent = (props = {}) =>
@@ -12,19 +10,22 @@ describe('<Parameters />', () => {
         instanceNames={[]}
         isValidatingCode={false}
         loginVSACUser={jest.fn()}
-        parameters={[{
-          name: 'Parameter 007',
-          uniqueId: 'parameter-007',
-          type: 'string',
-          value: '',
-          usedBy: [],
-          comment: ''
-        }]}
+        parameters={[
+          {
+            name: 'Parameter 007',
+            uniqueId: 'parameter-007',
+            type: 'string',
+            value: '',
+            usedBy: [],
+            comment: ''
+          }
+        ]}
         resetCodeValidation={jest.fn()}
         setVSACAuthStatus={jest.fn()}
         updateParameters={jest.fn()}
         validateCode={jest.fn()}
-        vsacFHIRCredentials={{ username: 'username', password: 'password' }}
+        vsacApiKey={'key'}
+        vsacIsAuthenticating={false}
         vsacStatus=""
         vsacStatusText=""
         {...props}
@@ -39,9 +40,9 @@ describe('<Parameters />', () => {
 
   it('can add a new parameter with the New parameter button', () => {
     const updateParameters = jest.fn();
-    const { getByText } = renderComponent({ parameters: [], updateParameters });
+    renderComponent({ parameters: [], updateParameters });
 
-    fireEvent.click(getByText('New parameter'));
+    userEvent.click(screen.getByRole('button', { name: 'New parameter' }));
 
     expect(updateParameters).toBeCalledWith([
       expect.objectContaining({
@@ -55,25 +56,28 @@ describe('<Parameters />', () => {
 
   it('can update a parameter', () => {
     const updateParameters = jest.fn();
-    const { getByText, getByLabelText } = renderComponent({ updateParameters });
+    renderComponent({ updateParameters });
 
-    openSelect(getByLabelText('Select Parameter Type'));
-    fireEvent.click(getByText('Integer'));
+    userEvent.click(screen.getByRole('button', { name: 'String' }));
+    userEvent.click(screen.getByRole('option', { name: 'Integer' }));
 
-    expect(updateParameters).toBeCalledWith([{
-      name: 'Parameter 007',
-      uniqueId: 'parameter-007',
-      type: 'integer',
-      comment: '',
-      value: null
-    }]);
+    expect(updateParameters).toBeCalledWith([
+      {
+        name: 'Parameter 007',
+        uniqueId: 'parameter-007',
+        type: 'integer',
+        comment: '',
+        value: null
+      }
+    ]);
   });
 
   it('can delete parameter', () => {
     const updateParameters = jest.fn();
-    const { getByLabelText } = renderComponent({ updateParameters });
+    renderComponent({ updateParameters });
 
-    fireEvent.click(getByLabelText('Delete Parameter'));
+    userEvent.click(screen.getByRole('button', { name: 'delete parameter' }));
+    userEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
     expect(updateParameters).toBeCalledWith([]);
   });

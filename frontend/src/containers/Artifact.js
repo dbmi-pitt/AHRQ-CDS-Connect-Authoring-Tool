@@ -2,27 +2,32 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import FontAwesome from 'react-fontawesome';
+import { Button } from '@material-ui/core';
+import AddIcon from '@material-ui/icons/Add';
 
-import { loadArtifacts, addArtifact, deleteArtifact, updateAndSaveArtifact } from '../actions/artifacts';
+import { loadArtifacts, addArtifact, deleteArtifact } from '../actions/artifacts';
 import artifactProps from '../prop-types/artifact';
 
-import NewArtifactForm from '../components/artifact/NewArtifactForm';
+import ArtifactModal from '../components/artifact/ArtifactModal';
 import ArtifactTable from '../components/artifact/ArtifactTable';
 
 class Artifact extends Component {
   constructor(props) {
     super(props);
 
-    this.state = { showForm: false };
+    this.state = { showNewArtifactModal: false };
   }
 
   UNSAFE_componentWillMount() { // eslint-disable-line camelcase
     this.props.loadArtifacts();
   }
 
-  handleShowForm = () => {
-    this.setState({ showForm: !this.state.showForm });
+  openNewArtifactModal = () => {
+    this.setState({ showNewArtifactModal: true });
+  }
+
+  closeNewArtifactModal = () => {
+    this.setState({ showNewArtifactModal: false });
   }
 
   renderArtifactsTable() {
@@ -32,8 +37,7 @@ class Artifact extends Component {
       return (
         <ArtifactTable
           artifacts={artifacts}
-          deleteArtifact={this.props.deleteArtifact}
-          updateAndSaveArtifact={this.props.updateAndSaveArtifact} />
+          deleteArtifact={this.props.deleteArtifact} />
       );
     }
 
@@ -44,16 +48,22 @@ class Artifact extends Component {
     return (
       <div className="artifact" id="maincontent">
         <div className="artifact-wrapper">
-          {this.state.showForm ?
-            <NewArtifactForm formType="new" addArtifact={this.props.addArtifact} />
-            :
-            <button className="primary-button" onClick={() => this.handleShowForm()}>
-              <FontAwesome name="plus" /> Create New Artifact
-            </button>
-          }
+          <Button
+            color="primary"
+            onClick={() => this.openNewArtifactModal()}
+            startIcon={<AddIcon />}
+            variant="contained"
+          >
+            Create New Artifact
+          </Button>
 
           {this.renderArtifactsTable()}
         </div>
+
+        <ArtifactModal
+          showModal={this.state.showNewArtifactModal}
+          closeModal={this.closeNewArtifactModal}
+        />
       </div>
     );
   }
@@ -63,8 +73,7 @@ Artifact.propTypes = {
   artifacts: PropTypes.arrayOf(artifactProps),
   loadArtifacts: PropTypes.func.isRequired,
   addArtifact: PropTypes.func.isRequired,
-  deleteArtifact: PropTypes.func.isRequired,
-  updateAndSaveArtifact: PropTypes.func.isRequired
+  deleteArtifact: PropTypes.func.isRequired
 };
 
 // these props are used for dispatching actions
@@ -72,8 +81,7 @@ function mapDispatchToProps(dispatch) {
   return bindActionCreators({
     loadArtifacts,
     addArtifact,
-    deleteArtifact,
-    updateAndSaveArtifact
+    deleteArtifact
   }, dispatch);
 }
 

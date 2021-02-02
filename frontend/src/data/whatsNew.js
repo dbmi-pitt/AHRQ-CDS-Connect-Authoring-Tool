@@ -1,37 +1,74 @@
 /* eslint-disable max-len */
+import React from 'react';
 
 // data for what's new section of homepage - should have between 1 and 4 objects
-export default [
+const whatsNew = [
   {
     id: 1,
-    name: 'Multi-Patient Testing',
-    image: `${process.env.PUBLIC_URL}/assets/images/whats-new-testing.png`,
-    description: 'CDS Authors can now test their CDS artifacts against more than one synthetic patient at once. The selected CDS artifact will be executed against each patient the author selects, and individual results are displayed.',
+    name: 'External CQL Functions',
+    ariaLabel: 'External CQL Functions',
+    image: `${process.env.PUBLIC_URL}/assets/images/whats-new-external-modifiers.png`,
+    description: (
+      <>
+        External CQL functions can now be used as expression modifiers on the elements
+        of an artifact. This allows CDS Authors to more easily and effectively extend
+        the functionality of the CDS Authoring Tool to suit their specific needs.
+      </>
+    ),
     linkText: 'Documentation',
-    link: `${process.env.PUBLIC_URL}/documentation#Testing_Artifacts`
+    link: `${process.env.PUBLIC_URL}/documentation#Using_External_CQL_Expression_Modifiers`,
   },
   {
     id: 2,
-    name: 'External CQL',
-    image: `${process.env.PUBLIC_URL}/assets/images/whats-new-external-cql.png`,
-    description: 'CDS Authors can now import externally authored CQL libraries and use their defined expressions in Inclusions, Exclusions, Subpopulations, and Base Elements. This allows authors to fill gaps in logic that cannot be produced by the CDS Authoring Tool and to leverage pre-existing CQL expressions.',
-    linkText: 'Documentation',
-    link: `${process.env.PUBLIC_URL}/documentation#External_CQL`
+    name: (
+      <>
+        CPG on FHIR<sup>®</sup> Support
+      </>
+    ),
+    ariaLabel: 'CPG Publishable Library Support',
+    image: `${process.env.PUBLIC_URL}/assets/images/whats-new-cpg-on-fhir.png`,
+    description: (
+      <>
+        CDS Authors can now provide additional metadata about their artifact in
+        a new form based on the FHIR<sup>®</sup> Clinical Practice Guidelines
+        (a.k.a. CPG on FHIR) Publishable Library profile. The metadata will also
+        be exported automatically as a CPG Publishable library in all CQL
+        downloads.{' '}
+      </>
+    ),
+    linkText: 'CPG Publishable Library',
+    link:
+      'http://build.fhir.org/ig/HL7/cqf-recommendations/StructureDefinition-cpg-publishablelibrary.html',
+    linkExternal: true,
   },
   {
     id: 3,
-    name: 'Comments',
-    image: `${process.env.PUBLIC_URL}/assets/images/whats-new-comments.png`,
-    description: 'CDS Authors now have the ability to add comments to individual CDS elements including single base elements. These comments are added to the generated CQL above the element’s definition.',
-    linkText: 'Documentation',
-    link: `${process.env.PUBLIC_URL}/documentation#Comments`
+    name: 'Common Functions',
+    ariaLabel: 'Common Functions',
+    image: `${process.env.PUBLIC_URL}/assets/images/whats-new-common-functions.png`,
+    description: (
+      <>
+        Artifact downloads no longer package separate CDS Connect Commons and
+        CDS Connect Conversions libraries. Instead, the primary CQL library will
+        embed any required common functions in its own CQL.
+      </>
+    ),
   },
   {
     id: 4,
-    name: 'Webinar',
-    image: `${process.env.PUBLIC_URL}/assets/images/whats-new-webinar.png`,
-    description: 'AHRQ hosted a national web conference on the CDS Authoring Tool in February 2019.  During this conference, participants were shown how to build an example Statin Use artifact and how to integrate it with an EHR using CQL Services and the CDS Hooks API.',
-    linkText: 'More Information',
-    link: 'https://healthit.ahrq.gov/events/national-web-conference-clinical-decision-support-authoring-tool'
-  }
+    name: 'Collapsible Comments',
+    ariaLabel: 'Collapsible Comments',
+    image: `${process.env.PUBLIC_URL}/assets/images/whats-new-collapsible-comments.png`,
+    description: (
+      <>
+        User-provided comments are now supported on most authoring elements.
+        Comments are collapsed by default to allow users to see the most
+        relevant data without being overwhelmed by empty comment blocks.
+      </>
+    ),
+    linkText: 'Documentation',
+    link: `${process.env.PUBLIC_URL}/documentation#Annotate_Element`,
+  },
 ];
+
+export default whatsNew;

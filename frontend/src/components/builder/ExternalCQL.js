@@ -1,13 +1,13 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import FontAwesome from 'react-fontawesome';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSpinner, faCloudUploadAlt } from '@fortawesome/free-solid-svg-icons';
 import Dropzone from 'react-dropzone';
+import { Alert } from '@material-ui/lab';
 
 import artifactProps from '../../prop-types/artifact';
-
 import ExternalCqlTable from './ExternalCqlTable';
 import ELMErrorModal from './ELMErrorModal';
-import Banner from '../elements/Banner';
 
 export default class ExternalCQL extends Component {
   constructor(props) {
@@ -65,7 +65,7 @@ export default class ExternalCQL extends Component {
           cqlFileName,
           cqlFileContent: fileContentToSend,
           fileType: cqlFileType,
-          artifactId: artifact._id
+          artifact
         };
 
         this.props.addExternalLibrary(library);
@@ -98,8 +98,8 @@ export default class ExternalCQL extends Component {
 
   renderDropzoneIcon = () => {
     const { isAddingExternalCqlLibrary } = this.props;
-    if (isAddingExternalCqlLibrary) return <FontAwesome name="spinner" size="5x" spin />;
-    return <FontAwesome name="cloud-upload" size="5x" />;
+    if (isAddingExternalCqlLibrary) return <FontAwesomeIcon icon={faSpinner} size="5x" spin />;
+    return <FontAwesomeIcon icon={faCloudUploadAlt} size="5x" />;
   }
 
   renderExternalCqlTable() {
@@ -117,7 +117,7 @@ export default class ExternalCQL extends Component {
     if (externalCqlList && externalCqlList.length > 0) {
       return (
         <ExternalCqlTable
-          artifactId={artifact._id}
+          artifact={artifact}
           externalCqlList={externalCqlList}
           externalCQLLibraryParents={externalCQLLibraryParents}
           externalCqlLibraryDetails={externalCqlLibraryDetails}
@@ -141,37 +141,51 @@ export default class ExternalCQL extends Component {
       <div className="external-cql" id="maincontent">
         <div className="external-cql-wrapper">
           <Dropzone
-            className="dropzone"
-            onDrop={this.handleAddExternalCQL.bind(this)}
+            onDrop={acceptedFiles => this.handleAddExternalCQL(acceptedFiles)}
             accept=".cql,application/zip,text/plain"
             disabled={isDropzoneDisabled}
-            disabledClassName='disabled'
-            multiple={false}>
-            {this.renderDropzoneIcon()}
+            disabledClassName="disabled"
+            multiple={false}
+            aria-label="External CQL Dropzone"
+          >
+            {({ getRootProps, getInputProps }) => (
+              <section className="container">
+                <div {...getRootProps({ className: 'dropzone' })}>
+                  <input {...getInputProps()} />
 
-            {showUploadErrorBanner &&
-              <Banner type="warning" close={event => this.dismissBanner(event, 'showUploadErrorBanner')}>
-                Invalid file type.
-              </Banner>
-            }
+                  {this.renderDropzoneIcon()}
 
-            {showLibraryErrorBanner &&
-              <Banner type="warning" close={event => this.dismissBanner(event, 'showLibraryErrorBanner')}>
-                {addExternalCqlLibraryErrorMessage || 'An error occurred.'}
-              </Banner>
-            }
+                  {showUploadErrorBanner &&
+                    <Alert severity="error" onClose={event => this.dismissBanner(event, 'showUploadErrorBanner')}>
+                      Invalid file type.
+                    </Alert>
+                  }
 
-            {showLibraryNotificationBanner &&
-              <Banner close={event => this.dismissBanner(event, 'showLibraryNotificationBanner')}>
-                {addExternalCqlLibraryErrorMessage}
-              </Banner>
-            }
+                  {showLibraryErrorBanner &&
+                    <Alert severity="error" onClose={event => this.dismissBanner(event, 'showLibraryErrorBanner')}>
+                      {addExternalCqlLibraryErrorMessage || 'An error occurred.'}
+                    </Alert>
+                  }
 
-            {isDropzoneDisabled && <Banner type="warning">Artifact must be saved before uploading libraries.</Banner>}
+                  {showLibraryNotificationBanner &&
+                    <Alert
+                      severity="info"
+                      onClose={event => this.dismissBanner(event, 'showLibraryNotificationBanner')}
+                    >
+                      {addExternalCqlLibraryErrorMessage}
+                    </Alert>
+                  }
 
-            <div className="dropzone__instructions">
-              Drop a valid external CQL library or zip file here, or click to browse.
-            </div>
+                  {isDropzoneDisabled &&
+                    <Alert severity="warning">Artifact must be saved before uploading libraries.</Alert>
+                  }
+
+                  <div className="dropzone__instructions">
+                    Drop a valid external CQL library or zip file here, or click to browse.
+                  </div>
+                </div>
+              </section>
+            )}
           </Dropzone>
 
           <div className="external-cql__display">
@@ -180,10 +194,10 @@ export default class ExternalCQL extends Component {
         </div>
 
         <ELMErrorModal
-            isOpen={this.state.showELMErrorModal}
-            closeModal={this.closeELMErrorModal}
-            errors={this.props.externalCqlErrors}/>
-
+          isOpen={this.state.showELMErrorModal}
+          closeModal={this.closeELMErrorModal}
+          errors={this.props.externalCqlErrors}
+        />
       </div>
     );
   }

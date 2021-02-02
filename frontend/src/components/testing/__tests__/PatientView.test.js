@@ -1,8 +1,10 @@
 import React from 'react';
+import moment from 'moment';
 import PatientView from '../PatientView';
 import { render } from '../../../utils/test-utils';
 import mockPatientDstu2 from '../../../mocks/mockPatientDstu2';
 import mockPatientStu3 from '../../../mocks/mockPatientStu3';
+import mockPatientR4 from '../../../mocks/mockPatientR4';
 
 describe('<PatientView />', () => {
   it('renders DSTU2 without crashing', () => {
@@ -10,7 +12,7 @@ describe('<PatientView />', () => {
       <PatientView patient={mockPatientDstu2} />
     );
 
-    expect(container).not.toBeEmpty();
+    expect(container).not.toBeEmptyDOMElement();
   });
 
   it('header renders DSTU2 correctly', () => {
@@ -21,7 +23,8 @@ describe('<PatientView />', () => {
     expect(container.querySelectorAll('.patient-view__patient')).toHaveLength(1);
     expect(container.querySelector('.patient-data-name')).toHaveTextContent('Robin67 Baumbach677');
     expect(container.querySelector('.patient-data-details-gender')).toHaveTextContent('female');
-    expect(container.querySelector('.patient-data-details-age')).toHaveTextContent('34 yrs');
+    const expectedAge = moment().diff(moment('1985-02-04'), 'years');
+    expect(container.querySelector('.patient-data-details-age')).toHaveTextContent(`${expectedAge} yrs`);
   });
 
   it('renders the DSTU2 resources', () => {
@@ -37,7 +40,7 @@ describe('<PatientView />', () => {
       <PatientView patient={mockPatientStu3} />
     );
 
-    expect(container).not.toBeEmpty();
+    expect(container).not.toBeEmptyDOMElement();
   });
 
   it('header renders STU3 correctly', () => {
@@ -48,12 +51,41 @@ describe('<PatientView />', () => {
     expect(container.querySelectorAll('.patient-view__patient')).toHaveLength(1);
     expect(container.querySelector('.patient-data-name')).toHaveTextContent('Arnulfo253 McClure239');
     expect(container.querySelector('.patient-data-details-gender')).toHaveTextContent('male');
-    expect(container.querySelector('.patient-data-details-age')).toHaveTextContent('33 yrs');
+    const expectedAge = moment().diff(moment('1986-01-12'), 'years');
+    expect(container.querySelector('.patient-data-details-age')).toHaveTextContent(`${expectedAge} yrs`);
   });
 
   it('renders the STU3 resources', () => {
     const { container } = render(
       <PatientView patient={mockPatientStu3} />
+    );
+
+    expect(container.querySelectorAll('.patient-view__resources')).toHaveLength(1);
+  });
+
+  it('renders R4 without crashing', () => {
+    const { container } = render(
+      <PatientView patient={mockPatientR4} />
+    );
+
+    expect(container).not.toBeEmptyDOMElement();
+  });
+
+  it('header renders R4 correctly', () => {
+    const { container } = render(
+      <PatientView patient={mockPatientR4} />
+    );
+
+    expect(container.querySelectorAll('.patient-view__patient')).toHaveLength(1);
+    expect(container.querySelector('.patient-data-name')).toHaveTextContent('Geneva168 Reynolds644');
+    expect(container.querySelector('.patient-data-details-gender')).toHaveTextContent('female');
+    const expectedAge = moment().diff(moment('1999-10-10'), 'years');
+    expect(container.querySelector('.patient-data-details-age')).toHaveTextContent(`${expectedAge} yrs`);
+  });
+
+  it('renders the R4 resources', () => {
+    const { container } = render(
+      <PatientView patient={mockPatientR4} />
     );
 
     expect(container.querySelectorAll('.patient-view__resources')).toHaveLength(1);

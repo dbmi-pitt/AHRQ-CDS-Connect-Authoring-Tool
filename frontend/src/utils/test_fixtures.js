@@ -1,6 +1,6 @@
 /* eslint-disable object-curly-newline */
 const elementLists = ['list_of_observations', 'list_of_conditions', 'list_of_medication_statements',
-  'list_of_medication_orders', 'list_of_procedures', 'list_of_allergy_intolerances', 'list_of_encounters'];
+  'list_of_medication_requests', 'list_of_procedures', 'list_of_allergy_intolerances', 'list_of_encounters'];
 
 /**
  * Example TemplateInstances
@@ -13,7 +13,8 @@ const instanceTree = {
   path: '',
   uniqueId: 'And-1',
   fields: [
-    { id: 'element_name', type: 'string', name: 'Group Name', value: 'MeetsInclusionCriteria' }
+    { id: 'element_name', type: 'string', name: 'Group Name', value: 'MeetsInclusionCriteria' },
+    { id: 'comment', type: 'string', name: 'Comment', value: 'Includes a comment'}
   ],
   childInstances: [
     {
@@ -93,7 +94,8 @@ const emptyInstanceTree = {
   path: '',
   uniqueId: 'And-1',
   fields: [
-    { id: 'element_name', type: 'string', name: 'Group Name', value: 'MeetsInclusionCriteria' }
+    { id: 'element_name', type: 'string', name: 'Group Name', value: 'MeetsInclusionCriteria' },
+    { id: 'comment', type: 'string', name: 'Comment', value: 'Includes a comment'}
   ],
   childInstances: []
 };
@@ -196,7 +198,8 @@ const elementGroups = [
         conjunction: true,
         returnType: 'boolean',
         fields: [
-          { id: 'element_name', type: 'string', name: 'Group Name' }
+          { id: 'element_name', type: 'string', name: 'Group Name' },
+          { id: 'comment', type: 'string', name: 'Comment'}
         ]
       },
       {
@@ -205,7 +208,8 @@ const elementGroups = [
         conjunction: true,
         returnType: 'boolean',
         fields: [
-          { id: 'element_name', type: 'string', name: 'Group Name' }
+          { id: 'element_name', type: 'string', name: 'Group Name' },
+          { id: 'comment', type: 'string', name: 'Comment'}
         ]
       }
     ]
@@ -247,8 +251,10 @@ const genericElementTypes = [
   { value: 'baseElements', label: 'Base Elements', vsacAuthRequired: false },
   { value: 'condition', label: 'Condition', vsacAuthRequired: true, template: 'GenericCondition_vsac' },
   { value: 'demographics', label: 'Demographics', vsacAuthRequired: false },
+  { value: 'device', label: 'Device', vsacAuthRequired: true, template: 'GenericDevice_vsac' },
   { value: 'encounter', label: 'Encounter', vsacAuthRequired: true, template: 'GenericEncounter_vsac' },
   { value: 'externalCqlElement', label: 'External CQL', vsacAuthRequired: false },
+  { value: 'immunization', label: 'Immunization', vsacAuthRequired: true, template: 'GenericImmunization_vsac' },
   {
     value: 'medicationStatement',
     label: 'Medication Statement',
@@ -256,10 +262,10 @@ const genericElementTypes = [
     template: 'GenericMedicationStatement_vsac'
   },
   {
-    value: 'medicationOrder',
-    label: 'Medication Order',
+    value: 'medicationRequest',
+    label: 'Medication Request',
     vsacAuthRequired: true,
-    template: 'GenericMedicationOrder_vsac'
+    template: 'GenericMedicationRequest_vsac'
   },
   { value: 'observation', label: 'Observation', vsacAuthRequired: true, template: 'GenericObservation_vsac' },
   { value: 'booleanParameter', label: 'Parameters', vsacAuthRequired: false },
@@ -488,7 +494,8 @@ const genericBaseElementListInstance = {
   uniqueId: 'Union-1',
   usedBy: ['testId1'],
   fields: [
-    { id: 'element_name', type: 'string', name: 'Group Name', value: 'UnionListName' }
+    { id: 'element_name', type: 'string', name: 'Group Name', value: 'UnionListName' },
+    { id: 'comment', type: 'string', name: 'Comment', value: 'UnionListName Comment'}
   ],
   childInstances: [genericInstance]
 };
@@ -544,7 +551,14 @@ const reduxState = {
     externalCQLLibraryParents: {},
     externalCqlList: []
   },
-  modifiers: {},
+  modifiers: {
+    modifierMap: {},
+    modifiersByInputType: {},
+    loadModifiers: {
+      isLoadingModifiers: null,
+      loadModifiersStatus: null
+    }
+  },
   templates: {
     templates: elementGroups
   },

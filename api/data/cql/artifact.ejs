@@ -8,16 +8,14 @@ include "<%=includeLibrary.name%>" version '<%=includeLibrary.version%>'<%if (in
 codesystem "<%=key%>": '<%-resource.id%>' <%}) -%>
 
 <% resourceMap.forEach((resource, key) => {%>
-valueset "<%-resource.name%>": '<%=resource.oid%>'<%});-%>
+valueset "<%-resource.name%>": 'https://cts.nlm.nih.gov/fhir/ValueSet/<%=resource.oid%>'<%});-%>
 
 <% codeMap.forEach((code) => { %>
-code "<%-code.name%>": '<%-code.code%>' from "<%-code.codeSystem.name%>"
-  display '<%-code.display%>'
+code "<%-code.name%>": '<%-code.code%>' from "<%-code.codeSystem.name%>" display '<%-code.display%>'
 <%})-%>
 
 <% conceptMap.forEach((concept) => {%>
-concept "<%-concept.name%>" : { <%concept.codes.forEach((code, index) => {%>"<%if (index > 0) {%>, <%}%><%-code.name%>"<%})%>}
-  display '<%-concept.display%>'
+concept "<%-concept.name%>" : { <%concept.codes.forEach((code, index) => {%>"<%if (index > 0) {%>, <%}%><%-code.name%>"<%})%>} display '<%-concept.display%>'
 <%})-%>
 
 <% parameters.forEach(parameter => { if(parameter.name) {
@@ -27,10 +25,10 @@ concept "<%-concept.name%>" : { <%concept.codes.forEach((code, index) => {%>"<%i
   %>// <%-c%>
 <%});
   }-%>
-parameter "<%-parameter.name%>" <%- parameter.value || parameter.value === 0 ? 'default ' + (typeof parameter.value === 'object' ? parameter.value.str : parameter.value) : parameter.type %>
+parameter "<%-parameter.name%>" <%- parameter.value || parameter.value === 0 ? 'default ' + (typeof parameter.value === 'object' ? parameter.value.str : parameter.value) : parameter.type.replace('Quantity', 'System.Quantity') %>
 <%}});-%>
 
-context <%=context%>
+context Patient
 
 <% referencedElements.forEach((element) => { -%>
 define "<%=element.name%>":

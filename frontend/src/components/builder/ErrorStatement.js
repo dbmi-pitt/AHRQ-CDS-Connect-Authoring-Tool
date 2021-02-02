@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { Button } from '@material-ui/core';
 import _ from 'lodash';
 
-import StyledSelect from '../elements/StyledSelect';
+import { Dropdown } from 'components/elements';
 
 export default class ErrorStatement extends Component {
   // Ensures there is at least one statement to start
@@ -70,18 +71,17 @@ export default class ErrorStatement extends Component {
   }
 
   // Updates the if/then statements in base and child
-  setStatement = (value, parent, index, type) => {
-    let newValue = value;
-    if (newValue === null) {
-      newValue = { label: null, value: null };
-    }
+  setStatement = (event, parent, index, type, options = null) => {
+    let value = event?.target?.value;
+    if (options) value = options.find(option => option.value === event.target.value);
+    if (value == null) value = { label: null, value: null };
 
     const newErrorStatement = _.cloneDeep(this.props.errorStatement);
     const { statements } = newErrorStatement;
     if (parent == null) {
-      statements[index][type] = newValue;
+      statements[index][type] = value;
     } else {
-      statements[parent].child.statements[index][type] = newValue;
+      statements[parent].child.statements[index][type] = value;
     }
 
     this.props.updateErrorStatement(newErrorStatement);
@@ -129,13 +129,19 @@ export default class ErrorStatement extends Component {
   }
 
   renderWarning = (statement) => {
-    if (statement.condition.value) { return null; }
-
-    if ((statement.thenClause !== '') || (statement.child && statement.child.statements
-        && statement.child.statements.some(val => this.renderWarning(val)))) {
-      return <div className="warning">You need an If statement</div>;
+    if (statement.condition.value && (_.isEmpty(statement.thenClause) )) {
+      return <div className="warning errorStatement">You need a Then statement</div>;
     }
 
+    if ( ((statement.thenClause !== '') && _.isEmpty(statement.condition.value))||
+      (statement.child && statement.child.statements  &&
+        statement.child.statements.some(val => this.renderWarning(val)))) {
+      return <div className="warning errorStatement">You need an If statement</div>;
+    }
+
+    if ( !(_.isEmpty(this.props.errorStatement.elseClause)) && _.isEmpty(statement.condition.value)){
+      return <div className="warning errorStatement">You need an If statement</div>;
+    }
     return null;
   }
 
@@ -143,17 +149,18 @@ export default class ErrorStatement extends Component {
   renderCondition = (statement, parent, index) => {
     let options = this.options();
     let selectedOption = options.find(({ value }) => value === statement.condition.value);
+    const id = `condition-${parent != null ? parent : -1}-${index}`;
 
     return (
-      <StyledSelect
-        className="error-statement__select"
-        key={`condition-${parent != null ? parent : -1}-${index}`}
-        inputProps={{ id: `condition-${parent != null ? parent : -1}-${index}` }}
-        index={index}
-        value={selectedOption}
-        options={options}
-        onChange={e => this.setStatement(e, parent, index, 'condition')}
-      />
+      <div className="error-statement__select" key={id}>
+        <Dropdown
+          id={id}
+          label="Choose if statement"
+          onChange={event => this.setStatement(event, parent, index, 'condition', options)}
+          options={options}
+          value={selectedOption ? selectedOption.value : ''}
+        />
+      </div>
     );
   }
 
@@ -170,7 +177,7 @@ export default class ErrorStatement extends Component {
           aria-label="ThenClause"
           placeholder='Describe your error'
           value={statement.thenClause}
-          onChange={e => this.setStatement(e.target.value, parent, index, 'thenClause')} />
+          onChange={event => this.setStatement(event, parent, index, 'thenClause')} />
       </div>
     </div>
   )
@@ -203,38 +210,41 @@ export default class ErrorStatement extends Component {
   // Renders button to manage then or nested if
   renderNestingButton = (statement, index) => (
     <div className="error-statement__action">
-      <button
+      <Button
+        color="primary"
         disabled={!statement.condition.value}
-        aria-disabled={!statement.condition.value}
-        className={`button primary-button ${statement.condition.value ? '' : 'disabled'}`}
-        onClick={e => this.handleUseThenClause(index)}>
-        {this.props.errorStatement.statements[index].useThenClause ? 'And Also If...' : '(Remove nested statements)'}
-      </button>
+        onClick={() => this.handleUseThenClause(index)}
+        variant="contained"
+      >
+        {this.props.errorStatement.statements[index].useThenClause ? 'And Also If...' : 'Remove nested statements'}
+      </Button>
     </div>
   )
 
   // Renders button to add if else statements
-  renderAddIfButton = (parent) => {
-    const disabled = !this.props.errorStatement.statements.every(s => s.condition.label);
-
-    return (
-      <div className="error-statement__action">
-        <button
-          disabled={disabled}
-          aria-disabled={disabled}
-          className="button primary-button"
-          onClick={e => this.addStatement(parent)}>Or Else If...</button>
-      </div>
-    );
-  }
+  renderAddIfButton = parent => (
+    <div className="error-statement__action">
+      <Button
+        color="primary"
+        disabled={!this.props.errorStatement.statements.every(s => s.condition.label)}
+        onClick={() => this.addStatement(parent)}
+        variant="contained"
+      >
+        Or Else If...
+      </Button>
+    </div>
+  );
 
   // Renders delete if/then button
   renderDeleteButton = (parent, index) => (
     <div className="error-statement__action">
-      <button
-        className="button primary-button"
-        onClick={e => this.deleteStatement(parent, index)}>Delete If Clause
-      </button>
+      <Button
+        color="primary"
+        onClick={() => this.deleteStatement(parent, index)}
+        variant="contained"
+      >
+        Delete If Clause
+      </Button>
     </div>
   )
 

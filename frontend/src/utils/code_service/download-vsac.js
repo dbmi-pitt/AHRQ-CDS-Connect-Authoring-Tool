@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { Code, ValueSet } from 'cql-execution';
+import extractOid from './extractOid';
 
 const API_BASE = process.env.REACT_APP_API_URL;
 
-function downloadFromVSAC(username, password, input, vsDB = {}) {
+function downloadFromVSAC(apiKey, input, vsDB = {}) {
   const vsJSON = {};
   const keys = Object.keys(input);
   keys.forEach((val, idx) => {
@@ -12,11 +13,11 @@ function downloadFromVSAC(username, password, input, vsDB = {}) {
     }
   });
   if (Object.keys(vsJSON).length > 0) {
-    const oids = Object.keys(vsJSON).map(k => vsJSON[k]);
+    const oids = Object.keys(vsJSON).map(k => extractOid(vsJSON[k]));
     const promises = oids.map(oid =>
       // Catch errors and convert to resolutions returning an error.  This ensures Promise.all waits for all promises.
       // See: http://stackoverflow.com/questions/31424561/wait-until-all-es6-promises-complete-even-rejected-promises
-      getVSDetailsByOIDFHIR(oid, username, password, vsDB)
+      getVSDetailsByOIDFHIR(oid, apiKey, vsDB)
         .catch(err => err));
     return Promise.all(promises)
       .then((results) => { // eslint-disable-line consistent-return
@@ -34,10 +35,10 @@ function downloadFromVSAC(username, password, input, vsDB = {}) {
   return Promise.resolve();
 }
 
-function getVSDetailsByOIDFHIR(oid, username, password, vsDB) {
+function getVSDetailsByOIDFHIR(oid, apiKey, vsDB) {
   const auth = {
-    username,
-    password
+    username: '',
+    password: apiKey
   };
 
   return new Promise((resolve, reject) => {

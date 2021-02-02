@@ -6,18 +6,19 @@ $white: #fff;
 $black: #151515;
 $gray-lightest: #f8f8f8;
 $gray-lighter: #ececec;
-$gray-light: #aeb0b5;
+$gray-light: #545459;
 $gray-blue: #e9ecef;
 $gray-blue-dark: #718eb2;
-$gray: #5b616b;
+$gray: #494d55;
+$gray-contrast: #4b5558;
 $gray-dark: #323a45;
 $blue: #102537;
 $blue-dark: #08101c;
-$blue-light: #6b8eb6;
+$blue-light: #5178a4;
 $blue-darkest: #071119;
 $blue-link: #004198;
 $light-blue-link: #84b9ff;
-$red: #e31c3d;
+$red: #961328;
 $green: #41c682;
 $gray-with-opacity: rgba(20, 37, 54, 0.9);
 $white-with-opacity: rgba(255, 255, 255, 0.5);
@@ -39,9 +40,9 @@ $brand-success: $green;
 $brand-danger: $red;
 
 // home page colors
-$home-red: #ea7e73;
-$home-green: #48bdbd;
-$home-yellow: #efc062;
+$home-red: #e1756a;
+$home-green: #36a0a0;
+$home-yellow: #b48e43;
 $home-gray: #646974;
 
 // border colors
@@ -74,7 +75,7 @@ $disabled-button-border-color: $gray-lighter;
 $disabled-button-border-hover-color: $gray-lighter;
 
 // form colors
-$form-input-placeholder-color: $gray;
+$form-input-placeholder-color: $gray-contrast;
 $form-validation-success-color: shade($blue, 60%);
 $form-validation-error-color: darken($red, 20%);
 
@@ -108,7 +109,6 @@ $font-weight-bold: 500;
 
 // ------------------------- PATHS ----------------------------------------- //
 $icon-font-path: '/assets/bootstrap/';
-$fa-font-path: '/assets/fontawesome';
 
 // ------------------------- BOOTSTRAP VARIABLES --------------------------- //
 $navbar-height: 80px;

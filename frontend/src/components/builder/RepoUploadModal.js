@@ -1,9 +1,9 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { get, post } from 'axios';
-import FontAwesome from 'react-fontawesome';
+import { Button, TextField } from '@material-ui/core';
 
-import Modal from '../elements/Modal';
+import { Modal }  from 'components/elements';
 
 const API_BASE = process.env.REACT_APP_API_URL;
 const REPO_BASE = process.env.REACT_APP_REPO_URL;
@@ -87,119 +87,88 @@ export default class RepoUploadModal extends Component {
     this.setState({ page: STATUS, artifactNID: nid });
   }
 
-  renderLogin() {
-    return (
-      <div>
-        <div className="modal__header">
-          <span className="modal__heading">
-            Log in to CDS Connect
-          </span>
-          <div className="modal__buttonbar">
-            <button onClick={this.closeModal}
-              className="modal__deletebutton"
-              aria-label="Close CDS Connect login modal">
-              <FontAwesome fixedWidth name='close'/>
-            </button>
-          </div>
-        </div>
-        <div className='form__group repo-login-form'>
-          <label htmlFor={'repoUserName'}>
-            Username
-          </label>
-          <input id='repoUserName'
-            className='repo-login-field'
-            value={this.state.userName}
-            type="text"
-            name={this.state.userName}
-            aria-describedby={'repoUserName'}
-            onChange={(event) => {
-              this.updateUserName(event.target.value);
-            }}
-          />
-          <label htmlFor={'repoPassword'}>
-            Password
-          </label>
-          <input id='repoPassword'
-            className='repo-login-field'
-            value={this.state.password}
-            type="password"
-            name={this.state.password}
-            aria-describedby={'repoPassword'}
-            onChange={(event) => {
-              this.updatePassword(event.target.value);
-            }}
-          />
-          <button className="primary-button" onClick={this.fetchArtifacts}>Login</button>
+  renderLogin = () => (
+    <div>
+      <h3>Log in to CDS Connect</h3>
+
+      <div className='form__group repo-login-form'>
+        <TextField
+          className="repo-login-form__input"
+          fullWidth
+          label="username"
+          onChange={event => this.updateUserName(event.target.value)}
+          value={this.state.userName}
+          variant="outlined"
+        />
+
+        <TextField
+          className="repo-login-form__input"
+          fullWidth
+          label="password"
+          onChange={event => this.updatePassword(event.target.value)}
+          type="password"
+          value={this.state.password}
+          variant="outlined"
+        />
+
+        <div className="repo-login-form__input">
+          <Button color="primary" onClick={this.fetchArtifacts} variant="contained">
+            Login
+          </Button>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
-  renderRepositoryArtifacts() {
-    return (
-      <div className="repo-list">
-        <table className="artifacts__table">
-          <thead>
-            <tr>
-              <th scope="col" className="artifacts__tablecell-wide">Artifact Name</th>
-              <th scope="col" className="artifacts__tablecell-short">Version</th>
-              <th scope="col" className="artifacts__tablecell-short">Update</th>
-            </tr>
-          </thead>
-          <tbody>
+  renderRepositoryArtifacts = () => (
+    <div className="repo-list">
+      <table className="artifacts__table" role="table" aria-label="Artifacts">
+        <thead>
+          <tr>
+            <th scope="col" className="artifacts__tablecell-wide">Artifact Name</th>
+            <th scope="col" className="artifacts__tablecell-short">Version</th>
+            <th scope="col" className="artifacts__tablecell-short">Update</th>
+          </tr>
+        </thead>
+
+        <tbody>
           {this.state.artifacts.map(a => (
-              <tr key={a.nid}>
-                <td>{a.title.replace(/<\/?[^>]+(>|$)/g, '')}</td>
-                <td>{a.field_version}</td>
-                <td><button onClick={() => this.uploadArtifact(a.nid)}>Update</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="buttonbar">
-          <button onClick={this.closeModal}
-            className="modal__deletebutton"
-            aria-label="Close modal">
-            Cancel
-          </button>
-        </div>
-      </div>
-    );
-  }
+            <tr key={a.nid}>
+              <td>{a.title.replace(/<\/?[^>]+(>|$)/g, '')}</td>
+              <td>{a.field_version}</td>
+              <td>
+                <Button color="primary" onClick={() => this.uploadArtifact(a.nid)} variant="contained">
+                  Update
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
-  renderUploadStatus() {
-    return (
-      <div>
-        Uploading artifact {this.state.artifactNID} to <a href={`${REPO_BASE}`}>repository</a>...
-      </div>
-    );
-  }
+  renderUploadStatus = () => (
+    <div>
+      Uploading artifact {this.state.artifactNID} to <a href={`${REPO_BASE}`}>repository</a>...
+    </div>
+  );
 
-  renderErrorState() {
-    return (
-      <div>
-        <div className="modal__header">
-          <span className="modal__heading">
-            Error
-          </span>
-          <div className="modal__buttonbar">
-            <button onClick={this.closeModal}
-              className="modal__deletebutton"
-              aria-label="Close CDS Connect error modal">
-              <FontAwesome fixedWidth name='close'/>
-            </button>
-          </div>
-        </div>
-        <p className="repo-upload-error-message">
-          {
-            // TODO: Should put more detailed error info here when API is ready
-            //       Should also include 'Retry' button when applicable.
-          }
-          The <a href={`${REPO_BASE}`}>Artifact Repository</a> could not be reached.
-        </p>
+  renderErrorState = () => (
+    <div>
+      <div className="modal__header">
+        <span className="modal__heading">Error</span>
       </div>
-    );
-  }
+
+      <p className="repo-upload-error-message">
+        {
+          // TODO: Should put more detailed error info here when API is ready
+          //       Should also include 'Retry' button when applicable.
+        }
+        The <a href={`${REPO_BASE}`}>Artifact Repository</a> could not be reached.
+      </p>
+    </div>
+  );
 
   renderPage() {
     switch (this.state.page) {
@@ -217,17 +186,13 @@ export default class RepoUploadModal extends Component {
   }
 
   render() {
-    // const isAuth = this.state.page === AUTHENTICATE;
-
     return (
       <Modal
-        modalTitle="Submit to Repository"
-        modalId="submit-to-repository-modal"
-        modalTheme="light"
-        modalSubmitButtonText="Save"
+        title="Submit to Repository"
         handleShowModal={this.props.showModal}
         handleCloseModal={this.closeModal}
-        handleSaveModal={this.closeModal}>
+        handleSaveModal={this.closeModal}
+      >
         {this.renderPage()}
       </Modal>
     );

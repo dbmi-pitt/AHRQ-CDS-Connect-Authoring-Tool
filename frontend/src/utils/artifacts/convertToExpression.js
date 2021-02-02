@@ -44,10 +44,12 @@ function getExpressionSentenceValue(modifier) {
     ActiveOrRecurring: { modifierText: 'active or recurring', leadingText: '', type: 'list' },
     ActiveConiditon: { modifierText: 'active', leadingText: '', type: 'list' },
     CompletedProcedure: { modifierText: 'completed', leadingText: '', type: 'list' },
+    CompletedImmunization: { modifierText: 'completed', leadingText: '', type: 'list' },
     InProgressProcedure: { modifierText: 'in progress', leadingText: '', type: 'list' },
     ActiveMedicationStatement: { modifierText: 'active', leadingText: '', type: 'list' },
-    ActiveMedicationOrder: { modifierText: 'active', leadingText: '', type: 'list' },
+    ActiveMedicationRequest: { modifierText: 'active', leadingText: '', type: 'list' },
     ActiveOrConfirmedAllergyIntolerance: { modifierText: 'active or confirmed', leadingText: '', type: 'list' },
+    ActiveDevice: { modifierText: 'active', leadingText: '', type: 'list' },
     EqualsString: { modifierText: 'equals', leadingText: '', type: 'post' },
     EndsWithString: { modifierText: 'ends with', leadingText: '', type: 'post' },
     StartsWithString: { modifierText: 'starts with', leadingText: '', type: 'post' },
@@ -70,9 +72,11 @@ function getExpressionSentenceValue(modifier) {
     MostRecentObservation: { modifierText: 'most recent', leadingText: '', type: 'descriptor' },
     MostRecentProcedure: { modifierText: 'most recent', leadingText: '', type: 'descriptor' },
     MostRecentCondition: { modifierText: 'most recent', leadingText: '', type: 'descriptor' },
+    MostRecentImmunization: { modifierText: 'most recent', leadingText: '', type: 'descriptor' },
+    LookBackImmunization: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
     LookBackObservation: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
     LookBackCondition: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
-    LookBackMedicationOrder: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
+    LookBackMedicationRequest: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
     LookBackMedicationStatement: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
     LookBackProcedure: { modifierText: 'look back', leadingText: 'which occurred', type: 'post' },
     Count: { modifierText: 'count', leadingText: 'with a', type: 'Count' },
@@ -85,8 +89,16 @@ function getExpressionSentenceValue(modifier) {
     AnyTrue: { modifierText: 'any element true', leadingText: 'with', type: 'post' },
     DoseMedicationStatement: { modifierText: 'dose', leadingText: 'with dose', type: 'post'},
     DoseMedicationOrder: { modifierText: 'dose', leadingText: 'with dose', type: 'post'},
-    ValueComparisonDoseMedicationStatement: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' },
-    ValueComparisonDoseMedicationOrder: { modifierText: 'greater than a number', leadingText: 'whose value', type: 'post' }
+    ValueComparisonDoseMedicationStatement: {
+      modifierText: 'greater than a number',
+      leadingText: 'whose value',
+      type: 'post'
+    },
+    ValueComparisonDoseMedicationOrder: {
+      modifierText: 'greater than a number',
+      leadingText: 'whose value',
+      type: 'post'
+    }
 
   };
 
@@ -219,7 +231,8 @@ function getExpressionSentenceValue(modifier) {
       }
       case 'LookBackObservation':
       case 'LookBackCondition':
-      case 'LookBackMedicationOrder':
+      case 'LookBackImmunization':
+      case 'LookBackMedicationRequest':
       case 'LookBackMedicationStatement':
       case 'LookBackProcedure': {
         expressionSentenceValues[modifier.id].modifierText =
@@ -257,7 +270,17 @@ function getExpressionSentenceValue(modifier) {
     return expressionSentenceValue;
   }
 
-  // If the modifier is not listed in the object, return just the name of the modifier to be placed at the end.
+  // If the modifier is not listed in the object but it's from external CQL, return the following.
+  if (modifier.type === 'ExternalModifier') {
+    return {
+      modifierText: `with ${modifier.name.substring(0, modifier.name.indexOf('(') - 1)}`,
+      leadingText: '',
+      type: 'post',
+      id: modifier.id
+    };
+  }
+  // If the modifier is not listed in the object and it's not from external CQL,
+  // return just the name of the modifier to be placed at the end.
   return { modifierText: _.lowerCase(modifier.name), leadingText: '', type: 'post', id: modifier.id };
 }
 
@@ -451,10 +474,10 @@ function orderExpressionSentenceArray(
     const nulls = ['is null', 'is not null'];
     return nulls.indexOf(expression.modifierText) !== -1;
   });
-  let otherExpressions = _.uniqWith(expressionArray.filter((expression) => {
+  let otherExpressions = expressionArray.filter((expression) => {
     const knownTypes = ['not', 'BooleanExists', 'descriptor', 'list', 'post-list', 'value', 'Count'];
     return knownTypes.indexOf(expression.type) === -1;
-  }), _.isEqual);
+  });
   let hasStarted = false;
 
   // Count modifier will always refer to a group of elements, so always treat it as plural

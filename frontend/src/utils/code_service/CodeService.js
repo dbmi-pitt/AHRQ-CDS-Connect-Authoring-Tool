@@ -1,4 +1,5 @@
 import downloadFromVSAC from './download-vsac';
+import extractOid from './extractOid';
 
 /**
  * Constructs a code service with functions for downloading codes from the National Library of Medicine's
@@ -20,8 +21,7 @@ class CodeService {
    */
   ensureValueSets(
     valueSetList = [],
-    umlsUserName = process.env.UMLS_USER_NAME,
-    umlsPassword = process.env.UMLS_PASSWORD
+    vsacApiKey
   ) {
     // First, filter out the value sets we already have
     const filteredVSList = valueSetList.filter((vs) => {
@@ -31,13 +31,10 @@ class CodeService {
     // Now download from VSAC if necessary
     if (filteredVSList.length === 0) {
       return Promise.resolve();
-    } else if (typeof umlsUserName === 'undefined'
-      || umlsUserName == null
-      || typeof umlsPassword === 'undefined'
-      || umlsPassword == null) {
-      return Error('Failed to download value sets since UMLS_USER_NAME and/or UMLS_PASSWORD is not set.');
+    } else if (!vsacApiKey) {
+      return Error('Failed to download value sets since API Key is not provided.');
     }
-    return downloadFromVSAC(umlsUserName, umlsPassword, filteredVSList, this.valueSets);
+    return downloadFromVSAC(vsacApiKey, filteredVSList, this.valueSets);
   }
 
   findValueSetsByOid(oid) {
@@ -52,7 +49,8 @@ class CodeService {
     return result;
   }
 
-  findValueSet(oid, version) {
+  findValueSet(id, version) {
+    const oid = extractOid(id);
     if (version != null) {
       const vsObj = this.valueSets[oid];
       if (typeof vsObj !== 'undefined') {

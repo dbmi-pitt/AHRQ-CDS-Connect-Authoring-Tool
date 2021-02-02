@@ -10,12 +10,7 @@ const path = require('path');
 const glob = require('glob');
 const request = require('request');
 const Busboy = require('busboy');
-
-const tmp = require('tmp');
-const { exec } = require("child_process");
-const propertiesReader = require('properties-reader');
-var root = path.dirname(require.main.filename)
-const properties = propertiesReader(path.join(root,'../authoring.properties') );
+const { exportCQL, importCQL, RawCQL } = require('cql-merge');
 
 const templatePath = './data/cql/templates';
 const specificPath = './data/cql/specificTemplates';
@@ -27,15 +22,27 @@ const modifierMap = loadTemplates(modifierPath);
 // Each library will be included. Aliases are optional.
 const includeLibrariesDstu2 = [
   { name: 'FHIRHelpers', version: '1.0.2', alias: 'FHIRHelpers' },
-  { name: 'CDS_Connect_Commons_for_FHIRv102', version: '1.3.2', alias: 'C3F' },
-  { name: 'CDSConnectConversions', version: '1', alias: 'Convert' }
+  { name: 'AT_Internal_CDS_Connect_Commons_for_FHIRv102', version: '1.3.2', alias: 'C3F' },
+  { name: 'AT_Internal_CDS_Connect_Conversions', version: '1', alias: 'Convert' }
 ];
 
 const includeLibrariesStu3 = [
   { name: 'FHIRHelpers', version: '3.0.0', alias: 'FHIRHelpers' },
-  { name: 'CDSConnectCommonsforFHIRv300', version: '1.0.1', alias: 'C3F' },
-  { name: 'CDSConnectConversions', version: '1', alias: 'Convert' }
+  { name: 'AT_Internal_CDS_Connect_Commons_for_FHIRv300', version: '1.0.1', alias: 'C3F' },
+  { name: 'AT_Internal_CDS_Connect_Conversions', version: '1', alias: 'Convert' }
 ];
+
+const includeLibrariesR4 = [
+  { name: 'FHIRHelpers', version: '4.0.0', alias: 'FHIRHelpers' },
+  { name: 'AT_Internal_CDS_Connect_Commons_for_FHIRv400', version: '1.0.1', alias: 'C3F' },
+  { name: 'AT_Internal_CDS_Connect_Conversions', version: '1', alias: 'Convert' }
+];
+
+const includeLibrariesMap = {
+  '1.0.2': includeLibrariesDstu2,
+  '3.0.0': includeLibrariesStu3,
+  '4.0.0': includeLibrariesR4
+};
 
 // A flag to hold the FHIR version, so that it can be used
 // in functions external to the artifact.
@@ -119,7 +126,7 @@ function unionExpressions(context, name, unionedElementsList) {
     expressionList: context.values
   }
   unionedElementsList.push(expressionToUnion);
-  context.values = [ `"${uniqueName}"` ];
+  context.values = [`"${uniqueName}"`];
 }
 
 function addGroupedValueSetExpression(referencedElements, resourceMap, valuesets, type, context) {
@@ -277,12 +284,13 @@ function createCommentArray(comment) {
 // Class to handle all cql generation
 class CqlArtifact {
   constructor(artifact) {
-    this.name = slug(artifact.name ? artifact.name : 'untitled');
+    this.name = slug(artifact.name ? artifact.name : 'untitled', { lower: false });
     this.version = artifact.version ? artifact.version : 1;
     this.dataModel = artifact.dataModel;
-    this.includeLibraries = (artifact.dataModel.version === '3.0.0') ? includeLibrariesStu3 : includeLibrariesDstu2;
+    this.includeLibraries =
+      artifact.dataModel.version ? includeLibrariesMap[artifact.dataModel.version] : includeLibrariesR4;
     this.includeLibraries = this.includeLibraries.concat(artifact.externalLibs || []);
-    this.context = artifact.context ? artifact.context : 'Patient';
+    this.context = artifact.context && artifact.context.length ? artifact.context : 'Patient';
     this.inclusions = artifact.expTreeInclude;
     this.parameters = artifact.parameters;
     this.exclusions = artifact.expTreeExclude;
@@ -439,9 +447,9 @@ class CqlArtifact {
         context.template = 'GenericStatement';
         if (concepts.length > 0) {
           // If there is one concept, check to see if it is already a referenced/grouped element.
-          if (concepts.length === 1 && !this.referencedConceptElements.find( el => `"${el.name}"` === concepts[0])) {
+          if (concepts.length === 1 && !this.referencedConceptElements.find(el => `"${el.name}"` === concepts[0])) {
             addGroupedConceptExpression(
-              this.referencedConceptElements, this.resourceMap,elementDetails, valuesetQueryName, context);
+              this.referencedConceptElements, this.resourceMap, elementDetails, valuesetQueryName, context);
           } else {
             context.values = context.values.concat(concepts);
           }
@@ -453,7 +461,7 @@ class CqlArtifact {
           addGroupedValueSetExpression(
             this.referencedElements, this.resourceMap, elementDetails, valuesetQueryName, context);
           // If there is one concept, check to see if it is already a referenced/grouped element.
-          if (concepts.length === 1 && !this.referencedConceptElements.find( el => `"${el.name}"` === concepts[0])) {
+          if (concepts.length === 1 && !this.referencedConceptElements.find(el => `"${el.name}"` === concepts[0])) {
             addGroupedConceptExpression(
               this.referencedConceptElements, this.resourceMap, elementDetails, valuesetQueryName, context);
           } else {
@@ -499,10 +507,14 @@ class CqlArtifact {
       ))
     ));
     const name = getFieldWithId(element.fields, 'element_name').value;
+    const commentField = getFieldWithId(element.fields, 'comment');
+    // Older artifacts might not have a comment field -- so account for that.
+    const comment = commentField ? commentField.value : '';
     conjunction.element_name = (name || element.subpopulationName || element.uniqueId);
+    conjunction.comment = (createCommentArray(comment) || "");
     (element.childInstances || []).forEach((child) => {
       const childNameField = getFieldWithId(child.fields, 'element_name');
-      let childName = (childNameField||{}).value || child.uniqueId;
+      let childName = (childNameField || {}).value || child.uniqueId;
       let isBaseElementUseAndUnchanged = false;
       let isParameterUseAndUnchanged = false;
       if (child.type === 'baseElement') {
@@ -603,18 +615,18 @@ class CqlArtifact {
           this.setFieldContexts(medicationStatementValueSets, 'MedicationStatement', context);
           break;
         }
-        case 'medicationOrder_vsac': {
-          const medicationOrderValueSets = {
-            id: 'generic_medication_order',
+        case 'medicationRequest_vsac': {
+          const medicationRequestValueSets = {
+            id: 'generic_medication_request',
             valuesets: [],
             concepts: []
           };
-          buildConceptObjectForCodes(field.codes, medicationOrderValueSets.concepts);
-          addValueSets(field, medicationOrderValueSets, 'valuesets');
-          if (fhirTarget.version === '3.0.0') {
-            this.setFieldContexts(medicationOrderValueSets, 'MedicationRequest', context);
+          buildConceptObjectForCodes(field.codes, medicationRequestValueSets.concepts);
+          addValueSets(field, medicationRequestValueSets, 'valuesets');
+          if (fhirTarget.version === '3.0.0' || fhirTarget.version === '4.0.0') {
+            this.setFieldContexts(medicationRequestValueSets, 'MedicationRequest', context);
           } else {
-            this.setFieldContexts(medicationOrderValueSets, 'MedicationOrder', context);
+            this.setFieldContexts(medicationRequestValueSets, 'MedicationOrder', context);
           }
           break;
         }
@@ -640,7 +652,7 @@ class CqlArtifact {
           this.setFieldContexts(encounterValueSets, 'Encounter', context);
           break;
         }
-        case 'allergyIntolerance_vsac' : {
+        case 'allergyIntolerance_vsac': {
           const allergyIntoleranceValueSets = {
             id: 'generic_allergyIntolerance',
             valuesets: [],
@@ -651,19 +663,41 @@ class CqlArtifact {
           this.setFieldContexts(allergyIntoleranceValueSets, 'AllergyIntolerance', context);
           break;
         }
+        case 'immunization_vsac': {
+          const immunizationValueSets = {
+            id: 'generic_immunization',
+            valuesets: [],
+            concepts: []
+          }
+          buildConceptObjectForCodes(field.codes, immunizationValueSets.concepts);
+          addValueSets(field, immunizationValueSets, 'valuesets');
+          this.setFieldContexts(immunizationValueSets, 'Immunization', context);
+          break;
+        }
+        case 'device_vsac': {
+          const deviceValueSets = {
+            id: 'generic_device',
+            valuesets: [],
+            concepts: []
+          }
+          buildConceptObjectForCodes(field.codes, deviceValueSets.concepts);
+          addValueSets(field, deviceValueSets, 'valuesets');
+          this.setFieldContexts(deviceValueSets, 'Device', context);
+          break;
+        }
         case 'reference': {
           // Need to pull the element name from the reference to support renaming the elements while being used.
           if (field.id === 'parameterReference') {
             const referencedParameter = this.parameters.find(p => p.uniqueId === field.value.id);
             const referencedParameterName = referencedParameter.name || referencedParameter.uniqueId;
-            context.values = [ `"${referencedParameterName}"` ];
+            context.values = [`"${referencedParameterName}"`];
           } else if (field.id === 'baseElementReference') {
             const referencedElement = this.baseElements.find(e => e.uniqueId === field.value.id);
             const referencedElementName =
               getFieldWithId(referencedElement.fields, 'element_name').value || referencedElement.uniqueId;
-            context.values = [ `"${referencedElementName}"` ];
+            context.values = [`"${referencedElementName}"`];
           } else if (field.id === 'externalCqlReference') {
-            context.values = [`"${field.value.library}"."${field.value.element}"` ];
+            context.values = [`"${field.value.library}"."${field.value.element}"`];
           }
           break;
         }
@@ -688,7 +722,7 @@ class CqlArtifact {
     context.element_name = (context.element_name || element.uniqueId);
     // If it is an unchanged base element or parameter, don't add to context
     if (!(element.type === 'baseElement' && !isBaseElementUseChanged(element, this.baseElements))
-    && !(element.type === 'parameter' && !isParameterUseChanged(element, this.parameters))) {
+      && !(element.type === 'parameter' && !isParameterUseChanged(element, this.parameters))) {
       this.contexts.push(context);
     }
   }
@@ -718,9 +752,9 @@ class CqlArtifact {
     let expressions = this.contexts.concat(this.conjunctions);
     expressions = expressions.concat(this.conjunction_main);
     return expressions.map((context) => {
-      if (fhirTarget.version === '3.0.0') {
-        if (context.template === 'GenericMedicationOrder') context.template = 'GenericMedicationRequest';
-        if (context.template === 'MedicationOrdersByConcept') context.template = 'MedicationRequestsByConcept';
+      if (fhirTarget.version.startsWith('1.0.')) {
+        if (context.template === 'GenericMedicationRequest') context.template = 'GenericMedicationOrder';
+        if (context.template === 'MedicationRequestsByConcept') context.template = 'MedicationOrdersByConcept';
       }
       if (context.withoutModifiers || context.components) {
         return ejs.render(specificMap[context.template], context);
@@ -755,26 +789,20 @@ class CqlArtifact {
   }
 
   recommendation() {
-    let recommendations = this.recommendations;
-    if (this.recommendations.length > 0 && (this.recommendations[0].grade === 'A' && this.recommendations[0].text ===
-        '' && this.recommendations[0].rationale === '' && this.recommendations[0].subpopulations.length === 0)) {
-      recommendations.splice(0,1);
-    }
-    let text = recommendations.map((recommendation) => {
-      const conditional = constructOneRecommendationConditional(recommendation);
-      return `${conditional}'${sanitizeCQLString(recommendation.text)}'`;
+    let text = this.recommendations.map((recommendation, index) => {
+      let conditional = constructOneRecommendationConditional(recommendation);
+      let comment = constructComment(recommendation.comment);
+      let text = sanitizeCQLString(recommendation.text);
+      if (index > 0) {
+        conditional = "else " + conditional;
+      }
+      return { "comment": comment, "conditional": conditional, "text": text }
     });
-    text = _.isEmpty(text) ? 'null' : text.join('\n  else ').concat('\n  else null');
-    return ejs.render(templateMap.BaseTemplate, { element_name: 'Recommendation', cqlString: text });
+    return ejs.render(templateMap.RecommendationTemplate, { element_name: 'Recommendation', recs: text });
   }
 
   rationale() {
-    let recommendations = this.recommendations;
-    if (this.recommendations.length > 0 && (this.recommendations[0].grade === 'A' && this.recommendations[0].text ===
-        '' && this.recommendations[0].rationale === '' && this.recommendations[0].subpopulations.length === 0)) {
-      recommendations.splice(0,1);
-    }
-    let rationaleText = recommendations.map((recommendation) => {
+    let rationaleText = this.recommendations.map((recommendation) => {
       const conditional = constructOneRecommendationConditional(recommendation);
       return conditional + (_.isEmpty(recommendation.rationale)
         ? 'null'
@@ -819,9 +847,28 @@ class CqlArtifact {
     return ejs.render(templateMap.BaseTemplate, { element_name: 'Indicator', cqlString: indicatorText });
   }
 
+  /*
+    this function handles a condition in which the error statement is notionally null, but isn't exactly null
+    if this function returns true,  the cql generated will be:
+    define "Errors":
+      null
+  */
+  isErrorEmpty(errorStatement){
+    let retVal = false;
+    let firstStatement = errorStatement.statements[0];
+    if(_.isEmpty(firstStatement.condition.label) &&
+      _.isEmpty(firstStatement.child) &&
+      _.isEmpty(firstStatement.thenClause) &&
+      _.isEmpty(errorStatement.elseClause)){
+      retVal = true;
+    }
+    return retVal;
+  }
+
   errors() {
     this.errorStatement.statements.forEach((statement, index) => {
       this.errorStatement.statements[index].condition.label = sanitizeCQLString(statement.condition.label);
+      this.errorStatement.statements[index].condition.value = quoteCQLConditional(statement.condition.value);
       if (statement.useThenClause) {
         this.errorStatement.statements[index].thenClause = sanitizeCQLString(statement.thenClause);
       } else {
@@ -836,6 +883,12 @@ class CqlArtifact {
     });
     this.errorStatement.elseClause =
       _.isEmpty(this.errorStatement.elseClause) ? null : sanitizeCQLString(this.errorStatement.elseClause);
+    //if the user clicks "Handle Errors" in the UI, there are non-null elements in errorStatement.statements
+    //even though they are effectively "null"
+    if( (this.errorStatement.statements.length > 0) && this.isErrorEmpty(this.errorStatement)){
+      this.errorStatement.statements = [];
+      this.errorStatement.elseCaluse = null;
+    }
     return ejs.render(templateMap.ErrorStatements, { element_name: 'Errors', errorStatement: this.errorStatement });
   }
 
@@ -855,7 +908,7 @@ class CqlArtifact {
     return {
       name: this.name,
       version: this.version,
-      filename: `${this.name}-v${this.version}`,
+      filename: this.name,
       text: this.toString(),
       type: 'text/plain'
     };
@@ -867,19 +920,36 @@ function sanitizeCQLString(cqlString) {
   return _.replace(cqlString, /'/g, '\\\'');
 }
 
+//we want to quote conditionals with a space, but some may already have quotes around them
+function quoteCQLConditional(conditional) {
+  let returnValue = conditional;
+  //some conditionals may already be quoted
+  if (!(_.includes(conditional, "\""))) {
+    returnValue = "\"" + conditional + "\"";
+  }
+  return returnValue;
+}
+
 // Both parameters are arrays. All modifiers will be applied to all values, and joined with "\n or".
-function applyModifiers(values = [] , modifiers = []) { // default modifiers to []
+function applyModifiers(values = [], modifiers = []) { // default modifiers to []
   return values.map((value) => {
     let newValue = value;
     modifiers.forEach((modifier) => {
-      if (fhirTarget.version === '3.0.0') {
-        if (modifier.id === 'ActiveMedicationOrder') modifier.cqlLibraryFunction = 'C3F.ActiveMedicationRequest';
-        if (modifier.id === 'LookBackMedicationOrder') modifier.cqlLibraryFunction = 'C3F.MedicationRequestLookBack';
+      if (fhirTarget.version.startsWith('1.0.')) {
+        if (modifier.id === 'ActiveMedicationRequest') modifier.cqlLibraryFunction = 'C3F.ActiveMedicationOrder';
+        if (modifier.id === 'LookBackMedicationRequest') modifier.cqlLibraryFunction = 'C3F.MedicationOrderLookBack';
       }
       if (!modifier.cqlLibraryFunction && modifier.values && modifier.values.templateName) {
         modifier.cqlLibraryFunction = modifier.values.templateName;
       }
       const modifierContext = { cqlLibraryFunction: modifier.cqlLibraryFunction, value_name: newValue };
+      if (modifier.values && modifier.type === 'ExternalModifier') {
+        modifier.values.value.forEach(value => {
+          let system = _.get(value, 'system', '').replace(/'/g, '\\\'');
+          let uri = _.get(value, 'uri', '').replace(/'/g, '\\\'');
+          if (system && uri) { this.codeSystemMap.set(system, { name: system, id: uri }); }
+        });
+      }
       // Modifiers that add new value sets, will have a valueSet attribute on values.
       if (modifier.values && modifier.values.valueSet) {
         modifier.values.valueSet.name = `${modifier.values.valueSet.name.replace(/"/g, '\\"')} VS`;
@@ -927,6 +997,13 @@ function constructOneRecommendationConditional(recommendation, text) {
   return `if ${conditionalText} then `;
 }
 
+function constructComment(comment) {
+  let commentText = "";
+  if (!_.isEmpty(comment)) {
+    commentText = comment.split("\n").join("\n  //");
+  }
+  return commentText;
+}
 /**
  * Checks a map to see if an identical expression is being added. Adds new expressions with a unique name.
  *
@@ -1044,48 +1121,20 @@ function addValueSets(field, valueSetObject, attribute) {
   }
 }
 
-// Creates the cql file from an artifact object
 function objToCql(req, res) {
-  const user = req.user.uid;
-  const artifactId = req.body._id;
-  const artifactFromRequest = req.body;
-  artifactFromRequest.externalLibs = [];
-  const externalLibs = [];
-
-  // Add all external libraries
-  CQLLibrary.find({ user: user, linkedArtifactId: { $ne: null, $eq: artifactId } }, (error, libraries) => {
-    if (error) res.status(500).send({ error: error.message });
-    else {
-      libraries.forEach(lib => {
-        artifactFromRequest.externalLibs.push({ name: lib.name, version: lib.version, alias: '' });
-        const libJson = {
-          filename: `${lib.name}-v${lib.version}`,
-          version: lib.version,
-          text: lib.details.cqlFileText,
-          type: 'text/plain'
-        };
-        externalLibs.push(libJson);
-      });
-      console.log("Current artifact:");
-      console.log(artifactFromRequest);
-      const artifact = new CqlArtifact(artifactFromRequest);
-      res.attachment('archive-name.zip');
-      writeZip(artifact, externalLibs, res, (err) => {
-        if (err) {
-          res.status(500).send({ error: err.message });
-        }
-      });
-    }
-  });
+  objConvert(req, res, writeZip);
 }
 
 function objToELM(req, res) {
+  objConvert(req, res, validateELM);
+}
+
+function objConvert(req, res, callback) {
   const user = req.user.uid;
   const artifactId = req.body._id;
   const artifactFromRequest = req.body;
   artifactFromRequest.externalLibs = [];
   const externalLibs = [];
-
   // Add all external libraries
   CQLLibrary.find({ user: user, linkedArtifactId: { $ne: null, $eq: artifactId } }, (error, libraries) => {
     if (error) res.status(500).send({ error: error.message });
@@ -1093,7 +1142,7 @@ function objToELM(req, res) {
       libraries.forEach(lib => {
         artifactFromRequest.externalLibs.push({ name: lib.name, version: lib.version, alias: '' });
         const libJson = {
-          filename: `${lib.name}-v${lib.version}`,
+          filename: `${lib.name}`,
           version: lib.version,
           text: lib.details.cqlFileText,
           type: 'text/plain'
@@ -1101,7 +1150,33 @@ function objToELM(req, res) {
         externalLibs.push(libJson);
       });
       const artifact = new CqlArtifact(artifactFromRequest);
-      validateELM(artifact, externalLibs, res, (err) => {
+      artifact._id = artifactId;
+      const artifactJson = artifact.toJson();
+
+      // Merge the artifact with the commons and conversions libraries
+      let helperPath;
+      let commonsPath;
+      if (fhirTarget.version === '4.0.0') {
+        helperPath = path.join(__dirname, '..', 'data', 'library_helpers', 'CQLFiles', 'R4');
+        commonsPath = path.join(helperPath, 'AT_Internal_CDS_Connect_Commons_for_FHIRv400.cql');
+      } else if (fhirTarget.version === '3.0.0') {
+        helperPath = path.join(__dirname, '..', 'data', 'library_helpers', 'CQLFiles', 'STU3');
+        commonsPath = path.join(helperPath, 'AT_Internal_CDS_Connect_Commons_for_FHIRv300.cql');
+      } else {
+        helperPath = path.join(__dirname, '..', 'data', 'library_helpers', 'CQLFiles', 'DSTU2');
+        commonsPath = path.join(helperPath, 'AT_Internal_CDS_Connect_Commons_for_FHIRv102.cql');
+      }
+      const conversionsPath = path.join(helperPath, 'AT_Internal_CDS_Connect_Conversions.cql');
+      const artifactRaw = new RawCQL(artifactJson.text);
+      const commonsRaw = new RawCQL(fs.readFileSync(commonsPath, 'utf-8'));
+      const conversionsRaw = new RawCQL(fs.readFileSync(conversionsPath, 'utf-8'));
+      const libraryGroup = importCQL(artifactRaw, [commonsRaw, conversionsRaw]);
+      // Reassigning the text field of the artifactJson is safe, since it makes no
+      // changes to the original CqlArtifact instance, and no other fields in the
+      // artifactJson are affected by the merge operation here.
+      artifactJson.text = exportCQL(libraryGroup);
+
+      callback(artifact, artifactJson, externalLibs, res, (err) => {
         if (err) {
           res.status(500).send({ error: err.message });
         }
@@ -1110,12 +1185,12 @@ function objToELM(req, res) {
   });
 }
 
-
-function validateELM(cqlArtifact, externalLibs, writeStream, callback) {
-  const artifactJSON = cqlArtifact.toJson();
-  const artifacts = [artifactJSON, ...externalLibs];
+// While the artifact argument is not used, it's required because the callback
+// that calls this function requires that argument to be present
+function validateELM(artifact, artifactJson, externalLibs, writeStream, callback) {
+  const artifacts = [artifactJson, ...externalLibs];
   convertToElm(artifacts, (err, elmFiles) => {
-    if(err) {
+    if (err) {
       callback(err);
       return;
     }
@@ -1125,86 +1200,85 @@ function validateELM(cqlArtifact, externalLibs, writeStream, callback) {
       if (Array.isArray(annotations)) {
         // Only return true errors (not warnings)
         const fileErrors = annotations.filter(a => a.errorSeverity === 'error');
-        if(fileErrors.length) {
+        if (fileErrors.length) {
           elmErrors = elmErrors.concat(fileErrors);
         }
       }
     });
-    writeStream.json({elmFiles, elmErrors});
+    writeStream.json({ elmFiles, elmErrors });
   });
 }
 
 
-function writeZip(cqlArtifact, externalLibs, writeStream, callback /* (error) */) {
-  // Artifact JSON is generated first and passed in to avoid incorrect EJS rendering.
-  // TODO: Consider separating EJS rendering from toJSON() or toString() methods.
-  let helperPath;
-  if (fhirTarget.version === '3.0.0') {
-    helperPath = `${__dirname}/../data/library_helpers/CQLFiles/STU3`;
-  } else {
-    helperPath = `${__dirname}/../data/library_helpers/CQLFiles/DSTU2`;
-  }
+//given a CQLArtifact, find the associated Artifact in the DB, convert it to a CPG Publishable Library
+function convertToCPGPL(cqlArtifact){
+  return Artifact.findOne({_id: { $ne: null, $eq: cqlArtifact._id }})
+    .exec()
+    .then((artifact) => {
+      let cpg = artifact.toPublishableLibrary();
+      let cqlBuffer = Buffer.from(cqlArtifact.toJson().text);
+      cpg['content'] = [
+        {
+          "contentType": "application/cql",
+          "data": cqlBuffer.toString('base64'),
+        },
+      ]; //{content type: application/cql, data: base64 of the CQL)
+      return JSON.stringify(cpg,null,2);
 
-  const artifactJson = cqlArtifact.toJson();
+    })
+    .catch((err) => {
+      return {"error": err};
+    });
+}
+
+function writeZip(artifact, artifactJson, externalLibs, writeStream, callback /* (error) */) {
   const artifacts = [artifactJson, ...externalLibs];
-  const planDefinition = writePlanDefinition(cqlArtifact);
 
-  var cql_to_elm = properties.get('CQL_TO_ELM_BASE');
-  var tmpCQL = tmp.fileSync({postfix: '.cql' , dir: helperPath});
-  fs.writeSync(tmpCQL.fd, artifactJson.text);
+   const planDefinition = writePlanDefinition(artifactJson);
+   // library = writeLibrary(cqlArtifact, Buffer.from(artifactJson.text).toString('base64'),
+   //            Buffer.from(elm).toString('base64'));
 
-  var elm;
-  var library;
-  try {
-    exec(cql_to_elm + " -i " + tmpCQL.name + " -o " + helperPath + "/" + artifactJson.filename + ".xml",
-        (error, stdout, stderr) => {
-          if (error) {
-            console.log(`error: ${error.message}`);
-          }
-          if (stderr) {
-            console.log(`stderr: ${stderr}`);
-          }
-          elm = fs.readFileSync(helperPath + "/" + artifactJson.filename + ".xml", 'utf8');
-          library = writeLibrary(cqlArtifact, Buffer.from(artifactJson.text).toString('base64'),
-              Buffer.from(elm).toString('base64'));
+   //convert the artifact to a CPG Publishable Library
+  convertToCPGPL(artifact).then(function(cpgString){
+    // We must first convert to ELM before packaging up
+    convertToElm(artifacts, (err, elmFiles) => {
+      if (err) {
+        callback(err);
+        return;
+      }
+      // Now build the zip, piping it to the writestream
+      writeStream.attachment('archive-name.zip');
+      const archive = archiver('zip', { zlib: { level: 9 } })
+        .on('error', callback);
+      writeStream.on('close', callback);
+      archive.pipe(writeStream);
 
-          // We must first convert to ELM before packaging up
-          convertToElm(artifacts, (err, elmFiles) => {
-            if (err) {
-              callback(err);
-              return;
-            }
-            // Now build the zip, piping it to the writestream
-            const archive = archiver('zip', {zlib: {level: 9}})
-                .on('error', callback);
-            writeStream.on('close', callback);
-            archive.pipe(writeStream);
-            externalLibs.forEach(artifact => {
-              archive.append(artifact.text, {name: `${artifact.filename}.cql`});
-            });
-            archive.append(artifactJson.text, {name: `${artifactJson.filename}.cql`});
-            archive.append(planDefinition, {name: `${artifactJson.filename}-PlanDefinition.json`});
-            archive.append(library, {name: `${artifactJson.filename}-Library-Bundle.json`});
-            archive.append(elm, {name: `${artifactJson.filename}.xml`});
-            elmFiles.forEach((e, i) => {
-              archive.append(e.content.replace(/\r\n|\r|\n/g, '\r\n'), {name: `${e.name}.json`});
-            });
-            archive.directory(helperPath, '/');
-            archive.finalize();
-          });
+      externalLibs.forEach(externalLib => {
+        archive.append(externalLib.text, { name: `${externalLib.filename}.cql` });
+      });
+      if(typeof(cpgString) === "string") {
+        archive.append(cpgString, {name: `Library-${artifactJson.filename}.json`});
+      }else{
+        console.log("Error with CPG Publishable library: " + cpgString["error"]);
+      }
+      archive.append(planDefinition, {name: `${artifactJson.filename}-PlanDefinition.json`});
+      archive.append(artifactJson.text, { name: `${artifactJson.filename}.cql` });
+      elmFiles.forEach(e => {
+        archive.append(e.content.replace(/\r\n|\r|\n/g, '\r\n'), { name: `${e.name}.json` });
+      });
 
-          // Remove tmp file
-          tmpCQL.removeCallback();
-          fs.unlinkSync(helperPath + "/" + artifactJson.filename + ".xml")
-        });
-
-  } catch (error) {
-    // Remove tmp file
-    tmpCQL.removeCallback();
-    fs.unlinkSync(helperPath + "/" + artifactJson.filename + ".xml")
-    console.log("Error creating library bundle.");
-    console.log(error);
-  }
+      let helperPath;
+      if (fhirTarget.version === '4.0.0') {
+        helperPath = path.join(__dirname, '..', 'data', 'library_helpers', 'CQLFiles', 'R4');
+      } else if (fhirTarget.version === '3.0.0') {
+        helperPath = path.join(__dirname, '..', 'data', 'library_helpers', 'CQLFiles', 'STU3');
+      } else {
+        helperPath = path.join(__dirname, '..', 'data', 'library_helpers', 'CQLFiles', 'DSTU2');
+      }
+      archive.glob('FHIRHelpers.cql', { cwd: helperPath });
+      archive.finalize();
+    })
+  });
 }
 
 function convertToElm(artifacts, callback /* (error, elmFiles) */) {
@@ -1216,12 +1290,16 @@ function convertToElm(artifacts, callback /* (error, elmFiles) */) {
 
   // Load all the supplementary CQL files, open file streams to them, and convert to ELM
   let helperPath;
-  if (fhirTarget.version === '3.0.0') {
-    helperPath = `${__dirname}/../data/library_helpers/CQLFiles/STU3`;
+  if (fhirTarget.version === '4.0.0') {
+    helperPath = path.join(__dirname, '..', 'data', 'library_helpers', 'CQLFiles', 'R4');
+  } else if (fhirTarget.version === '3.0.0') {
+    helperPath = path.join(__dirname, '..', 'data', 'library_helpers', 'CQLFiles', 'STU3');
   } else {
-    helperPath = `${__dirname}/../data/library_helpers/CQLFiles/DSTU2`;
+    helperPath = path.join(__dirname, '..', 'data', 'library_helpers', 'CQLFiles', 'DSTU2');
   }
-  glob(`${helperPath}/*.cql`, (err, files) => {
+  // We might not need glob anymore, but we keep it just in case we need to bundle more
+  // helper libraries into the CQL to ELM request again eventually
+  glob(`${helperPath}/FHIRHelpers.cql`, (err, files) => {
     if (err) {
       callback(err);
       return;
@@ -1233,7 +1311,21 @@ function convertToElm(artifacts, callback /* (error, elmFiles) */) {
 }
 
 function makeCQLtoELMRequest(files, fileStreams, callback) {
-  const requestEndpoint = `${config.get('cqlToElm.url')}?result-types=true&signatures=All`;
+  // Request endpoint query parameters are being updated according to CPG guidance
+  // http://build.fhir.org/ig/HL7/cqf-recommendations/documentation-libraries.html
+  const requestParams = [
+    'annotations=true',
+    'locators=true',
+    'disable-list-demotion=true',
+    'disable-list-promotion=true',
+    'disable-method-invocation=true',
+    'date-range-optimization=true',
+    'result-types=true',
+    'detailed-errors=false',
+    'disable-list-traversal=false',
+    'signatures=All'
+  ]
+  const requestEndpoint = `${config.get('cqlToElm.url')}?${requestParams.join('&')}`;
   // NOTE: the request isn't posted until the next event loop, so we can modify it after calling request.post
   const cqlReq = request.post(requestEndpoint, (err2, resp, body) => {
     if (err2) {
