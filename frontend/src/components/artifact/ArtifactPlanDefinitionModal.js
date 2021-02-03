@@ -17,7 +17,14 @@ export default class ArtifactPlanDefinitionModal extends Component {
       pddiRecommendations: artifact ? artifact.pddiRecommendations : '',
       recommendations: artifact ? artifact.recommendations : '',
       planDefinitionRecommendations: artifact ? artifact.planDefinitionRecommendations : '',
-      planDefinition: artifact ? artifact.planDefinition : ''
+      planDefinition: {
+        'planDefinitionURL': '',
+        'planDefinitionLibraryURL': '',
+        'planDefinitionTopicText': '',
+        'relatedArtifactType': '',
+        'relatedArtifactName': '',
+        'relatedArtifactURL': ''
+      }
     };
   }
 
