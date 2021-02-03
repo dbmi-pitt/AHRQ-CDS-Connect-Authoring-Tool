@@ -6,6 +6,7 @@ import {Dropdown} from 'components/elements';
 import UcumField from 'components/builder/fields/UcumField';
 
 const options = [
+  {value: '', label: 'Clear'},
   {value: '>', label: '>'},
   {value: '>=', label: '>='},
   {value: '=', label: '='},
