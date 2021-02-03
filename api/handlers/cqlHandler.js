@@ -1234,9 +1234,7 @@ function convertToCPGPL(cqlArtifact){
 function writeZip(artifact, artifactJson, externalLibs, writeStream, callback /* (error) */) {
   const artifacts = [artifactJson, ...externalLibs];
 
-   const planDefinition = writePlanDefinition(artifactJson);
-   // library = writeLibrary(cqlArtifact, Buffer.from(artifactJson.text).toString('base64'),
-   //            Buffer.from(elm).toString('base64'));
+   const planDefinition = writePlanDefinition(artifact);
 
    //convert the artifact to a CPG Publishable Library
   convertToCPGPL(artifact).then(function(cpgString){
@@ -1261,7 +1259,7 @@ function writeZip(artifact, artifactJson, externalLibs, writeStream, callback /*
       }else{
         console.log("Error with CPG Publishable library: " + cpgString["error"]);
       }
-      archive.append(planDefinition, {name: `${artifactJson.filename}-PlanDefinition.json`});
+      archive.append(planDefinition, {name: `PlanDefinition-${artifactJson.filename}.json`});
       archive.append(artifactJson.text, { name: `${artifactJson.filename}.cql` });
       elmFiles.forEach(e => {
         archive.append(e.content.replace(/\r\n|\r|\n/g, '\r\n'), { name: `${e.name}.json` });
@@ -1419,17 +1417,4 @@ function writePlanDefinition(artifact) {
             }
         );
     }
-}
-
-function writeLibrary(artifact, cql_base64_data, elm_base64_data) {
-    return ejs.render(
-        templateMap.Library,
-        {
-            element_id: artifact.planDefinition.planDefinitionLibraryURL,
-            element_version: artifact.version,
-            element_library_url: "Library/" + artifact.planDefinition.planDefinitionLibraryURL,
-            cql_base64_data: cql_base64_data,
-            elm_base64_data: elm_base64_data
-        }
-    );
 }

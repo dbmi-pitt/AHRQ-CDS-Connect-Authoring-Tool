@@ -21,6 +21,7 @@ const Modal = ({
   Footer,
   handleCloseModal,
   handleSaveModal,
+  onAfterOpen,
   handleShowModal,
   hasCancelButton = false,
   hasEnterKeySubmit = true,
@@ -53,6 +54,7 @@ const Modal = ({
         onClose={handleCloseModal}
         onKeyDown={hasEnterKeySubmit ? e => enterKeyCheck(handleSaveModal, null, e) : null}
         open={handleShowModal}
+        onEntered={onAfterOpen}
       >
         <DialogTitle disableTypography>
           <Typography variant="body1">{title}</Typography>
@@ -105,6 +107,7 @@ Modal.propTypes = {
   handleCloseModal: PropTypes.func.isRequired,
   handleSaveModal: PropTypes.func.isRequired,
   handleShowModal: PropTypes.bool.isRequired,
+  onAfterOpen: PropTypes.func,
   hasCancelButton: PropTypes.bool,
   hasEnterKeySubmit: PropTypes.bool,
   hasTitleIcon: PropTypes.bool,

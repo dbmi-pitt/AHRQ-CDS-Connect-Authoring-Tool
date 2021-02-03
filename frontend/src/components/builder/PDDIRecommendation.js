@@ -127,7 +127,7 @@ export default class PDDIRecommendation extends Component {
   }
 
   handleClassificationChange = (event) => {
-    if(event != undefined) {
+    if(event !== undefined) {
       const selectedClassification = classificationOptions.find(option => option.value === event.target.value);
       const value = selectedClassification ? selectedClassification.value : null;
 

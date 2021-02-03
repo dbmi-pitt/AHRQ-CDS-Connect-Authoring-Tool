@@ -32,7 +32,7 @@ import {
 import BaseElements from '../components/builder/BaseElements';
 import ConjunctionGroup from '../components/builder/ConjunctionGroup';
 import ArtifactModal from '../components/artifact/ArtifactModal';
-
+import ArtifactPlanDefinitionModal from '../components/artifact/ArtifactPlanDefinitionModal';
 import ELMErrorModal from '../components/builder/ELMErrorModal';
 import ErrorStatement from '../components/builder/ErrorStatement';
 import ExternalCQL from '../components/builder/ExternalCQL';
@@ -56,6 +56,7 @@ export class Builder extends Component {
 
     this.state = {
       showArtifactModal: false,
+      showArtifactPlanDefinitionModal: false,
       showPublishModal: false,
       showELMErrorModal: false,
       showMenu: false,
@@ -273,6 +274,23 @@ export class Builder extends Component {
     this.closeArtifactModal(false);
   }
 
+  openArtifactPlanDefinitionModal = async () => {
+    this.setState({showArtifactPlanDefinitionModal: true});
+    await this.props.updateAndSaveArtifact(this.props.artifact, {planDefinitionRecommendations: []});
+    this.setState({artifact: this.props.artifact});
+  }
+
+  closeArtifactPlanDefinitionModal = () => {
+    this.setState({showArtifactPlanDefinitionModal: false});
+  }
+
+  handleSaveArtifactAndDownload = async (artifactPropsChanged) => {
+    await this.props.updateAndSaveArtifact(this.props.artifact, artifactPropsChanged);
+    this.downloadOptionSelected(false, '3.0.0');
+    this.closeArtifactPlanDefinitionModal(false);
+
+  }
+
   // ----------------------- TREES ----------------------------------------- //
 
   // Identifies tree to modify whether state tree or tree in an array.
@@ -325,7 +343,7 @@ export class Builder extends Component {
   }
 
   updatePDDIRecommendations = (pddiRecommendations) => {
-    this.props.updateArtifact(this.props.artifact, { pddiRecommendations });
+    this.props.updateArtifact(this.props.artifact, {pddiRecommendations});
   }
 
   updateParameters = (parameters) => {
@@ -483,7 +501,7 @@ export class Builder extends Component {
                 FHIR<sup>®</sup> DSTU2
               </MenuItem>
 
-              <MenuItem disabled={disableSTU3} onClick={() => this.downloadOptionSelected(disableSTU3, '3.0.0')}>
+              <MenuItem disabled={disableSTU3} onClick={() => this.openArtifactPlanDefinitionModal()}>
                 FHIR<sup>®</sup> STU3
               </MenuItem>
 
@@ -790,6 +808,12 @@ export class Builder extends Component {
           closeModal={this.closeArtifactModal}
           showModal={this.state.showArtifactModal}
         />
+
+        <ArtifactPlanDefinitionModal
+          artifact={artifact}
+          showModal={this.state.showArtifactPlanDefinitionModal}
+          closeModal={this.closeArtifactPlanDefinitionModal}
+          saveModal={this.handleSaveArtifactAndDownload}/>
 
         <ELMErrorModal
           closeModal={this.closeELMErrorModal}
