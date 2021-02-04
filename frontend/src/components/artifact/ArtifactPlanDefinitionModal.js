@@ -80,6 +80,7 @@ export default class ArtifactPlanDefinitionModal extends Component {
           <StringField
             id={'planDefinitionURL'}
             name={'Plan Definition URL'}
+            placeholder={'Canonical identifier for this plan definition'}
             value={this.state.planDefinition.planDefinitionURL}
             updateInstance={this.handleInputChange}
           />
@@ -93,6 +94,7 @@ export default class ArtifactPlanDefinitionModal extends Component {
           <StringField
             id={'planDefinitionTopicText'}
             name={'Topic Text'}
+            placeholder={'Descriptive topics related to the content of the plan definition'}
             value={this.state.planDefinition.planDefinitionTopicText}
             updateInstance={this.handleInputChange}
           />
@@ -100,13 +102,16 @@ export default class ArtifactPlanDefinitionModal extends Component {
           <StringField
             id={'relatedArtifactType'}
             name={'Related Artifact Type'}
+            placeholder={'documentation | justification | citation | predecessor ' +
+            '| successor | derived-from | depends-on | composed-of'}
             value={this.state.planDefinition.relatedArtifactType}
             updateInstance={this.handleInputChange}
           />
 
           <StringField
             id={'relatedArtifactName'}
-            name={'Related Artifact Name'}
+            name={'Related Artifact Display'}
+            placeholder={'Brief description of the related artifact'}
             value={this.state.planDefinition.relatedArtifactName}
             updateInstance={this.handleInputChange}
           />
@@ -114,6 +119,7 @@ export default class ArtifactPlanDefinitionModal extends Component {
           <StringField
             id={'relatedArtifactURL'}
             name={'Related Artifact URL'}
+            placeholder={'Where the artifact can be accessed'}
             value={this.state.planDefinition.relatedArtifactURL}
             updateInstance={this.handleInputChange}
           />
@@ -125,7 +131,7 @@ export default class ArtifactPlanDefinitionModal extends Component {
             <h5>Select the recommendations to be used in the Plan Definition.</h5>
             <div className="artifact-form__inputs d-flex justify-content-start">
               <div className='form__group p-2'>
-                {pddiRecommendations.length >= 0 ? (
+                {pddiRecommendations.length > 0 ? (
                   pddiRecommendations.map((key, index) => {
                     return (
                       <div className='form__group p-2'>

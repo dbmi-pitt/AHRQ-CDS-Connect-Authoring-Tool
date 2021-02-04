@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import { useFlexStyles } from 'styles/hooks';
 import useStyles from './styles';
 
-const StringField = ({ disabled, id, name, updateInstance, value }) => {
+const StringField = ({ disabled, id, name, updateInstance, value, placeholder }) => {
   const styles = useStyles();
   const flexStyles = useFlexStyles();
 
@@ -20,6 +20,7 @@ const StringField = ({ disabled, id, name, updateInstance, value }) => {
         fullWidth
         onChange={event => updateInstance({ [id]: event.target.value })}
         value={value || ''}
+        placeholder={placeholder || ''}
         variant="outlined"
       />
     </div>
@@ -30,6 +31,7 @@ StringField.propTypes = {
   disabled: PropTypes.bool,
   id: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
+  placeholder: PropTypes.string,
   updateInstance: PropTypes.func.isRequired,
   value: PropTypes.string
 };
