@@ -1385,7 +1385,7 @@ function writePlanDefinition(artifact) {
   return ejs.render(
       templateMap.PlanDefinition,
       {
-        element_id: artifact.name.toLowerCase().replace(/\s/g, "-"),
+        element_id: artifact.name.toLowerCase().replace(/\s+/g, "-"),
         element_name: artifact.name,
         element_version: artifact.version,
         element_url: artifact.planDefinition.planDefinitionURL,

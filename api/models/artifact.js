@@ -77,14 +77,15 @@ ArtifactSchema.methods.toPublishableLibrary = function(){
   };
 
   //name should be machine readable
-  retVal["name"] = this.name.replace(/\s/g, "_");
+  retVal["name"] = this.name.replace(/\s+/g, "_");
   retVal["title"] = this.name;
   retVal["date"] = this.updatedAt;
   retVal["version"] = this.version;
   retVal["description"] = this.description;
-  retVal["id"] = this.name.toLowerCase().replace(/\s/g , "-");
+  let id = this.name.toLowerCase().replace("-", "").replace(/\s+/g , "-");
+  retVal["id"] = id;
   // retVal["url"] = this.url
-  retVal["url"] = "Library/" + this.name.toLowerCase().replace(/\s/g , "-");
+  retVal["url"] = "Library/" + id;
   retVal["status"] = this.status || "draft";  //default to draft, this field is _required_ by FHIR
   retVal["experimental"] = this["experimental"];
   retVal["publisher"] = this.publisher;

@@ -79,7 +79,7 @@ export default class ArtifactPlanDefinitionModal extends Component {
 
           <StringField
             id={'planDefinitionURL'}
-            name={'Plan Definition ID'}
+            name={'Plan Definition URL'}
             value={this.state.planDefinition.planDefinitionURL}
             updateInstance={this.handleInputChange}
           />
