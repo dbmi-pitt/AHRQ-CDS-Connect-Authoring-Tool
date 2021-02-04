@@ -2,16 +2,15 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
+import { Alert } from '@material-ui/lab';
 
-import { loginUser, logoutUser, setAuthStatus, getCurrentUser } from '../actions/auth';
-import setErrorMessage from '../actions/errors';
+import { getCurrentUser } from 'actions/auth';
+import setErrorMessage from 'actions/errors';
 
-import Analytics from '../components/Analytics';
-import CdsHeader from '../components/header/CdsHeader';
-import AhrqHeader from '../components/header/AhrqHeader';
-import Navbar from '../components/Navbar';
-import CdsFooter from '../components/footer/CdsFooter';
-import AhrqFooter from '../components/footer/AhrqFooter';
+import { Analytics, Navbar } from 'components/base';
+import CdsHeader from 'components/header/CdsHeader';
+import AhrqHeader from 'components/header/AhrqHeader';
+import CdsFooter from 'components/footer/CdsFooter';
 
 class App extends Component {
   UNSAFE_componentWillMount() { // eslint-disable-line camelcase
@@ -26,67 +25,41 @@ class App extends Component {
   renderedErrorMessage() {
     const { errorMessage } = this.props;
     if (errorMessage === '') { return null; }
+
     return (
-      <div className="error-message">
+      <Alert severity="error" onClose={this.handleDismissClick}>
         {errorMessage}
-        <button className="close" aria-label="Close" onClick={this.handleDismissClick}>
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
+      </Alert>
     );
   }
 
   render() {
-    const {
-      children, isAuthenticated, authUser, authStatus, authStatusText, artifactSaved
-    } = this.props;
+    const { children, isAuthenticated } = this.props;
 
     return (
       <div className="app">
         <a className="skiplink" href="#maincontent">Skip to main content</a>
         <Analytics gtmKey={process.env.REACT_APP_GTM_KEY} dapURL={process.env.REACT_APP_DAP_URL} />
         <AhrqHeader />
-
-        <CdsHeader
-          isAuthenticated={isAuthenticated}
-          authUser={authUser}
-          authStatus={authStatus}
-          authStatusText={authStatusText}
-          artifactSaved={artifactSaved}
-          loginUser={this.props.loginUser}
-          logoutUser={this.props.logoutUser}
-          setAuthStatus={this.props.setAuthStatus}
-        />
-
+        <CdsHeader />
         <Navbar isAuthenticated={isAuthenticated} />
         {this.renderedErrorMessage()}
         {children}
         <CdsFooter />
-        <AhrqFooter />
       </div>
     );
   }
 }
 
 App.propTypes = {
-  isAuthenticated: PropTypes.bool.isRequired,
-  authUser: PropTypes.string,
-  authStatus: PropTypes.string,
-  authStatusText: PropTypes.string,
-  artifactSaved: PropTypes.bool.isRequired,
   getCurrentUser: PropTypes.func.isRequired,
-  loginUser: PropTypes.func.isRequired,
-  logoutUser: PropTypes.func.isRequired,
-  setAuthStatus: PropTypes.func.isRequired
+  isAuthenticated: PropTypes.bool.isRequired
 };
 
 // these props are used for dispatching actions
 function mapDispatchToProps(dispatch) {
   return bindActionCreators({
     getCurrentUser,
-    loginUser,
-    logoutUser,
-    setAuthStatus,
     setErrorMessage
   }, dispatch);
 }
@@ -94,12 +67,8 @@ function mapDispatchToProps(dispatch) {
 // these props come from the application's state when it is started
 function mapStateToProps(state) {
   return {
-    isAuthenticated: state.auth.isAuthenticated,
-    authUser: state.auth.username,
-    authStatus: state.auth.authStatus,
-    authStatusText: state.auth.authStatusText,
     errorMessage: state.errors.errorMessage,
-    artifactSaved: state.artifacts.artifactSaved
+    isAuthenticated: state.auth.isAuthenticated
   };
 }
 

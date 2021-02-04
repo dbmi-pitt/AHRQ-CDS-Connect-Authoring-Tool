@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { Button } from '@material-ui/core';
 import _ from 'lodash';
 
 import Parameter from './Parameter';
@@ -47,7 +48,7 @@ export default class Parameters extends Component {
             instanceNames={this.props.instanceNames}
             updateInstanceOfParameter={this.updateInstanceOfParameter}
             deleteParameter={this.deleteParameter}
-            vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+            vsacApiKey={this.props.vsacApiKey}
             loginVSACUser={this.props.loginVSACUser}
             setVSACAuthStatus={this.props.setVSACAuthStatus}
             vsacStatus={this.props.vsacStatus}
@@ -58,15 +59,13 @@ export default class Parameters extends Component {
             validateCode={this.props.validateCode}
             resetCodeValidation={this.props.resetCodeValidation}
             getAllInstancesInAllTrees={this.props.getAllInstancesInAllTrees}
+            vsacIsAuthenticating={this.props.vsacIsAuthenticating}
           />
         ))}
 
-        <button
-            className="button primary-button new-parameter"
-            onClick={this.addParameter}
-            aria-label="New Parameter">
+        <Button color="primary" onClick={this.addParameter} variant="contained">
           New parameter
-        </button>
+        </Button>
       </div>
     );
   }
@@ -76,10 +75,11 @@ Parameters.propTypes = {
   parameters: PropTypes.array.isRequired,
   updateParameters: PropTypes.func.isRequired,
   instanceNames: PropTypes.array.isRequired,
-  vsacFHIRCredentials: PropTypes.object,
+  vsacApiKey: PropTypes.string,
   loginVSACUser: PropTypes.func.isRequired,
   setVSACAuthStatus: PropTypes.func.isRequired,
   vsacStatus: PropTypes.string,
   vsacStatusText: PropTypes.string,
+  vsacIsAuthenticating: PropTypes.bool,
   getAllInstancesInAllTrees: PropTypes.func.isRequired
 };

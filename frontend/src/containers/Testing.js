@@ -136,7 +136,7 @@ class Testing extends Component {
       );
     } else if (isExecuting) {
       return <div className="execution-loading"><FontAwesomeIcon icon={faSpinner} spin size="4x" /></div>;
-    } else if (this.props.vsacFHIRCredentials.username == null) {
+    } else if (!this.props.vsacApiKey) {
       return (
         <Breadcrumb className="execution-message">
           Log in to VSAC to execute CQL.
@@ -181,7 +181,7 @@ class Testing extends Component {
           artifacts={this.props.artifacts}
           deletePatient={this.props.deletePatient}
           executeCQLArtifact={this.props.executeCQLArtifact}
-          vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+          vsacApiKey={this.props.vsacApiKey}
           loginVSACUser={this.props.loginVSACUser}
           setVSACAuthStatus={this.props.setVSACAuthStatus}
           vsacStatus={this.props.vsacStatus}
@@ -209,25 +209,35 @@ class Testing extends Component {
       <div className="testing" id="maincontent">
         <div className="testing-wrapper">
           <Dropzone
-            className="dropzone"
-            onDrop={this.addPatient.bind(this)}
-            accept="application/json" multiple={false}
+            onDrop={acceptedFiles => this.addPatient(acceptedFiles)}
+            accept="application/json"
+            multiple={false}
             aria-label="Testing Patient Dropzone"
           >
-            {this.renderDropzoneIcon()}
+            {({ getRootProps, getInputProps }) => (
+              <section className="container">
+                <div {...getRootProps({ className: 'dropzone' })}>
+                  <input {...getInputProps()} />
 
-            {this.state.uploadError &&
-              <div className="warning">Invalid file type. Only valid JSON FHIR<sup>®</sup> Bundles are accepted.</div>
-            }
+                  {this.renderDropzoneIcon()}
 
-            <p className="dropzone__instructions">
-              Drop a valid JSON FHIR<sup>®</sup> bundle containing a synthetic patient here, or click to browse.
-            </p>
+                  {this.state.uploadError &&
+                    <div className="warning">
+                      Invalid file type. Only valid JSON FHIR<sup>®</sup> Bundles are accepted.
+                    </div>
+                  }
 
-            <p className="dropzone__warning">
-              Do not upload any Personally Identifiable Information (PII) or Protected Health Information (PHI). Upload
-              synthetic data only.
-            </p>
+                  <p className="dropzone__instructions">
+                    Drop a valid JSON FHIR<sup>®</sup> bundle containing a synthetic patient here, or click to browse.
+                  </p>
+
+                  <p className="dropzone__warning">
+                    Do not upload any Personally Identifiable Information (PII) or Protected Health Information (PHI).
+                    Upload synthetic data only.
+                  </p>
+                </div>
+              </section>
+            )}
           </Dropzone>
 
           <div className="testing-wrapper">
@@ -267,7 +277,7 @@ Testing.propTypes = {
   deletePatient: PropTypes.func.isRequired,
   loadArtifacts: PropTypes.func.isRequired,
   executeCQLArtifact: PropTypes.func.isRequired,
-  vsacFHIRCredentials: PropTypes.object,
+  vsacApiKey: PropTypes.string,
   loginVSACUser: PropTypes.func.isRequired,
   setVSACAuthStatus: PropTypes.func.isRequired,
   vsacStatus: PropTypes.string,
@@ -313,7 +323,7 @@ function mapStateToProps(state) {
     vsacStatus: state.vsac.authStatus,
     vsacStatusText: state.vsac.authStatusText,
     vsacIsAuthenticating: state.vsac.isAuthenticating,
-    vsacFHIRCredentials: { username: state.vsac.username, password: state.vsac.password },
+    vsacApiKey: state.vsac.apiKey,
     isValidatingCode: state.vsac.isValidatingCode,
     isValidCode: state.vsac.isValidCode,
     codeData: state.vsac.codeData,

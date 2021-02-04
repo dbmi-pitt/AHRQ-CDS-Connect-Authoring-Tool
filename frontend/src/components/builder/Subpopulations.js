@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import _ from 'lodash';
+import { Button } from '@material-ui/core';
 import pluralize from 'pluralize';
+import _ from 'lodash';
 
 import Subpopulation from './Subpopulation';
-import createTemplateInstance from '../../utils/templates';
+import createTemplateInstance from 'utils/templates';
 
 export default class Subpopulations extends Component {
   constructor(props) {
@@ -72,8 +73,6 @@ export default class Subpopulations extends Component {
           <Subpopulation
             key={subpop.uniqueId}
             treeName={this.props.name}
-            valueSets={this.props.valueSets}
-            loadValueSets={this.props.loadValueSets}
             subpopulation={subpop}
             subpopulationIndex={i + this.state.numOfSpecialSubpopulations} // System needs to know true index out of all subpopulations
             setSubpopulationName={this.setSubpopulationName}
@@ -90,6 +89,9 @@ export default class Subpopulations extends Component {
             getAllInstancesInAllTrees={this.props.getAllInstancesInAllTrees}
             templates={this.props.templates}
             artifact={this.props.artifact}
+            modifierMap={this.props.modifierMap}
+            modifiersByInputType={this.props.modifiersByInputType}
+            isLoadingModifiers={this.props.isLoadingModifiers}
             conversionFunctions={this.props.conversionFunctions}
             instanceNames={this.props.instanceNames}
             scrollToElement={this.props.scrollToElement}
@@ -105,23 +107,24 @@ export default class Subpopulations extends Component {
             isRetrievingDetails={this.props.isRetrievingDetails}
             vsacDetailsCodes={this.props.vsacDetailsCodes}
             vsacDetailsCodesError={this.props.vsacDetailsCodesError}
-            vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+            vsacApiKey={this.props.vsacApiKey}
             validateReturnType={this.props.validateReturnType}
             isValidatingCode={this.props.isValidatingCode}
             isValidCode={this.props.isValidCode}
             codeData={this.props.codeData}
             validateCode={this.props.validateCode}
             resetCodeValidation={this.props.resetCodeValidation}
+            vsacIsAuthenticating={this.props.vsacIsAuthenticating}
           />
         ))}
 
-        <button
-          className="button primary-button new-subpopulation-button"
-          aria-label={newButtonLabel}
+        <Button
+          color="primary"
           onClick={this.addSubpopulation}
+          variant="contained"
         >
           {newButtonLabel}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -129,8 +132,6 @@ export default class Subpopulations extends Component {
 
 Subpopulations.propTypes = {
   artifact: PropTypes.object.isRequired,
-  valueSets: PropTypes.array,
-  loadValueSets: PropTypes.func.isRequired,
   updateSubpopulations: PropTypes.func.isRequired,
   templates: PropTypes.array.isRequired,
   addInstance: PropTypes.func.isRequired,
@@ -146,6 +147,9 @@ Subpopulations.propTypes = {
   externalCqlList: PropTypes.array.isRequired,
   loadExternalCqlList: PropTypes.func.isRequired,
   name: PropTypes.string.isRequired,
+  modifierMap: PropTypes.object.isRequired,
+  modifiersByInputType: PropTypes.object.isRequired,
+  isLoadingModifiers: PropTypes.bool,
   conversionFunctions: PropTypes.array,
   scrollToElement: PropTypes.func,
   loginVSACUser: PropTypes.func.isRequired,
@@ -160,5 +164,6 @@ Subpopulations.propTypes = {
   isRetrievingDetails: PropTypes.bool.isRequired,
   vsacDetailsCodes: PropTypes.array.isRequired,
   vsacDetailsCodesError: PropTypes.string.isRequired,
-  validateReturnType: PropTypes.bool
+  validateReturnType: PropTypes.bool,
+  vsacIsAuthenticating: PropTypes.bool.isRequired
 };

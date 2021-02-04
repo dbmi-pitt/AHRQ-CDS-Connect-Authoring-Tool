@@ -2,13 +2,13 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { Button } from '@material-ui/core';
+import AddIcon from '@material-ui/icons/Add';
 
-import { loadArtifacts, addArtifact, deleteArtifact, updateAndSaveArtifact } from '../actions/artifacts';
+import { loadArtifacts, addArtifact, deleteArtifact } from '../actions/artifacts';
 import artifactProps from '../prop-types/artifact';
 
-import NewArtifactModal from '../components/artifact/NewArtifactModal';
+import ArtifactModal from '../components/artifact/ArtifactModal';
 import ArtifactTable from '../components/artifact/ArtifactTable';
 
 class Artifact extends Component {
@@ -37,8 +37,7 @@ class Artifact extends Component {
       return (
         <ArtifactTable
           artifacts={artifacts}
-          deleteArtifact={this.props.deleteArtifact}
-          updateAndSaveArtifact={this.props.updateAndSaveArtifact} />
+          deleteArtifact={this.props.deleteArtifact} />
       );
     }
 
@@ -49,18 +48,19 @@ class Artifact extends Component {
     return (
       <div className="artifact" id="maincontent">
         <div className="artifact-wrapper">
-          <button className="primary-button pull-right"
+          <Button
+            color="primary"
             onClick={() => this.openNewArtifactModal()}
-            aria-label="Create New Artifact"
+            startIcon={<AddIcon />}
+            variant="contained"
           >
-            <FontAwesomeIcon icon={faPlus} /> Create New Artifact
-          </button>
+            Create New Artifact
+          </Button>
 
           {this.renderArtifactsTable()}
         </div>
 
-        <NewArtifactModal
-          addArtifact={this.props.addArtifact}
+        <ArtifactModal
           showModal={this.state.showNewArtifactModal}
           closeModal={this.closeNewArtifactModal}
         />
@@ -73,8 +73,7 @@ Artifact.propTypes = {
   artifacts: PropTypes.arrayOf(artifactProps),
   loadArtifacts: PropTypes.func.isRequired,
   addArtifact: PropTypes.func.isRequired,
-  deleteArtifact: PropTypes.func.isRequired,
-  updateAndSaveArtifact: PropTypes.func.isRequired
+  deleteArtifact: PropTypes.func.isRequired
 };
 
 // these props are used for dispatching actions
@@ -82,8 +81,7 @@ function mapDispatchToProps(dispatch) {
   return bindActionCreators({
     loadArtifacts,
     addArtifact,
-    deleteArtifact,
-    updateAndSaveArtifact
+    deleteArtifact
   }, dispatch);
 }
 

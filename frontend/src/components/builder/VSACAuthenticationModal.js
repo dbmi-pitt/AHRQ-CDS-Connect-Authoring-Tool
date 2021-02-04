@@ -1,17 +1,21 @@
 /* eslint-disable jsx-a11y/no-autofocus */
-
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { Button, CircularProgress, TextField } from '@material-ui/core';
+import { Lock as LockIcon } from '@material-ui/icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faExclamationCircle, faSpinner, faKey } from '@fortawesome/free-solid-svg-icons';
+import { faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
 
-import Modal from '../elements/Modal';
+import { Link, Modal }  from 'components/elements';
 
 class VSACAuthenticationModal extends Component {
   constructor(props) {
     super(props);
 
-    this.state = { showVSACAuthModal: false };
+    this.state = {
+      apiKey: '',
+      showVSACAuthModal: false
+    };
   }
 
   openVSACLoginModal = () => {
@@ -23,12 +27,14 @@ class VSACAuthenticationModal extends Component {
     this.props.setVSACAuthStatus(null);
   }
 
-  loginToVSAC = (event) => {
+  loginToVSAC = event => {
     event.preventDefault();
-
-    const { username, password } = this.refs;
-    this.props.loginVSACUser(username.value.trim(), password.value.trim());
+    this.props.loginVSACUser(this.state.apiKey);
   }
+
+  handleApiKeyChange = event => {
+    this.setState({ apiKey: event.target.value });
+  };
 
   renderedAuthStatusText() {
     const { vsacStatus, vsacStatusText } = this.props;
@@ -42,67 +48,75 @@ class VSACAuthenticationModal extends Component {
     );
   }
 
-  renderButton = () => {
-    if (this.props.vsacIsAuthenticating) {
-      return (
-        <button className="disabled-button" disabled={true} aria-label="Authenticating">
-          <FontAwesomeIcon icon={faSpinner} size="2x" spin />
-        </button>
-      );
-    }
-
-    return (
-      <button className="primary-button" onClick={this.openVSACLoginModal} aria-label="Authenticate VSAC">
-        <FontAwesomeIcon icon={faKey} />{' '}Authenticate VSAC
-      </button>
-    );
-  }
+  renderButton = () => (
+    <Button
+      color="primary"
+      onClick={this.openVSACLoginModal}
+      variant="contained"
+      startIcon={this.props.vsacIsAuthenticating ? <CircularProgress size={20} /> : <LockIcon />}
+    >
+      Authenticate VSAC
+    </Button>
+  );
 
   render() {
+    const { vsacIsAuthenticating } = this.props;
+    const { apiKey, showVSACAuthModal } = this.state;
+
     return (
       <div className="vsac-authentication-modal">
         {this.renderButton()}
 
         <Modal
-          modalTitle="Login to VSAC your account"
-          modalId="vsac-login"
-          modalTheme="dark"
-          modalSubmitButtonText="Login"
-          handleShowModal={this.state.showVSACAuthModal}
+          title="Login to your VSAC account"
+          theme="dark"
+          maxWidth="md"
+          submitButtonText="Login"
+          hasCancelButton
+          hasEnterKeySubmit={false}
+          handleShowModal={showVSACAuthModal}
           handleCloseModal={this.closeVSACLoginModal}
           handleSaveModal={this.loginToVSAC}
+          isLoading={vsacIsAuthenticating}
         >
           <div className="login-modal modal__content">
             <div className="login-modal__disclaimer">
-              Use your UMLS account to log in to VSAC to access value sets and codes within the CDS Authoring Tool.
+              Use your UMLS Terminology Services API key to log in to VSAC to access value sets and codes within the CDS
+              Authoring Tool.
+              <p/>
+              <ul className="modal__helptext">
+                <li>
+                  Need an account?{' '}
+                  <Link
+                    href={`${process.env.PUBLIC_URL}/documentation#Requesting_UTS_Account`}
+                    text="Request a UMLS Terminology Services account."
+                  />
+                </li>
+                <li>
+                  Don't know your UMLS API key?{' '}
+                  <Link
+                    href={`${process.env.PUBLIC_URL}/documentation#Accessing_UMLS_API_Key`}
+                    text="Find your UMLS Terminology Services API key."
+                  />
+                </li>
+              </ul>
             </div>
 
-            <div className="login-modal__form">
-              <label htmlFor="username">Username</label>
-              <input
-                type='text'
+             <form id="modal-form" onSubmit={this.loginToVSAC} className="login-modal__form">
+              <TextField
+                autoComplete="new-password"
                 autoFocus
-                autoComplete="username"
-                ref='username'
-                id='username'
-                className="form-control col"
-                placeholder='username'
-                aria-labelledby="vsacUsernameLabel"
+                fullWidth
+                label="API Key"
+                onChange={this.handleApiKeyChange}
+                type="password"
+                value={apiKey}
+                variant="outlined"
               />
 
-              <label htmlFor="password">Password</label>
-              <input
-                type='password'
-                autoComplete="current-password"
-                ref='password'
-                id='password'
-                className="form-control col"
-                placeholder='password'
-                aria-labelledby="vsacPasswordLabel"
-              />
-
+              {vsacIsAuthenticating && <CircularProgress />}
               {this.renderedAuthStatusText()}
-            </div>
+            </form>
           </div>
         </Modal>
       </div>

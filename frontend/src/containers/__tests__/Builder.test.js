@@ -2,11 +2,21 @@ import React from 'react';
 import { Provider } from 'react-redux';
 import { createMockStore as reduxCreateMockStore } from 'redux-test-utils';
 import _ from 'lodash';
-import { instanceTree, emptyInstanceTree, artifact, reduxState } from '../../utils/test_fixtures';
-import { render, fireEvent, openSelect } from '../../utils/test-utils';
+import * as types from 'actions/types';
+import localModifiers from 'data/modifiers';
+import { render, fireEvent, userEvent, screen } from 'utils/test-utils';
+import { instanceTree, emptyInstanceTree, artifact, reduxState } from 'utils/test_fixtures';
+import { getFieldWithId } from 'utils/instances';
 import Builder from '../Builder';
-import { getFieldWithId } from '../../utils/instances';
-import * as types from '../../actions/types';
+
+const modifierMap = _.keyBy(localModifiers, 'id');
+const modifiersByInputType = {};
+
+localModifiers.forEach(modifier => {
+  modifier.inputTypes.forEach(inputType => {
+    modifiersByInputType[inputType] = (modifiersByInputType[inputType] || []).concat(modifier);
+  });
+});
 
 const defaultState = {
   ...reduxState,
@@ -16,10 +26,15 @@ const defaultState = {
       ...artifact,
       expTreeInclude: instanceTree
     }
+  },
+  modifiers: {
+    ...reduxState.modifiers,
+    modifierMap,
+    modifiersByInputType
   }
 };
 
-const createMockStore = (state) => {
+const createMockStore = state => {
   const store = reduxCreateMockStore(state);
   const { dispatch } = store;
 
@@ -71,13 +86,13 @@ describe('<Builder />', () => {
       }
     });
 
-    const { getByText, getByLabelText } = renderComponent({ store: store });
+    renderComponent({ store: store });
 
-    openSelect(getByLabelText('Choose element type'));
-    fireEvent.click(getByText('Demographics'));
+    userEvent.click(screen.getByLabelText('Element type'));
+    userEvent.click(screen.getByText('Demographics'));
 
-    openSelect(getByLabelText('Select Demographics element'));
-    fireEvent.click(getByText('Age Range'));
+    userEvent.click(screen.getByLabelText('Demographics element'));
+    userEvent.click(screen.getByText('Age Range'));
 
     const actions = store.getActions().map(expandAction);
     const updateAction = actions.find(({ type }) => type === types.UPDATE_ARTIFACT);
@@ -90,9 +105,11 @@ describe('<Builder />', () => {
 
   it('can edit a template instance', () => {
     const store = createMockStore(defaultState);
-    const { getByLabelText } = renderComponent({ store });
+    renderComponent({ store });
 
-    fireEvent.change(getByLabelText('Age Range'), { target: { value: '30 to 45' } });
+    fireEvent.change(document.querySelector('input[type=text]'), {
+      target: { value: '30 to 45' }
+    });
 
     const updateAction = expandAction(_.last(store.getActions()));
     const nameField = getFieldWithId(updateAction.artifact.expTreeInclude.childInstances[0].fields, 'element_name');
@@ -103,10 +120,10 @@ describe('<Builder />', () => {
 
   it('can edit a conjunction instance', () => {
     const store = createMockStore(defaultState);
-    const { container, getByText } = renderComponent({ store });
+    renderComponent({ store });
 
-    openSelect(container.querySelector('.conjunction-select__single-value + input'));
-    fireEvent.click(getByText('Or'));
+    userEvent.click(screen.getAllByRole('button', { name: 'And' })[0]);
+    userEvent.click(screen.getByText('Or'));
 
     const updateAction = expandAction(_.last(store.getActions()));
     const instance = updateAction.artifact.expTreeInclude;
@@ -116,12 +133,14 @@ describe('<Builder />', () => {
     expect(instance.name).toEqual('Or');
   });
 
-  it('can update an instance\'s modifiers', () => {
+  it("can update an instance's modifiers", () => {
     const store = createMockStore(defaultState);
-    const { getAllByLabelText, getByText } = renderComponent({ store });
+    renderComponent({
+      store
+    });
 
-    fireEvent.click(getAllByLabelText('add expression')[0]);
-    fireEvent.click(getByText('Is (Not) Null?'));
+    userEvent.click(screen.getAllByRole('button', { name: 'Add expression' })[0]);
+    userEvent.click(screen.getByRole('button', { name: 'Is (Not) Null?' }));
 
     const updateAction = expandAction(_.last(store.getActions()));
     const [instance] = updateAction.artifact.expTreeInclude.childInstances;
@@ -147,9 +166,10 @@ describe('<Builder />', () => {
       }
     });
 
-    const { getByLabelText } = renderComponent({ store });
+    const { getByLabelText, getByText } = renderComponent({ store });
 
     fireEvent.click(getByLabelText('remove Age Range'));
+    fireEvent.click(getByText('Delete'));
 
     const updateAction = expandAction(_.last(store.getActions()));
 

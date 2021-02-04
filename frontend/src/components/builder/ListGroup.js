@@ -2,11 +2,18 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import pluralize from 'pluralize';
 import classnames from 'classnames';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { IconButton } from '@material-ui/core';
 import {
-  faCheck, faExclamationCircle, faComment, faCommentDots, faAngleDoubleDown, faAngleDoubleRight, faTimes
-} from '@fortawesome/free-solid-svg-icons';
+  ChatBubble as ChatBubbleIcon,
+  Close as CloseIcon,
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
+  Sms as SmsIcon
+} from '@material-ui/icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCheck, faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
 import { UncontrolledTooltip } from 'reactstrap';
+import clsx from 'clsx';
 import _ from 'lodash';
 
 import { findValueAtPath } from '../../utils/find';
@@ -14,6 +21,7 @@ import { doesBaseElementInstanceNeedWarning, hasDuplicateName, hasGroupNestedWar
   from '../../utils/warnings';
 import { getReturnType, getFieldWithId } from '../../utils/instances';
 
+import { Modal } from 'components/elements';
 import ConjunctionGroup from './ConjunctionGroup';
 import ExpressionPhrase from './modifiers/ExpressionPhrase';
 import StringField from './fields/StringField';
@@ -56,7 +64,8 @@ export default class ListGroup extends Component {
 
     this.state = {
       isExpanded: true,
-      showComment: false
+      showComment: false,
+      showConfirmDeleteModal: false
     };
   }
 
@@ -96,11 +105,53 @@ export default class ListGroup extends Component {
     const newBaseElementLists = _.cloneDeep(this.props.artifact.baseElements);
     const baseElementIndex = this.props.artifact.baseElements.findIndex(baseElement =>
       baseElement.uniqueId === uniqueId);
+    newBaseElementLists.splice(baseElementIndex, 1);
+    this.props.updateBaseElementLists(newBaseElementLists, 'baseElements');
+  }
+
+  openConfirmDeleteModal = (uniqueId) => {
+    const newBaseElementLists = _.cloneDeep(this.props.artifact.baseElements);
+    const baseElementIndex = this.props.artifact.baseElements.findIndex(baseElement =>
+      baseElement.uniqueId === uniqueId);
     const baseElementListIsInUse = this.isBaseElementListUsed(newBaseElementLists[baseElementIndex]);
     if (!baseElementListIsInUse) {
-      newBaseElementLists.splice(baseElementIndex, 1);
-      this.props.updateBaseElementLists(newBaseElementLists, 'baseElements');
+      this.setState({ showConfirmDeleteModal: true });
     }
+  }
+
+  closeConfirmDeleteModal = () => {
+    this.setState({ showConfirmDeleteModal: false });
+  }
+
+  handleDeleteBaseElementList = () => {
+    this.deleteBaseElementList(this.props.instance.uniqueId);
+    this.closeConfirmDeleteModal();
+  }
+
+  renderConfirmDeleteModal() {
+    const elementName = getFieldWithId(this.props.instance.fields, 'element_name').value;
+
+    return (
+      <Modal
+        title="Delete List Group Confirmation"
+        submitButtonText="Delete"
+        handleShowModal={this.state.showConfirmDeleteModal}
+        handleCloseModal={this.closeConfirmDeleteModal}
+        handleSaveModal={this.handleDeleteBaseElementList}
+      >
+        <div className="delete-list-group-confirmation-modal modal__content">
+          <h5>
+            {`Are you sure you want to permanently delete
+              ${elementName ? 'the following' : 'this unnamed'} list group?`}
+          </h5>
+
+          {elementName && <div className="list-group-info">
+            <span>List Group: </span>
+            <span>{elementName}</span>
+          </div>}
+        </div>
+      </Modal>
+    );
   }
 
   promoteReturnTypeToList = (returnType) => {
@@ -277,7 +328,7 @@ export default class ListGroup extends Component {
           />
 
           <div className="return-type">
-            <div className="bold align-right return-type__label">Return Type:</div>
+            <div className="label">Return Type:</div>
 
             <div className="return-type__value">
               {
@@ -297,8 +348,6 @@ export default class ListGroup extends Component {
           treeName={this.props.treeName}
           artifact={this.props.artifact}
           templates={this.props.templates}
-          valueSets={this.props.valueSets}
-          loadValueSets={this.props.loadValueSets}
           instance={this.props.instance}
           addInstance={(name, template, path) => this.addInstance(name, template, path, instance, isAndOrElement)}
           editInstance={(treeName, fields, path, editingConjunction) =>
@@ -313,6 +362,9 @@ export default class ListGroup extends Component {
           baseElements={this.props.baseElements}
           externalCqlList={this.props.externalCqlList}
           loadExternalCqlList={this.props.loadExternalCqlList}
+          modifierMap={this.props.modifierMap}
+          modifiersByInputType={this.props.modifiersByInputType}
+          isLoadingModifiers={this.props.isLoadingModifiers}
           conversionFunctions={this.props.conversionFunctions}
           instanceNames={this.props.instanceNames}
           scrollToElement={this.props.scrollToElement}
@@ -328,7 +380,8 @@ export default class ListGroup extends Component {
           isRetrievingDetails={this.props.isRetrievingDetails}
           vsacDetailsCodes={this.props.vsacDetailsCodes}
           vsacDetailsCodesError={this.props.vsacDetailsCodesError}
-          vsacFHIRCredentials={this.props.vsacFHIRCredentials}
+          vsacApiKey={this.props.vsacApiKey}
+          vsacIsAuthenticating={this.props.vsacIsAuthenticating}
           isValidatingCode={this.props.isValidatingCode}
           isValidCode={this.props.isValidCode}
           codeData={this.props.codeData}
@@ -360,7 +413,6 @@ export default class ListGroup extends Component {
       needsDuplicateNameWarning || needsBaseElementWarning || this.hasNestedWarnings(instance.childInstances);
 
     const baseElementListUsed = this.isBaseElementListUsed(instance);
-    const disabledClass = baseElementListUsed ? 'disabled' : '';
     const headerClass = classnames('card-element__header', { collapsed: !isExpanded });
     const headerTopClass = classnames('card-element__header-top', { collapsed: !isExpanded });
     const hasComment = comment && comment !== '';
@@ -421,31 +473,34 @@ export default class ListGroup extends Component {
 
             <div className="card-element__buttons">
               {isExpanded &&
-                <button
-                  onClick={this.toggleComment}
-                  className={classnames('element_hidebutton', 'transparent-button', hasComment && 'has-comment')}
+                <IconButton
                   aria-label="show comment"
+                  className={clsx(hasComment && 'has-comment')}
+                  color="primary"
+                  onClick={this.toggleComment}
                 >
-                  <FontAwesomeIcon icon={hasComment ? faCommentDots : faComment} />
-                </button>
+                  {hasComment ? <SmsIcon fontSize="small" /> : <ChatBubbleIcon fontSize="small" />}
+                </IconButton>
               }
 
-              <button
-                onClick={isExpanded ? this.collapse : this.expand}
-                className="element__hidebutton transparent-button"
+              <IconButton
                 aria-label={`hide ${name}`}
+                color="primary"
+                onClick={isExpanded ? this.collapse : this.expand}
               >
-                <FontAwesomeIcon icon={isExpanded ? faAngleDoubleDown : faAngleDoubleRight} />
-              </button>
+                {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+              </IconButton>
 
-              <button
-                aria-label="Remove base element list"
-                className={`element__deletebutton transparent-button ${disabledClass}`}
-                id={`deletebutton-${instance.uniqueId}`}
-                onClick={() => this.deleteBaseElementList(instance.uniqueId)}
-              >
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
+              <span id={`deletebutton-${instance.uniqueId}`}>
+                <IconButton
+                  aria-label="remove base element list"
+                  color="primary"
+                  disabled={baseElementListUsed}
+                  onClick={() => this.openConfirmDeleteModal(instance.uniqueId)}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </span>
 
               {baseElementListUsed &&
                 <UncontrolledTooltip target={`deletebutton-${instance.uniqueId}`} placement="left">
@@ -465,6 +520,7 @@ export default class ListGroup extends Component {
         </div>
 
         {isExpanded && this.renderListGroup()}
+        {this.renderConfirmDeleteModal()}
       </div>
     );
   }
@@ -482,8 +538,6 @@ ListGroup.propTypes = {
   treeName: PropTypes.string.isRequired,
   artifact: PropTypes.object,
   templates: PropTypes.array,
-  valueSets: PropTypes.array,
-  loadValueSets: PropTypes.func.isRequired,
   instance: PropTypes.object.isRequired,
   index: PropTypes.number.isRequired,
   addInstance: PropTypes.func.isRequired,
@@ -497,6 +551,9 @@ ListGroup.propTypes = {
   baseElements: PropTypes.array.isRequired,
   externalCqlList: PropTypes.array.isRequired,
   loadExternalCqlList: PropTypes.func.isRequired,
+  modifierMap: PropTypes.object.isRequired,
+  modifiersByInputType: PropTypes.object.isRequired,
+  isLoadingModifiers: PropTypes.bool,
   conversionFunctions: PropTypes.array,
   instanceNames: PropTypes.array.isRequired,
   loginVSACUser: PropTypes.func.isRequired,
@@ -511,7 +568,8 @@ ListGroup.propTypes = {
   isRetrievingDetails: PropTypes.bool.isRequired,
   vsacDetailsCodes: PropTypes.array.isRequired,
   vsacDetailsCodesError: PropTypes.string.isRequired,
-  vsacFHIRCredentials: PropTypes.object,
+  vsacApiKey: PropTypes.string,
+  vsacIsAuthenticating: PropTypes.bool.isRequired,
   isValidatingCode: PropTypes.bool.isRequired,
   isValidCode: PropTypes.bool,
   codeData: PropTypes.object,

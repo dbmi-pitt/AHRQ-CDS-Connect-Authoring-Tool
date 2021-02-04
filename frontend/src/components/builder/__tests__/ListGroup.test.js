@@ -1,33 +1,14 @@
 import React from 'react';
 import _ from 'lodash';
+import { createTemplateInstance } from 'utils/test_helpers';
+import { render, userEvent, screen } from 'utils/test-utils';
+import { elementGroups, genericBaseElementUseInstance, genericBaseElementListInstance } from 'utils/test_fixtures';
+import { getFieldWithId } from 'utils/instances';
 import ListGroup from '../ListGroup';
-import { createTemplateInstance } from '../../../utils/test_helpers';
-import { render, fireEvent } from '../../../utils/test-utils';
-import { elementGroups, genericBaseElementUseInstance, genericBaseElementListInstance }
-  from '../../../utils/test_fixtures';
-import { getFieldWithId } from '../../../utils/instances';
 
 describe('<ListGroup />', () => {
   const genericBaseElementListTemplateInstance = createTemplateInstance(genericBaseElementListInstance);
   const genericBaseElementUseTemplateInstance = createTemplateInstance(genericBaseElementUseInstance);
-
-  let origCreateRange;
-
-  beforeEach(() => {
-    origCreateRange = global.document.createRange;
-    document.createRange = () => ({
-      setStart: () => {},
-      setEnd: () => {},
-      commonAncestorContainer: {
-        nodeName: 'BODY',
-        ownerDocument: document
-      }
-    });
-  });
-
-  afterEach(() => {
-    global.document.createRange = origCreateRange;
-  });
 
   const renderComponent = (props = {}) =>
     render(
@@ -49,8 +30,9 @@ describe('<ListGroup />', () => {
         isSearchingVSAC={false}
         isValidatingCode={false}
         loadExternalCqlList={jest.fn()}
-        loadValueSets={jest.fn()}
         loginVSACUser={jest.fn()}
+        modifierMap={{}}
+        modifiersByInputType={{}}
         parameters={[]}
         resetCodeValidation={jest.fn()}
         scrollToElement={jest.fn()}
@@ -62,9 +44,10 @@ describe('<ListGroup />', () => {
         updateInstanceModifiers={jest.fn()}
         validateCode={jest.fn()}
         validateReturnType={false}
+        vsacApiKey={'key'}
         vsacDetailsCodes={[]}
         vsacDetailsCodesError=""
-        vsacFHIRCredentials={{ username: 'name', password: 'pass' }}
+        vsacIsAuthenticating={false}
         vsacSearchCount={0}
         vsacSearchResults={[]}
         {...props}
@@ -73,31 +56,27 @@ describe('<ListGroup />', () => {
 
   it('cannot be deleted when in use', () => {
     const updateBaseElementLists = jest.fn();
-    const { getByLabelText } = renderComponent({ updateBaseElementLists });
+    renderComponent({ updateBaseElementLists });
 
-    const removeButton = getByLabelText('Remove base element list');
-
-    expect(removeButton).toHaveClass('disabled');
-    fireEvent.click(removeButton);
-
-    expect(updateBaseElementLists).not.toBeCalled();
+    expect(screen.getByRole('button', { name: 'remove base element list' })).toBeDisabled();
   });
 
   it('can be deleted when not in use', () => {
     const updateBaseElementLists = jest.fn();
-    const { getByLabelText } = renderComponent({
-      artifact: {
-        baseElements: [{
-          ...genericBaseElementListTemplateInstance,
-          usedBy: []
-        }]
-      },
+    const templateInstance = {
+      ...genericBaseElementListTemplateInstance,
+      usedBy: []
+    };
+
+    renderComponent({
+      artifact: { baseElements: [templateInstance] },
+      instance: templateInstance,
       updateBaseElementLists
     });
 
-    const removeButton = getByLabelText('Remove base element list');
+    userEvent.click(screen.getByRole('button', { name: 'remove base element list' }));
+    userEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
-    fireEvent.click(removeButton);
     expect(updateBaseElementLists).toBeCalled();
   });
 
@@ -130,16 +109,13 @@ describe('<ListGroup />', () => {
         { id: genericBaseElementUseTemplateInstance.uniqueId, name: 'UnionListName' },
         { id: modifiedUse.uniqueId, name: 'UnionListName' }
       ],
-      getAllInstancesInAllTrees: () => [
-        genericBaseElementListTemplateInstance,
-        modifiedUse
-      ]
+      getAllInstancesInAllTrees: () => [genericBaseElementListTemplateInstance, modifiedUse]
     });
 
     expect(container.querySelectorAll('.warning')).toHaveLength(1);
     expect(
       getByText('Warning: One or more uses of this Base Element have changed. Choose another name.')
-    ).not.toBeNull();
+    ).toBeInTheDocument();
   });
 
   describe('#checkReturnTypeCompatibility', () => {

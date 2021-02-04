@@ -1,52 +1,46 @@
-import React, {Component} from 'react';
+import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import _ from 'lodash';
+import { TextField } from '@material-ui/core';
 
-import StyledSelect from '../../elements/StyledSelect';
+import { Dropdown } from 'components/elements';
 
 const options = [
     {value: 'mg/d', label: 'mg/d'}
 ];
 
 export default class Dose extends Component {
-    handleChange = (selectedOption) => {
-        this.props.updateAppliedModifier(this.props.index, {unit: selectedOption ? selectedOption.value : null});
-    }
+  handleChange = event => {
+    const { index, updateAppliedModifier } = this.props;
+    const selectedOption = options.find(option => option.value === event.target.value);
+    updateAppliedModifier(index, { unit: selectedOption ? selectedOption.value : null });
+  }
 
     render() {
-        const valueId = _.uniqueId('value-');
-        const unitId = _.uniqueId('unit-');
+    const { index, unit, updateAppliedModifier, value } = this.props;
 
         return (
-            <div className="dose">
-                <label htmlFor={valueId}>
-                    <input
-                        id={valueId}
-                        type="number"
-                        name="value"
-                        placeholder="value"
-                        value={this.props.value || ''}
-                        onChange={(event) => {
-                            // eslint-disable-next-line max-len
-                            this.props.updateAppliedModifier(this.props.index, {value: parseInt(event.target.value, 10)});
-                        }}
-                    />
-                </label>
+      <div className="modifier">
+        <div className="modifier-text">Dose</div>
 
-                <label htmlFor={unitId}>
-                    <StyledSelect
-                        className="Select"
-                        name="unit"
-                        aria-label="Unit Select"
-                        id={unitId}
-                        value={options.find(({value}) => value === this.props.unit)}
-                        placeholder="select unit"
-                        onChange={this.handleChange}
-                        options={options}
-                    />
-                </label>
-            </div>
-        );
+        <TextField
+          className="field-input flex-1 field-input-sm"
+          label="Value"
+          onChange={event => updateAppliedModifier(index, { value: parseInt(event.target.value, 10) })}
+          type="number"
+          value={value || ''}
+          variant="outlined"
+        />
+
+        <Dropdown
+          className="field-input flex-2 field-input-md"
+          label="Unit"
+          onChange={this.handleChange}
+          options={options}
+          value={unit}
+        />
+      </div>
+    );
+
     }
 }
 

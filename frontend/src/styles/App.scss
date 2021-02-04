@@ -1,39 +1,35 @@
 /* ------------------------- IMPORT VARIABLES ------------------------------ */
 @import "elements/variables";
 
+/* ------------------------- IMPORT 3RD PARTY FONTS ------------------------ */
+@import "~fontsource-source-sans-pro/latin.css";
+@import "~fontsource-roboto-mono/latin.css";
+@import "~fontsource-public-sans/latin.css";
+@import "~fontsource-merriweather/latin.css";
+
 /* ------------------------- IMPORT 3RD PARTY VENDORS ---------------------- */
-@import "node_modules/bootstrap/scss/bootstrap.scss";
-@import "node_modules/bourbon/app/assets/stylesheets/bourbon";
-@import 'node_modules/tocbot/src/scss/tocbot-core';
-@import 'node_modules/tocbot/src/scss/tocbot-default-theme';
-@import 'node_modules/react-datepicker/dist/react-datepicker';
-@import 'node_modules/rc-time-picker/assets/index';
+@import "~bootstrap/scss/bootstrap.scss";
+@import '~tocbot/src/scss/tocbot-core';
+@import '~tocbot/src/scss/tocbot-default-theme';
 
 /* ------------------------- IMPORT CUSTOM SCSS ---------------------------- */
 // site-wide elements
 @import 'elements/mixins'; // keep first in list
 @import 'elements/accessibility';
 @import 'elements/base';
-@import 'elements/buttons';
 @import 'elements/cards';
-@import 'elements/dropdowns';
 @import 'elements/dropzone';
-@import 'elements/effects';
 @import 'elements/expressions';
 @import 'elements/flex';
 @import 'elements/forms';
-@import 'elements/inputs';
-@import 'elements/mixins';
-@import 'elements/modals';
-@import 'elements/select';
+@import 'elements/loading';
 @import 'elements/typography';
 
 // component-specific
 @import 'components/artifact/Artifact';
-@import 'components/auth/Login';
-@import 'components/auth/Logout';
 @import 'components/builder/Builder';
 @import 'components/builder/CodeSelectModal';
+@import 'components/builder/Editors';
 @import 'components/builder/Element';
 @import 'components/builder/ElementSelect';
 @import 'components/builder/ErrorStatement';
@@ -41,27 +37,23 @@
 @import 'components/builder/ExternalCqlDetails';
 @import 'components/builder/ExternalCqlDetailsSection';
 @import 'components/builder/ExternalCqlTable';
+@import 'components/builder/Fields';
 @import 'components/builder/Modifiers';
 @import 'components/builder/Parameters';
 @import 'components/builder/Recommendations';
 @import 'components/builder/RepoUploadModal';
 @import 'components/builder/Subpopulations';
-@import 'components/elements/Banner';
 @import 'components/header/CdsHeader';
+@import 'components/forms/AuthenticateVSAC';
+@import 'components/forms/ValidateVSACCode';
 @import 'components/footer/CdsFooter';
-@import 'components/Landing';
-@import 'components/Navbar';
-@import 'components/NotFoundPage';
-@import 'components/NotLoggedInPage';
 @import 'components/testing/PatientDataSection';
 @import 'components/testing/PatientTesting';
 @import 'components/testing/PatientView';
 @import 'components/testing/Testing';
-@import 'components/UserGuide';
 
 // vendors
 @import "vendors/bootstrap";
-@import "vendors/addthis";
 @import "vendors/ahrq-uswds2.0";
 @import "vendors/ahrq-global";
 @import "vendors/ahrq";

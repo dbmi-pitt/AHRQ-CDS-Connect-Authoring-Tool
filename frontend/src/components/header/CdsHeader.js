@@ -1,55 +1,35 @@
-import React, { memo } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLink } from '@fortawesome/free-solid-svg-icons';
+import React from 'react';
+import { useSelector } from 'react-redux';
+import { ThemeProvider } from '@material-ui/core/styles';
 
-import Login from '../auth/Login';
-import Logout from '../auth/Logout';
 
-export default memo(function Header({
-  isAuthenticated,
-  authUser,
-  authStatus,
-  authStatusText,
-  artifactSaved,
-  loginUser,
-  logoutUser,
-  setAuthStatus
-}) {
+import { Login, Logout } from 'components/auth';
+import darkTheme from 'styles/theme';
+
+const CdsHeader = () => {
+  const isAuthenticated = useSelector(state => state.auth.isAuthenticated);
+
   return (
-    <header className="cds-header">
-      <div className="cds-header__cdsbanner">
-        <div className="cds-header__cdsbanner-wrapper row">
-          <div className="cds-header__cdsbanner-text col-xs-12 col-md-5">
-            <a href="/" alt="home">
-              <div className="text-top">Patient-centered Outcomes Research</div>
-              <div className="text-bottom">Clinical Decision Support Authoring</div>
-            </a>
-          </div>
+    <ThemeProvider theme={darkTheme}>
+      <header className="cds-header">
+        <div className="cds-header__cdsbanner">
+          <div className="cds-header__cdsbanner-wrapper">
+            <div className="cds-header__cdsbanner-text">
+              <a href="/" alt="home">
+                <div className="text-top">Patient-centered Outcomes Research</div>
+                <div className="text-bottom">Drug-Drug Interaction Clinical Decision Support Authoring</div>
+              </a>
+            </div>
 
-          <div className="cds-header__cdsbanner-auth col-xs-12 col-md-7">
-            <a href="https://cds.ahrq.gov" className="cds-home-link">
-              <FontAwesomeIcon icon={faLink} /> CDS Home
-            </a>
+            <div className="cds-header__cdsbanner-auth">
 
-            {isAuthenticated ?
-              <Logout
-                onLogoutClick={logoutUser}
-                authUser={authUser}
-                authStatus={authStatus}
-                authStatusText={authStatusText}
-                artifactSaved={artifactSaved}
-              />
-            :
-              <Login
-                onLoginClick={loginUser}
-                authStatus={authStatus}
-                authStatusText={authStatusText}
-                setAuthStatus={setAuthStatus}
-              />
-            }
+              {isAuthenticated ? <Logout /> : <Login />}
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+    </ThemeProvider>
   );
-});
+};
+
+export default CdsHeader;
