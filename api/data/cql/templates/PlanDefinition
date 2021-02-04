@@ -27,7 +27,7 @@
 		],
 		"library": [
 		    {
-			"reference": "Library/<%-element_library_url%>"
+			"reference": "Library/<%-element_id%>"
 		    }
 		],
 		"extension": [

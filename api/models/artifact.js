@@ -53,6 +53,16 @@ const ArtifactSchema = new Schema({
 ArtifactSchema.methods.toPublishableLibrary = function(){
 
   //the ultimate value to return
+  let bundle = {};
+  bundle["resourceType"] = "Bundle";
+  bundle["type"] = "transaction";
+  bundle["entry"] = [];
+
+  let dataRequirement = new Set();
+  for(let index = 0; index < this.baseElements.length; index++){
+      dataRequirement.add(this.baseElements[index].name.replace(/\s/g , ""));
+  }
+
   let retVal = {};
 
   retVal["resourceType"] = "Library";
@@ -72,12 +82,23 @@ ArtifactSchema.methods.toPublishableLibrary = function(){
   retVal["date"] = this.updatedAt;
   retVal["version"] = this.version;
   retVal["description"] = this.description;
-  retVal["url"] = this.url;
+  retVal["id"] = this.name.toLowerCase().replace(/\s/g , "-");
+  // retVal["url"] = this.url
+  retVal["url"] = "Library/" + this.name.toLowerCase().replace(/\s/g , "-");
   retVal["status"] = this.status || "draft";  //default to draft, this field is _required_ by FHIR
   retVal["experimental"] = this["experimental"];
   retVal["publisher"] = this.publisher;
   retVal["useContext"] = this.convertContext();
   retVal["purpose"] = this.purpose;
+
+  if(dataRequirement.size > 0){
+      retVal["dataRequirement"] = [];
+      for (let item of dataRequirement.keys()){
+          retVal["dataRequirement"].push({
+              "type": item
+          });
+      }
+  }
 
   //date fields SHALL NOT have a time according to the Publishable Library spec
   if(this.approvalDate){
@@ -145,7 +166,9 @@ ArtifactSchema.methods.toPublishableLibrary = function(){
     else if ( (_.isEmpty(retVal[key])) || (_.isUndefined(retVal[key])) || (_.isNull(retVal[key])) ) delete retVal[key];
   });
   removeEmpty(retVal);
-  return retVal;
+
+  bundle["entry"].push(retVal);
+  return bundle;
 };
 
 //helper function to map contacts into CPG form.  used by toPublishableLibrary()

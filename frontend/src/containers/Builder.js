@@ -62,6 +62,7 @@ export class Builder extends Component {
       showMenu: false,
       activeTabIndex: 0,
       uniqueIdCounter: 0,
+      version: '',
       downloadMenuAnchorElement: null
     };
   }
@@ -274,8 +275,10 @@ export class Builder extends Component {
     this.closeArtifactModal(false);
   }
 
-  openArtifactPlanDefinitionModal = async () => {
+  openArtifactPlanDefinitionModal = async (disable, version) => {
     this.setState({showArtifactPlanDefinitionModal: true});
+    this.setState({version: version});
+    this.setState({disable: disable});
     await this.props.updateAndSaveArtifact(this.props.artifact, {planDefinitionRecommendations: []});
     this.setState({artifact: this.props.artifact});
   }
@@ -286,7 +289,7 @@ export class Builder extends Component {
 
   handleSaveArtifactAndDownload = async (artifactPropsChanged) => {
     await this.props.updateAndSaveArtifact(this.props.artifact, artifactPropsChanged);
-    this.downloadOptionSelected(false, '3.0.0');
+    this.downloadOptionSelected(this.state.disable, this.state.version);
     this.closeArtifactPlanDefinitionModal(false);
 
   }
@@ -497,15 +500,18 @@ export class Builder extends Component {
               onClose={this.handleCloseDownloadMenu}
               open={Boolean(downloadMenuAnchorElement)}
             >
-              <MenuItem disabled={disableDSTU2} onClick={() => this.downloadOptionSelected(disableDSTU2, '1.0.2')}>
+              <MenuItem disabled={disableDSTU2}
+                        onClick={() => this.openArtifactPlanDefinitionModal(disableDSTU2, '1.0.2')}>
                 FHIR<sup>®</sup> DSTU2
               </MenuItem>
 
-              <MenuItem disabled={disableSTU3} onClick={() => this.openArtifactPlanDefinitionModal()}>
+              <MenuItem disabled={disableSTU3}
+                        onClick={() => this.openArtifactPlanDefinitionModal(disableSTU3, '3.0.0')}>
                 FHIR<sup>®</sup> STU3
               </MenuItem>
 
-              <MenuItem disabled={disableR4} onClick={() => this.downloadOptionSelected(disableR4, '4.0.0')}>
+              <MenuItem disabled={disableR4}
+                        onClick={() => this.openArtifactPlanDefinitionModal(disableR4, '4.0.0')}>
                 FHIR<sup>®</sup> R4
               </MenuItem>
             </Menu>

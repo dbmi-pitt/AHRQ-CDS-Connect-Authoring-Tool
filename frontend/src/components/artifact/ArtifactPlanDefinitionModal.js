@@ -19,7 +19,7 @@ export default class ArtifactPlanDefinitionModal extends Component {
       planDefinitionRecommendations: artifact ? artifact.planDefinitionRecommendations : '',
       planDefinition: {
         'planDefinitionURL': '',
-        'planDefinitionLibraryURL': '',
+        // 'planDefinitionLibraryURL': '',
         'planDefinitionTopicText': '',
         'relatedArtifactType': '',
         'relatedArtifactName': '',
@@ -33,7 +33,7 @@ export default class ArtifactPlanDefinitionModal extends Component {
     this.setState({
       planDefinition: {
         'planDefinitionURL': '',
-        'planDefinitionLibraryURL': '',
+        // 'planDefinitionLibraryURL': '',
         'planDefinitionTopicText': '',
         'relatedArtifactType': '',
         'relatedArtifactName': '',
@@ -83,12 +83,12 @@ export default class ArtifactPlanDefinitionModal extends Component {
             value={this.state.planDefinition.planDefinitionURL}
             updateInstance={this.handleInputChange}
           />
-          <StringField
-            id={'planDefinitionLibraryURL'}
-            name={'Library ID'}
-            value={this.state.planDefinition.planDefinitionLibraryURL}
-            updateInstance={this.handleInputChange}
-          />
+          {/*<StringField*/}
+          {/*  id={'planDefinitionLibraryURL'}*/}
+          {/*  name={'Library ID'}*/}
+          {/*  value={this.state.planDefinition.planDefinitionLibraryURL}*/}
+          {/*  updateInstance={this.handleInputChange}*/}
+          {/*/>*/}
 
           <StringField
             id={'planDefinitionTopicText'}

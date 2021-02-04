@@ -567,7 +567,7 @@ const modifiers = [
     cqlLibraryFunction: 'C3F.MedicationStatementDose'
   },
   {
-    id: 'DoseMedicationOrder',
+    id: 'DoseMedicationRequest',
     type: 'Dose',
     name: 'Dose',
     inputTypes: ['list_of_medication_orders'],
@@ -575,7 +575,7 @@ const modifiers = [
     values: {value: undefined, unit: undefined},
     cqlTemplate: 'DoseModifier',
     //TODO: CHANGE THIS
-    cqlLibraryFunction: 'C3F.MedicationOrderDose'
+    cqlLibraryFunction: 'C3F.MedicationRequestDose'
   },
   {
     id: 'ValueComparisonDoseMedicationStatement',
@@ -589,14 +589,14 @@ const modifiers = [
     comparisonOperator: null
   },
   {
-    id: 'ValueComparisonDoseMedicationOrder',
+    id: 'ValueComparisonDoseMedicationRequest',
     type: 'ValueComparisonDose',
     name: 'Value Comparison Dose',
     inputTypes: ['list_of_medication_orders'],
     returnType: 'boolean',
     validator: {type: 'require', fields: ['minValue', 'minOperator', 'unit'], args: null},
     values: {minOperator: undefined, minValue: '', maxOperator: undefined, maxValue: '', unit: ''},
-    cqlTemplate: 'ValueComparisonDoseMedicationOrder',
+    cqlTemplate: 'ValueComparisonDoseMedicationRequest',
     comparisonOperator: null
   },
 ];

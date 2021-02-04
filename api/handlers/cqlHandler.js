@@ -1382,39 +1382,19 @@ function buildCQL(artifactBody) {
 
 function writePlanDefinition(artifact) {
   console.log(artifact.planDefinitionRecommendations);
-    if (artifact.pddiRecommendations != null) {
-        return ejs.render(
-            templateMap.PlanDefinition,
-            {
-                element_id: artifact.name.toLowerCase().replace(/\s/g , "-"),
-                element_name: artifact.name,
-                element_version: artifact.version,
-                element_url: artifact.planDefinition.planDefinitionURL,
-                element_library_url: artifact.planDefinition.planDefinitionLibraryURL,
-                element_topic: artifact.planDefinition.planDefinitionTopicText,
-                element_related_artifact_type: artifact.planDefinition.relatedArtifactType,
-                element_related_artifact_name: artifact.planDefinition.relatedArtifactName,
-                element_related_artifact_url: artifact.planDefinition.relatedArtifactURL,
-                planDefinitionRecommendations: artifact.planDefinitionRecommendations,
-                element_recommendations: artifact.pddiRecommendations
-            }
-        );
-    } else {
-        return ejs.render(
-            templateMap.PlanDefinition,
-            {
-                element_id: artifact.planDefinition.planDefinitionURL,
-                element_name: artifact.name,
-                element_version: artifact.version,
-                element_url: "PlanDefinition/" + artifact.planDefinition.planDefinitionURL,
-                element_library_url: artifact.planDefinition.planDefinitionLibraryURL,
-                element_topic: artifact.planDefinition.planDefinitionTopicText,
-                element_related_artifact_type: artifact.planDefinition.relatedArtifactType,
-                element_related_artifact_name: artifact.planDefinition.relatedArtifactName,
-                element_related_artifact_url: artifact.planDefinition.relatedArtifactURL,
-                planDefinitionRecommendations: artifact.planDefinitionRecommendations,
-                element_recommendations: artifact.recommendations
-            }
-        );
-    }
+  return ejs.render(
+      templateMap.PlanDefinition,
+      {
+        element_id: artifact.name.toLowerCase().replace(/\s/g, "-"),
+        element_name: artifact.name,
+        element_version: artifact.version,
+        element_url: artifact.planDefinition.planDefinitionURL,
+        element_topic: artifact.planDefinition.planDefinitionTopicText,
+        element_related_artifact_type: artifact.planDefinition.relatedArtifactType,
+        element_related_artifact_name: artifact.planDefinition.relatedArtifactName,
+        element_related_artifact_url: artifact.planDefinition.relatedArtifactURL,
+        planDefinitionRecommendations: artifact.planDefinitionRecommendations,
+        element_recommendations: artifact.pddiRecommendations
+      }
+  );
 }
