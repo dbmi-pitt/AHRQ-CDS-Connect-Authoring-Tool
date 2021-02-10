@@ -5,6 +5,7 @@ import {Modal} from 'components/elements';
 
 import artifactProps from '../../prop-types/artifact';
 import StringField from "../builder/fields/StringField";
+import {Checkbox, FormControl, FormControlLabel, FormGroup, FormLabel} from "@material-ui/core";
 
 export default class ArtifactPlanDefinitionModal extends Component {
 
@@ -125,49 +126,34 @@ export default class ArtifactPlanDefinitionModal extends Component {
           />
         </div>
 
-        <div className="artifact-table__modal modal__content">
-          <div className="artifact-form__edit">
+        <FormControl component="fieldset">
+          <FormLabel component="legend">Select the recommendations to be used in the Plan Definition</FormLabel>
+          <FormGroup>
+            {pddiRecommendations.length > 0 ? (
+              pddiRecommendations.map((key, index) => {
+                return (
+                  <FormControlLabel
+                    control={<Checkbox onChange={this.handleCheckboxInputChange} value={key.text}
+                                       id={"artifact-pddiRecommendations-" + index} name="artifact-recommendations"/>}
+                    label={key.text}
+                  />
+                );
+              })
+            ) : (
+              recommendations.map((key, index) => {
+                return (
+                  <FormControlLabel
+                    control={<Checkbox onChange={this.handleCheckboxInputChange} value={key.text}
+                                       id={"artifact-pddiRecommendations-" + index} name="artifact-recommendations"/>}
+                    label={key.text}
+                  />
+                );
+              })
+            )
+            }
+          </FormGroup>
+        </FormControl>
 
-            <h5>Select the recommendations to be used in the Plan Definition.</h5>
-            <div className="artifact-form__inputs d-flex justify-content-start">
-              <div className='form__group p-2'>
-                {pddiRecommendations.length > 0 ? (
-                  pddiRecommendations.map((key, index) => {
-                    return (
-                      <div className='form__group p-2'>
-                        <input type="checkbox" id={"artifact-pddiRecommendations-" + index}
-                               name='artifact-pddiRecommendations'
-                               value={key.text} style={{marginRight: 10 + 'px'}}
-                               onChange={this.handleCheckboxInputChange}/>
-                        <label
-                          htmlFor={"artifact-pddiRecommendations-" + index}> {key.text}</label>
-
-                      </div>
-                    );
-                  })
-
-                ) : (
-
-                  recommendations.map((key, index) => {
-                    return (
-                      <div className='form__group p-2'>
-                        <input type="checkbox" id={"artifact-recommendations-" + index}
-                               name='artifact-recommendations'
-                               value={key.text} style={{marginRight: 10 + 'px'}}
-                               onChange={this.handleCheckboxInputChange}/>
-                        <label
-                          htmlFor={"artifact-recommendations-" + index}> {key.text}</label>
-
-                      </div>
-                    )
-                      ;
-                  })
-
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
       </Modal>
     );
   }

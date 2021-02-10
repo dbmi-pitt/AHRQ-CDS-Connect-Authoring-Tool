@@ -11,7 +11,8 @@ import {
   Edit as EditIcon,
   GetApp as GetAppIcon,
   Publish as PublishIcon,
-  Save as SaveIcon
+  Save as SaveIcon,
+  DirectionsRun as RunIcon
 } from '@material-ui/icons';
 import _ from 'lodash';
 
@@ -33,6 +34,7 @@ import BaseElements from '../components/builder/BaseElements';
 import ConjunctionGroup from '../components/builder/ConjunctionGroup';
 import ArtifactModal from '../components/artifact/ArtifactModal';
 import ArtifactPlanDefinitionModal from '../components/artifact/ArtifactPlanDefinitionModal';
+import RunRuleModal from "../components/artifact/RunRuleModal";
 import ELMErrorModal from '../components/builder/ELMErrorModal';
 import ErrorStatement from '../components/builder/ErrorStatement';
 import ExternalCQL from '../components/builder/ExternalCQL';
@@ -56,6 +58,7 @@ export class Builder extends Component {
 
     this.state = {
       showArtifactModal: false,
+      showRunRuleModal: false,
       showArtifactPlanDefinitionModal: false,
       showPublishModal: false,
       showELMErrorModal: false,
@@ -274,6 +277,15 @@ export class Builder extends Component {
     this.props.updateAndSaveArtifact(this.props.artifact, artifactPropsChanged);
     this.closeArtifactModal(false);
   }
+
+  openRunRuleModal = () => {
+    this.setState({showRunRuleModal: true});
+  }
+
+  closeRunRuleModal = () => {
+    this.setState({showRunRuleModal: false});
+  }
+
 
   openArtifactPlanDefinitionModal = async (disable, version) => {
     this.setState({showArtifactPlanDefinitionModal: true});
@@ -522,6 +534,14 @@ export class Builder extends Component {
               variant="contained"
             >
               Save
+            </Button>
+
+            <Button
+              onClick={() => this.openRunRuleModal()}
+              startIcon={<RunIcon/>}
+              variant="contained"
+            >
+              Run Rule
             </Button>
 
             {publishEnabled &&
@@ -820,6 +840,12 @@ export class Builder extends Component {
           showModal={this.state.showArtifactPlanDefinitionModal}
           closeModal={this.closeArtifactPlanDefinitionModal}
           saveModal={this.handleSaveArtifactAndDownload}/>
+
+        <RunRuleModal
+          artifact={artifact}
+          showModal={this.state.showRunRuleModal}
+          closeModal={this.closeRunRuleModal}
+          saveModal={this.handleSaveArtifactAndRUn}/>
 
         <ELMErrorModal
           closeModal={this.closeELMErrorModal}
