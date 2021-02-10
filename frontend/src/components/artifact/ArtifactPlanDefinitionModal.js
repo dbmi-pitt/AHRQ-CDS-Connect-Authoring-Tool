@@ -76,7 +76,7 @@ export default class ArtifactPlanDefinitionModal extends Component {
         handleSaveModal={() => saveModal(this.state)}>
 
         <div>
-          <h5>Define the following fields for the Plan Definition.</h5>
+          <FormLabel component="legend">Define the following fields for the Plan Definition</FormLabel>
 
           <StringField
             id={'planDefinitionURL'}

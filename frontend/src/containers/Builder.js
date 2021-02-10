@@ -286,6 +286,9 @@ export class Builder extends Component {
     this.setState({showRunRuleModal: false});
   }
 
+  handleSaveArtifactAndRUn = () => {
+
+  }
 
   openArtifactPlanDefinitionModal = async (disable, version) => {
     this.setState({showArtifactPlanDefinitionModal: true});
