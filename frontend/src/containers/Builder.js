@@ -60,6 +60,8 @@ export class Builder extends Component {
       showArtifactModal: false,
       showRunRuleModal: false,
       showArtifactPlanDefinitionModal: false,
+      artifactPlanDefinitionTitle: "Create Plan Definition",
+      artifactPlanDefinitionSubmitText: "Download",
       showPublishModal: false,
       showELMErrorModal: false,
       showMenu: false,
@@ -278,20 +280,29 @@ export class Builder extends Component {
     this.closeArtifactModal(false);
   }
 
-  openRunRuleModal = () => {
+  openRunRuleModal = async () => {
     this.setState({showRunRuleModal: true});
+    await this.props.updateAndSaveArtifact(this.props.artifact, {fhirServer: {}});
+    this.setState({artifact: this.props.artifact});
   }
 
   closeRunRuleModal = () => {
     this.setState({showRunRuleModal: false});
   }
 
-  handleSaveArtifactAndRUn = () => {
-
+  handleSaveArtifactAndRun = async (artifactPropsChanged) => {
+    console.log(artifactPropsChanged);
+    this.setState({showRunRuleModal: false});
+    this.setState({artifactPlanDefinitionTitle: "Run Rule Configuration"});
+    this.setState({artifactPlanDefinitionSubmitText: "Run Rule"});
+    this.setState({showArtifactPlanDefinitionModal: true});
+    this.setState({artifact: this.props.artifact});
   }
 
   openArtifactPlanDefinitionModal = async (disable, version) => {
     this.setState({showArtifactPlanDefinitionModal: true});
+    this.setState({artifactPlanDefinitionTitle: "Specify Plan Definition"});
+    this.setState({artifactPlanDefinitionSubmitText: "Download"});
     this.setState({version: version});
     this.setState({disable: disable});
     await this.props.updateAndSaveArtifact(this.props.artifact, {planDefinitionRecommendations: []});
@@ -842,13 +853,17 @@ export class Builder extends Component {
           artifact={artifact}
           showModal={this.state.showArtifactPlanDefinitionModal}
           closeModal={this.closeArtifactPlanDefinitionModal}
-          saveModal={this.handleSaveArtifactAndDownload}/>
+          saveModal={this.handleSaveArtifactAndDownload}
+          title={this.state.artifactPlanDefinitionTitle}
+          submitText={this.state.artifactPlanDefinitionSubmitText}
+        />
 
         <RunRuleModal
-          artifact={artifact}
+          artifactEditing={artifact}
           showModal={this.state.showRunRuleModal}
+          showNextModal={this.handleSaveArtifactAndRun}
           closeModal={this.closeRunRuleModal}
-          saveModal={this.handleSaveArtifactAndRUn}/>
+        />
 
         <ELMErrorModal
           closeModal={this.closeELMErrorModal}

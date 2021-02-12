@@ -300,6 +300,7 @@ class CqlArtifact {
     this.pddiRecommendations = artifact.pddiRecommendations;
     this.planDefinitionRecommendations = artifact.planDefinitionRecommendations;
     this.planDefinition = artifact.planDefinition;
+    this.fhirServer = artifact.fhirServer;
     this.errorStatement = artifact.errorStatement;
 
     fhirTarget = artifact.dataModel;

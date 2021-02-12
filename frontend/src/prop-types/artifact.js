@@ -31,6 +31,17 @@ const expTreeProps = {
   }))
 };
 
+const fhirServerProps = {
+  fhirServer: PropTypes.string,
+  accessToken: PropTypes.string,
+  scope: PropTypes.string,
+  expiresIn: PropTypes.string,
+  subject: PropTypes.string,
+  startDate: PropTypes.string,
+  endDate: PropTypes.string,
+  fhirVersion: PropTypes.string,
+};
+
 const subpopulationsProps = {
   uniqueId: PropTypes.string,
   subpopulationName: PropTypes.string,
@@ -55,6 +66,7 @@ const artifactProps = {
     comment: PropTypes.string,
     subpopulations: PropTypes.arrayOf(PropTypes.shape(subpopulationsProps))
   })),
+  fhirServer: PropTypes.shape(fhirServerProps),
   planDefinitionRecommendations:  PropTypes.array,
   subpopulations: PropTypes.arrayOf(PropTypes.shape(subpopulationsProps)),
   parameters: PropTypes.arrayOf(PropTypes.shape(parametersProps)),

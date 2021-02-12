@@ -217,6 +217,7 @@ export function initializeArtifact(andTemplate, orTemplate) {
     expTreeExclude: newTrees.newExpTreeExclude,
     recommendations: [],
     pddiRecommendations: [],
+    fhirServer: {},
     subpopulations: [
       {
         special: true,

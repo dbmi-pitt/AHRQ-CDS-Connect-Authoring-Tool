@@ -1,185 +1,254 @@
-import React, {Component} from 'react';
-import PropTypes from 'prop-types';
+import React, { memo, useState, useCallback, useEffect, useRef } from 'react';
 
 import {Modal} from 'components/elements';
+import {SelectField, TextField} from 'components/fields';
+import {useDispatch} from 'react-redux';
 
-import artifactProps from '../../prop-types/artifact';
-import StringField from "../builder/fields/StringField";
-import {FormControlLabel, FormLabel, Radio, RadioGroup, Grid} from "@material-ui/core";
+import {
+  FormControlLabel,
+  FormLabel,
+  Radio,
+  RadioGroup,
+  Grid,
+  FormControl
+} from "@material-ui/core";
 import {MuiPickersUtilsProvider, KeyboardDatePicker} from "@material-ui/pickers";
 import DateFnsUtils from "@date-io/date-fns";
+import {Form, Formik, useField, useFormikContext} from "formik";
+import {formatISO} from "date-fns";
+import {updateAndSaveArtifact} from "../../actions/artifacts";
 
-export default class RunRuleModal extends Component {
 
-  constructor(props) {
-    super(props);
-    this.state = {
-// TODO: Create config file to store the default fhir server configuration
-      //the "token_type" has a fixed value of "Bearer"
-      fhirServer: {
-        'fhirServer': 'http://3.21.182.6/omoponfhir-stu3/fhir',
-        'accessToken': '12345',
-        'scope': 'launch profile openid online_access user/*.*',
-        'expiresIn': '300',
-        'subject': '',
-        'radio': '0',
-        'startDate': new Date(),
-        'endDate':  new Date()
-      }
-    };
-  }
+const initialValues =
+  {
+    fhirServer: 'http://3.21.182.6/omoponfhir-stu3/fhir',
+    accessToken: '12345',
+    scope: 'launch profile openid online_access user/*.*',
+    expiresIn: '300',
+    subject: 'patient',
+    startDate: new Date(),
+    endDate: new Date(),
+    fhirVersion: '3.0.0',
+    radio: "0"
+  };
 
-  handleRadioInputChange = (event) => {
-    var fhirServer = this.state.fhirServer;
-    fhirServer['radio'] = event.target.value;
+const fhirOptions = [
+  {value: '1.0.1', label: 'FHIR® DSTU2', id: 'dstu2'},
+  {value: '3.0.0', label: 'FHIR® STU3', id: 'stu3'},
+  {value: '4.0.0', label: 'FHIR® R4', id: 'r4'},
+];
 
-    if (event.target.name == 'default') {
-      fhirServer['fhirServer'] = 'http://3.21.182.6/omoponfhir-stu3/fhir';
-      fhirServer['accessToken'] = '12345';
-      fhirServer['scope'] = 'launch profile openid online_access user/*.*';
-      fhirServer['expiresIn'] = '300';
-      fhirServer['subject'] = '';
-    } else {
-      fhirServer['fhirServer'] = '';
-      fhirServer['accessToken'] = '';
-      fhirServer['scope'] = '';
-      fhirServer['expiresIn'] = '';
-      fhirServer['subject'] = '';
-    }
+export const SelectGroupField = ({...props}) => {
+  const {setFieldValue} = useFormikContext();
+  const [field] = useField(props);
 
-    this.setState({fhirServer: fhirServer});
-  }
+  return (
+    <div className="field-group">
+      <SelectField
+        {...field}
+        {...props}
+        value={field.value}
+        name={field.name}
+        label={"FHIR Version"}
+        onChange={val => {
+          setFieldValue(field.name, val);
+        }}
+        options={fhirOptions}/>
+    </div>
+  );
+};
 
-  handleDateChange = (id, date) => {
-    var fhirServer = this.state.fhirServer;
-    fhirServer[id] = date;
+export const RadioGroupField = ({...props}) => {
+  const {setFieldValue} = useFormikContext();
+  const [field] = useField(props);
+  return (
+    <RadioGroup
+      {...field}
+      {...props}
+      aria-label={"FHIR Server Configuration"}
+      value={field.value}
+      name={field.name}
+      onChange={event => {
+        setFieldValue(field.name, event.target.value);
 
-    this.setState({fhirServer: fhirServer});
-  }
+        if (event.target.name === 'default') {
+          setFieldValue('fhirServer', 'http://3.21.182.6/omoponfhir-stu3/fhir');
+          setFieldValue('accessToken', '12345');
+          setFieldValue('scope', 'launch profile openid online_access user/*.*');
+          setFieldValue('expiresIn', '300');
+          setFieldValue('subject', '');
+        } else {
+          setFieldValue('fhirServer', '');
+          setFieldValue('accessToken', '');
+          setFieldValue('scope', '');
+          setFieldValue('expiresIn', '');
+          setFieldValue('subject', '');
+        }
+      }}>
+      <FormControlLabel control={<Radio/>} name={'default'}
+                        label={"Run rule using our FHIR server and synthetic data"}
+                        value={"0"}/>
+      <FormControlLabel control={<Radio/>} name={'custom'}
+                        label={"Specify your own FHIR server configuration"}
+                        value={"1"}/>
+    </RadioGroup>
+  );
+};
 
-  handleInputChange = (input) => {
-    var fhirServer = this.state.fhirServer;
-    fhirServer[Object.keys(input)[0]] = Object.values(input)[0];
 
-    this.setState({fhirServer: fhirServer});
-  }
+export const DatePickerField = ({...props}) => {
+  const {setFieldValue} = useFormikContext();
+  const [field] = useField(props);
+  return (
+    <KeyboardDatePicker
+      {...field}
+      {...props}
+      disableToolbar
+      variant="inline"
+      format="MM/dd/yyyy"
+      margin="normal"
+      value={field.value}
+      label={props.label}
+      onChange={val => {
+        setFieldValue(field.name, val);
+      }}
+      KeyboardButtonProps={{
+        'aria-label': 'change date',
+      }}
+    />
+  );
+};
 
-  render() {
-    const {showModal, closeModal, saveModal} = this.props;
-    const {fhirServer} = this.state;
-
-    return (
-      <Modal
-        title="Run Rule"
-        submitButtonText="Download"
-        maxWidth="xl"
-        handleShowModal={showModal}
-        handleCloseModal={closeModal}
-        handleSaveModal={() => saveModal(this.state)}>
-
-        <FormLabel component="legend">FHIR server configuration</FormLabel>
-        <RadioGroup
-          aria-label={"FHIR Server Configuration"}
-          name={"radio"}
-          value={this.state.fhirServer.radio}
-          onChange={this.handleRadioInputChange}>
-          <FormControlLabel control={<Radio/>} name="default"
-                            label={"Run rule using our FHIR server and synthetic data"}
-                            value={"0"}/>
-          <FormControlLabel control={<Radio/>} name="custom"
-                            label={"Specify your own FHIR server configuration"}
-                            value={"1"}/>
-        </RadioGroup>
-
-        {fhirServer.radio > 0 ? (
-          <div>
-            <StringField
-              id={'fhirServer'}
-              name={'FHIR Server'}
-              placeholder={'The base URL of the CDS Client\'s FHIR server'}
-              value={this.state.fhirServer.fhirServer}
-              updateInstance={this.handleInputChange}
-            />
-
-            <StringField
-              id={'fhirServer'}
-              name={'Access Token'}
-              placeholder={'The OAuth 2.0 access token that provides access to the FHIR server'}
-              value={this.state.fhirServer.accessToken}
-              updateInstance={this.handleInputChange}
-            />
-
-            <StringField
-              id={'scope'}
-              name={'Scope'}
-              value={this.state.fhirServer.scope}
-              placeholder={'The scopes the access token grants the CDS Service'}
-              updateInstance={this.handleInputChange}
-            />
-
-            <StringField
-              id={'expiresIn'}
-              name={'Expires In'}
-              placeholder={'The lifetime in seconds of the access token.'}
-              value={this.state.fhirServer.expiresIn}
-              updateInstance={this.handleInputChange}
-            />
-
-            <StringField
-              id={'subject'}
-              name={'Subject'}
-              value={this.state.fhirServer.subject}
-              placeholder={'The OAuth 2.0 client identifier of the CDS Service'}
-              updateInstance={this.handleInputChange}
-            />
-          </div>
-        ) : (
-          null
-        )}
-
-        <MuiPickersUtilsProvider utils={DateFnsUtils}>
-          <FormLabel component="legend">Set period to run rule over</FormLabel>
-          <Grid container justify="space-around">
-            <KeyboardDatePicker
-              disableToolbar
-              variant="inline"
-              format="MM/dd/yyyy"
-              margin="normal"
-              name="startDate"
-              id="startDate"
-              label="Start Date"
-              value={this.state.fhirServer.startDate}
-              onChange={event => this.handleDateChange("startDate", event)}
-              KeyboardButtonProps={{
-                'aria-label': 'change date',
-              }}
-            />
-
-            <KeyboardDatePicker
-              disableToolbar
-              variant="inline"
-              format="MM/dd/yyyy"
-              margin="normal"
-              name="endDate"
-              id="endDate"
-              label="End Date"
-              value={this.state.fhirServer.endDate}
-              onChange={event => this.handleDateChange("endDate", event)}
-              KeyboardButtonProps={{
-                'aria-label': 'change date',
-              }}
-            />
-          </Grid>
-        </MuiPickersUtilsProvider>
-
-      </Modal>
-    );
-  }
+function dateToStringTransform(value) {
+  if (value == null) return value;
+  return formatISO(value);
 }
 
-RunRuleModal.propTypes = {
-  artifact: artifactProps,
-  showModal: PropTypes.bool.isRequired,
-  closeModal: PropTypes.func.isRequired,
-  saveModal: PropTypes.func.isRequired,
-};
+const RunRuleModalForm = memo(({setSubmitDisabled}) => {
+  const {values, isValid} = useFormikContext();
+
+  useEffect(() => setSubmitDisabled(!isValid), [isValid, setSubmitDisabled]);
+
+  return (
+    <Form>
+      <FormLabel component="legend">FHIR server configuration</FormLabel>
+
+      <FormControl component="fieldset">
+        <RadioGroupField name="radio"/>
+      </FormControl>
+
+      {values.radio > 0 ? (
+        <div>
+          <TextField
+            required={true}
+            name={'fhirServer'}
+            label={'FHIR Server'}
+            placeholder={'The base URL of the CDS Client\'s FHIR server'}
+          />
+
+          <TextField
+            required={true}
+            name={'accessToken'}
+            label={'Access Token'}
+            placeholder={'The OAuth 2.0 access token that provides access to the FHIR server'}
+          />
+
+          <TextField
+            required={true}
+            name={'scope'}
+            label={'Scope'}
+            placeholder={'The scopes the access token grants the CDS Service'}
+          />
+
+          <TextField
+            required={true}
+            name={'expiresIn'}
+            label={'Expires In'}
+            placeholder={'The lifetime in seconds of the access token.'}
+          />
+
+          <TextField
+            required={true}
+            name={'subject'}
+            label={'Subject'}
+            placeholder={'The OAuth 2.0 client identifier of the CDS Service'}
+          />
+
+          <SelectGroupField name="fhirVersion"/>
+        </div>
+      ) : (
+        null
+      )}
+
+      <MuiPickersUtilsProvider utils={DateFnsUtils}>
+        <FormLabel component="legend">Set period to run rule over</FormLabel>
+        <Grid container justify="space-around">
+          <DatePickerField name="startDate" label="Start Date"/>
+          <DatePickerField name="endDate" label="End Date"/>
+        </Grid>
+      </MuiPickersUtilsProvider>
+    </Form>
+  );
+});
+
+export default function RunRuleModal({artifactEditing, showModal, showNextModal, closeModal}) {
+  const formRef = useRef();
+  const dispatch = useDispatch();
+  const [submitDisabled, setSubmitDisabled] = useState(true);
+
+  const handleSaveModal = useCallback(() => {
+    formRef.current.submitForm();
+  }, [formRef]);
+
+  const validate = useCallback(values => {
+    const errors = {};
+    if (values.fhirServer === '') errors.fhirServer = 'Required';
+    if (values.accessToken === '') errors.accessToken = 'Required';
+    if (values.scope === '') errors.scope = 'Required';
+    if (values.expiresIn === '') errors.expiresIn = 'Required';
+    if (values.subject === '') errors.subject = 'Required';
+
+
+    return errors;
+  }, []);
+
+  const handleSubmit = useCallback(
+    values => {
+      const newValues = {
+        ...values,
+        startDate: dateToStringTransform(values.startDate),
+        endDate: dateToStringTransform(values.endDate),
+      };
+
+
+      dispatch(updateAndSaveArtifact(artifactEditing, {fhirServer: newValues}));
+      showNextModal();
+    },
+    [showNextModal, dispatch, artifactEditing]
+  );
+
+
+  return (
+    <div className="element-modal">
+      <Modal
+        handleCloseModal={closeModal}
+        handleSaveModal={handleSaveModal}
+        handleShowModal={showModal}
+        maxWidth="xl"
+        submitButtonText={'Next'}
+        submitDisabled={submitDisabled}
+        title={'Run Rule Configuration'}
+      >
+        <Formik
+          innerRef={formRef}
+          initialValues={initialValues}
+          onSubmit={handleSubmit}
+          validate={validate}
+          validateOnMount
+        >
+          <RunRuleModalForm setSubmitDisabled={setSubmitDisabled}/>
+        </Formik>
+      </Modal>
+    </div>
+  );
+}

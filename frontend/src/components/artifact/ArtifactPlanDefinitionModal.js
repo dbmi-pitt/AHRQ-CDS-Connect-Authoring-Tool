@@ -20,7 +20,6 @@ export default class ArtifactPlanDefinitionModal extends Component {
       planDefinitionRecommendations: artifact ? artifact.planDefinitionRecommendations : '',
       planDefinition: {
         'planDefinitionURL': '',
-        // 'planDefinitionLibraryURL': '',
         'planDefinitionTopicText': '',
         'relatedArtifactType': '',
         'relatedArtifactName': '',
@@ -34,7 +33,6 @@ export default class ArtifactPlanDefinitionModal extends Component {
     this.setState({
       planDefinition: {
         'planDefinitionURL': '',
-        // 'planDefinitionLibraryURL': '',
         'planDefinitionTopicText': '',
         'relatedArtifactType': '',
         'relatedArtifactName': '',
@@ -62,14 +60,14 @@ export default class ArtifactPlanDefinitionModal extends Component {
   }
 
   render() {
-    const {showModal, closeModal, saveModal} = this.props;
+    const {showModal, closeModal, saveModal, title, submitText} = this.props;
     const {pddiRecommendations, recommendations} = this.state;
 
     return (
       <Modal
         onAfterOpen={this.onAfterOpen}
-        title="Create Plan Definition"
-        submitButtonText="Download"
+        title={title}
+        submitButtonText={submitText}
         maxWidth="xl"
         handleShowModal={showModal}
         handleCloseModal={closeModal}
@@ -85,12 +83,6 @@ export default class ArtifactPlanDefinitionModal extends Component {
             value={this.state.planDefinition.planDefinitionURL}
             updateInstance={this.handleInputChange}
           />
-          {/*<StringField*/}
-          {/*  id={'planDefinitionLibraryURL'}*/}
-          {/*  name={'Library ID'}*/}
-          {/*  value={this.state.planDefinition.planDefinitionLibraryURL}*/}
-          {/*  updateInstance={this.handleInputChange}*/}
-          {/*/>*/}
 
           <StringField
             id={'planDefinitionTopicText'}
@@ -124,36 +116,37 @@ export default class ArtifactPlanDefinitionModal extends Component {
             value={this.state.planDefinition.relatedArtifactURL}
             updateInstance={this.handleInputChange}
           />
+
+          <FormControl component="fieldset">
+            <FormLabel component="legend">Select the recommendations to be used in the Plan Definition</FormLabel>
+            <FormGroup>
+              {pddiRecommendations.length > 0 ? (
+                pddiRecommendations.map((element, index) => {
+                  return (
+                    <FormControlLabel key={index}
+                                      control={<Checkbox onChange={this.handleCheckboxInputChange} value={element.text}
+                                                         id={"artifact-pddiRecommendations-" + index}
+                                                         name="artifact-recommendations"/>}
+                                      label={element.text}
+                    />
+                  );
+                })
+              ) : (
+                recommendations.map((element, index) => {
+                  return (
+                    <FormControlLabel key={index}
+                                      control={<Checkbox onChange={this.handleCheckboxInputChange} value={element.text}
+                                                         id={"artifact-pddiRecommendations-" + index}
+                                                         name="artifact-recommendations"/>}
+                                      label={element.text}
+                    />
+                  );
+                })
+              )
+              }
+            </FormGroup>
+          </FormControl>
         </div>
-
-        <FormControl component="fieldset">
-          <FormLabel component="legend">Select the recommendations to be used in the Plan Definition</FormLabel>
-          <FormGroup>
-            {pddiRecommendations.length > 0 ? (
-              pddiRecommendations.map((key, index) => {
-                return (
-                  <FormControlLabel
-                    control={<Checkbox onChange={this.handleCheckboxInputChange} value={key.text}
-                                       id={"artifact-pddiRecommendations-" + index} name="artifact-recommendations"/>}
-                    label={key.text}
-                  />
-                );
-              })
-            ) : (
-              recommendations.map((key, index) => {
-                return (
-                  <FormControlLabel
-                    control={<Checkbox onChange={this.handleCheckboxInputChange} value={key.text}
-                                       id={"artifact-pddiRecommendations-" + index} name="artifact-recommendations"/>}
-                    label={key.text}
-                  />
-                );
-              })
-            )
-            }
-          </FormGroup>
-        </FormControl>
-
       </Modal>
     );
   }

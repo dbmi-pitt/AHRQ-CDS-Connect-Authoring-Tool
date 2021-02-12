@@ -36,6 +36,7 @@ const ArtifactSchema = new Schema({
   expTreeInclude: Object,
   expTreeExclude: Object,
   recommendations: Array,
+  fhirServer: Object,
   pddiRecommendations: Array,
   planDefinitionRecommendations: Array,
   planDefinition: Object,

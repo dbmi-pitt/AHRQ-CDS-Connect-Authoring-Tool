@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import { useFlexStyles } from 'styles/hooks';
 import useStyles from './styles';
 
-const StringField = ({ disabled, id, name, updateInstance, value, placeholder }) => {
+const StringField = ({ disabled, id, name, updateInstance, value, placeholder, required }) => {
   const styles = useStyles();
   const flexStyles = useFlexStyles();
 
