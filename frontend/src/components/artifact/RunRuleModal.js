@@ -1,7 +1,7 @@
-import React, { memo, useState, useCallback, useEffect, useRef } from 'react';
+import React, {memo, useState, useCallback, useEffect, useRef} from 'react';
 
 import {Modal} from 'components/elements';
-import {SelectField, TextField} from 'components/fields';
+import {DateRangeField, SelectField, TextField} from 'components/fields';
 import {useDispatch} from 'react-redux';
 
 import {
@@ -9,11 +9,8 @@ import {
   FormLabel,
   Radio,
   RadioGroup,
-  Grid,
   FormControl
 } from "@material-ui/core";
-import {MuiPickersUtilsProvider, KeyboardDatePicker} from "@material-ui/pickers";
-import DateFnsUtils from "@date-io/date-fns";
 import {Form, Formik, useField, useFormikContext} from "formik";
 import {formatISO} from "date-fns";
 import {updateAndSaveArtifact} from "../../actions/artifacts";
@@ -26,8 +23,10 @@ const initialValues =
     scope: 'launch profile openid online_access user/*.*',
     expiresIn: '300',
     subject: 'patient',
-    startDate: new Date(),
-    endDate: new Date(),
+    effectivePeriod: {
+      start: new Date(),
+      end: new Date()
+    },
     fhirVersion: '3.0.0',
     radio: "0"
   };
@@ -95,37 +94,13 @@ export const RadioGroupField = ({...props}) => {
   );
 };
 
-
-export const DatePickerField = ({...props}) => {
-  const {setFieldValue} = useFormikContext();
-  const [field] = useField(props);
-  return (
-    <KeyboardDatePicker
-      {...field}
-      {...props}
-      disableToolbar
-      variant="inline"
-      format="MM/dd/yyyy"
-      margin="normal"
-      value={field.value}
-      label={props.label}
-      onChange={val => {
-        setFieldValue(field.name, val);
-      }}
-      KeyboardButtonProps={{
-        'aria-label': 'change date',
-      }}
-    />
-  );
-};
-
 function dateToStringTransform(value) {
   if (value == null) return value;
   return formatISO(value);
 }
 
 const RunRuleModalForm = memo(({setSubmitDisabled}) => {
-  const {values, isValid} = useFormikContext();
+  const {errors, values, isValid} = useFormikContext();
 
   useEffect(() => setSubmitDisabled(!isValid), [isValid, setSubmitDisabled]);
 
@@ -180,13 +155,11 @@ const RunRuleModalForm = memo(({setSubmitDisabled}) => {
         null
       )}
 
-      <MuiPickersUtilsProvider utils={DateFnsUtils}>
-        <FormLabel component="legend">Set period to run rule over</FormLabel>
-        <Grid container justify="space-around">
-          <DatePickerField name="startDate" label="Start Date"/>
-          <DatePickerField name="endDate" label="End Date"/>
-        </Grid>
-      </MuiPickersUtilsProvider>
+      <DateRangeField
+        name={"effectivePeriod"}
+        label={"Run rule over period"}
+        helperText={errors.effectivePeriod}
+      />
     </Form>
   );
 });
@@ -208,6 +181,10 @@ export default function RunRuleModal({artifactEditing, showModal, showNextModal,
     if (values.expiresIn === '') errors.expiresIn = 'Required';
     if (values.subject === '') errors.subject = 'Required';
 
+    if (dateToStringTransform(values.effectivePeriod.start) > dateToStringTransform(values.effectivePeriod.end)) {
+      errors.effectivePeriod = 'Start date must be before end date';
+
+    }
 
     return errors;
   }, []);
@@ -216,8 +193,8 @@ export default function RunRuleModal({artifactEditing, showModal, showNextModal,
     values => {
       const newValues = {
         ...values,
-        startDate: dateToStringTransform(values.startDate),
-        endDate: dateToStringTransform(values.endDate),
+        startDate: dateToStringTransform(values.effectivePeriod.start),
+        endDate: dateToStringTransform(values.effectivePeriod.end)
       };
 
 
