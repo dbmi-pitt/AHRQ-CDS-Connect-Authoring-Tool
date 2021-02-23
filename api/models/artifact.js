@@ -54,10 +54,7 @@ const ArtifactSchema = new Schema({
 ArtifactSchema.methods.toPublishableLibrary = function(){
 
   //the ultimate value to return
-  let bundle = {};
-  bundle["resourceType"] = "Bundle";
-  bundle["type"] = "transaction";
-  bundle["entry"] = [];
+
 
   let dataRequirement = new Set();
   for(let index = 0; index < this.baseElements.length; index++){
@@ -169,8 +166,7 @@ ArtifactSchema.methods.toPublishableLibrary = function(){
   });
   removeEmpty(retVal);
 
-  bundle["entry"].push(retVal);
-  return bundle;
+  return retVal;
 };
 
 //helper function to map contacts into CPG form.  used by toPublishableLibrary()

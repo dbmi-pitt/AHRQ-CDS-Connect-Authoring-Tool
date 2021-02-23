@@ -11,6 +11,7 @@ const glob = require('glob');
 const request = require('request');
 const Busboy = require('busboy');
 const { exportCQL, importCQL, RawCQL } = require('cql-merge');
+const temp = require('tmp');
 
 const templatePath = './data/cql/templates';
 const specificPath = './data/cql/specificTemplates';
@@ -1212,19 +1213,29 @@ function validateELM(artifact, artifactJson, externalLibs, writeStream, callback
 
 
 //given a CQLArtifact, find the associated Artifact in the DB, convert it to a CPG Publishable Library
-function convertToCPGPL(cqlArtifact){
-  return Artifact.findOne({_id: { $ne: null, $eq: cqlArtifact._id }})
+function convertToCPGPL(cqlArtifact, artifactJson){
+    return Artifact.findOne({_id: { $ne: null, $eq: cqlArtifact._id }})
     .exec()
     .then((artifact) => {
       let cpg = artifact.toPublishableLibrary();
-      let cqlBuffer = Buffer.from(cqlArtifact.toJson().text);
+      let cqlBuffer = Buffer.from(artifactJson.text);
+
       cpg['content'] = [
         {
-          "contentType": "application/cql",
+          "contentType": "text/cql",
           "data": cqlBuffer.toString('base64'),
         },
       ]; //{content type: application/cql, data: base64 of the CQL)
-      return JSON.stringify(cpg,null,2);
+
+      let bundle = {};
+      bundle["resourceType"] = "Bundle";
+      bundle["type"] = "transaction";
+      bundle["entry"] = [];
+
+      let resource = {};
+      resource['resource'] = cpg;
+      bundle["entry"].push(resource);
+      return JSON.stringify(bundle,null,2);
 
     })
     .catch((err) => {
@@ -1238,7 +1249,7 @@ function writeZip(artifact, artifactJson, externalLibs, writeStream, callback /*
    const planDefinition = writePlanDefinition(artifact);
 
    //convert the artifact to a CPG Publishable Library
-  convertToCPGPL(artifact).then(function(cpgString){
+  convertToCPGPL(artifact, artifactJson).then(function(cpgString){
     // We must first convert to ELM before packaging up
     convertToElm(artifacts, (err, elmFiles) => {
       if (err) {
@@ -1382,19 +1393,18 @@ function buildCQL(artifactBody) {
 }
 
 function writePlanDefinition(artifact) {
-  console.log(artifact.planDefinitionRecommendations);
+  console.log(artifact.planDefinition.planDefinitionRecommendations);
   return ejs.render(
       templateMap.PlanDefinition,
       {
         element_id: artifact.name.toLowerCase().replace(/\s+/g, "-"),
         element_name: artifact.name,
         element_version: artifact.version,
-        element_url: artifact.planDefinition.planDefinitionURL,
         element_topic: artifact.planDefinition.planDefinitionTopicText,
         element_related_artifact_type: artifact.planDefinition.relatedArtifactType,
         element_related_artifact_name: artifact.planDefinition.relatedArtifactName,
         element_related_artifact_url: artifact.planDefinition.relatedArtifactURL,
-        planDefinitionRecommendations: artifact.planDefinitionRecommendations,
+        planDefinitionRecommendations: artifact.planDefinition.planDefinitionRecommendations,
         element_recommendations: artifact.pddiRecommendations
       }
   );

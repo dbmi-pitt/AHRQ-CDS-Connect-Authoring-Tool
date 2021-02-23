@@ -1,160 +1,209 @@
-import React, {Component} from 'react';
-import PropTypes from 'prop-types';
+import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 
 import {Modal} from 'components/elements';
 
-import artifactProps from '../../prop-types/artifact';
-import StringField from "../builder/fields/StringField";
-import {Checkbox, FormControl, FormControlLabel, FormGroup, FormLabel} from "@material-ui/core";
+import {Checkbox, FormControlLabel, FormLabel} from "@material-ui/core";
+import {Form, Formik, useField, useFormikContext} from "formik";
+import {SelectField, TextField} from "../fields";
+import {useDispatch} from "react-redux";
+import {updateAndSaveArtifact} from "../../actions/artifacts";
 
-export default class ArtifactPlanDefinitionModal extends Component {
 
-  constructor(props) {
-    super(props);
-
-    const {artifact: artifact} = this.props;
-
-    this.state = {
-      pddiRecommendations: artifact ? artifact.pddiRecommendations : '',
-      recommendations: artifact ? artifact.recommendations : '',
-      planDefinitionRecommendations: artifact ? artifact.planDefinitionRecommendations : '',
-      planDefinition: {
-        'planDefinitionURL': '',
-        'planDefinitionTopicText': '',
-        'relatedArtifactType': '',
-        'relatedArtifactName': '',
-        'relatedArtifactURL': ''
-      }
-    };
-  }
-
-  onAfterOpen = () => {
-    this.setState({planDefinitionRecommendations: []});
-    this.setState({
-      planDefinition: {
-        'planDefinitionURL': '',
-        'planDefinitionTopicText': '',
-        'relatedArtifactType': '',
-        'relatedArtifactName': '',
-        'relatedArtifactURL': ''
-      }
-    });
-  }
-
-  handleCheckboxInputChange = (event) => {
-    var checkedBoxes = document.querySelectorAll('input[name=' + event.target.name + ']:checked');
-    var planDefinitionRecommendations = [];
-    for (var i = 0; i < checkedBoxes.length; i++) {
-      if (checkedBoxes[i].checked) {
-        planDefinitionRecommendations.push(checkedBoxes[i].value);
-      }
-    }
-    this.setState({planDefinitionRecommendations: planDefinitionRecommendations});
-  }
-
-  handleInputChange = (input) => {
-    var planDefinition = this.state.planDefinition;
-    planDefinition[Object.keys(input)[0]] = Object.values(input)[0];
-
-    this.setState({planDefinition: planDefinition});
-  }
-
-  render() {
-    const {showModal, closeModal, saveModal, title, submitText} = this.props;
-    const {pddiRecommendations, recommendations} = this.state;
-
-    return (
-      <Modal
-        onAfterOpen={this.onAfterOpen}
-        title={title}
-        submitButtonText={submitText}
-        maxWidth="xl"
-        handleShowModal={showModal}
-        handleCloseModal={closeModal}
-        handleSaveModal={() => saveModal(this.state)}>
-
-        <div>
-          <FormLabel component="legend">Define the following fields for the Plan Definition</FormLabel>
-
-          <StringField
-            id={'planDefinitionURL'}
-            name={'Plan Definition URL'}
-            placeholder={'Canonical identifier for this plan definition'}
-            value={this.state.planDefinition.planDefinitionURL}
-            updateInstance={this.handleInputChange}
-          />
-
-          <StringField
-            id={'planDefinitionTopicText'}
-            name={'Topic Text'}
-            placeholder={'Descriptive topics related to the content of the plan definition'}
-            value={this.state.planDefinition.planDefinitionTopicText}
-            updateInstance={this.handleInputChange}
-          />
-
-          <StringField
-            id={'relatedArtifactType'}
-            name={'Related Artifact Type'}
-            placeholder={'documentation | justification | citation | predecessor ' +
-            '| successor | derived-from | depends-on | composed-of'}
-            value={this.state.planDefinition.relatedArtifactType}
-            updateInstance={this.handleInputChange}
-          />
-
-          <StringField
-            id={'relatedArtifactName'}
-            name={'Related Artifact Display'}
-            placeholder={'Brief description of the related artifact'}
-            value={this.state.planDefinition.relatedArtifactName}
-            updateInstance={this.handleInputChange}
-          />
-
-          <StringField
-            id={'relatedArtifactURL'}
-            name={'Related Artifact URL'}
-            placeholder={'Where the artifact can be accessed'}
-            value={this.state.planDefinition.relatedArtifactURL}
-            updateInstance={this.handleInputChange}
-          />
-
-          <FormControl component="fieldset">
-            <FormLabel component="legend">Select the recommendations to be used in the Plan Definition</FormLabel>
-            <FormGroup>
-              {pddiRecommendations.length > 0 ? (
-                pddiRecommendations.map((element, index) => {
-                  return (
-                    <FormControlLabel key={index}
-                                      control={<Checkbox onChange={this.handleCheckboxInputChange} value={element.text}
-                                                         id={"artifact-pddiRecommendations-" + index}
-                                                         name="artifact-recommendations"/>}
-                                      label={element.text}
-                    />
-                  );
-                })
-              ) : (
-                recommendations.map((element, index) => {
-                  return (
-                    <FormControlLabel key={index}
-                                      control={<Checkbox onChange={this.handleCheckboxInputChange} value={element.text}
-                                                         id={"artifact-pddiRecommendations-" + index}
-                                                         name="artifact-recommendations"/>}
-                                      label={element.text}
-                    />
-                  );
-                })
-              )
-              }
-            </FormGroup>
-          </FormControl>
-        </div>
-      </Modal>
-    );
-  }
+function getInitialValue(artifactEditing, valueName, defaultValue, transformer = x => x) {
+  if (!artifactEditing || artifactEditing[valueName] == null) return defaultValue;
+  return transformer(artifactEditing[valueName]);
 }
 
-ArtifactPlanDefinitionModal.propTypes = {
-  artifact: artifactProps,
-  showModal: PropTypes.bool.isRequired,
-  closeModal: PropTypes.func.isRequired,
-  saveModal: PropTypes.func.isRequired,
+const useInitialValues = artifactEditing =>
+  useMemo(
+    () => ({
+      planDefinitionTopicText: '',
+      relatedArtifactType: 'documentation',
+      relatedArtifactName: '',
+      relatedArtifactURL: '',
+      pddiRecommendations: getInitialValue(artifactEditing, 'pddiRecommendations', []),
+      recommendations: getInitialValue(artifactEditing, 'recommendations', []),
+      planDefinitionRecommendations: []
+    }),
+    [artifactEditing]
+  );
+
+
+const relatedArtifactTypes = [
+  {value: 'documentation', label: 'documentation', id: 'documentation'},
+  {value: 'justification', label: 'justification', id: 'justification'},
+  {value: 'citation', label: 'citation', id: 'citation'},
+  {value: 'predecessor', label: 'predecessor', id: 'predecessor'},
+  {value: 'successor', label: 'successor', id: 'successor'},
+  {value: 'derived-from', label: 'derived-from', id: 'derived-from'},
+  {value: 'depends-on', label: 'depends-on', id: 'depends-on'},
+  {value: 'composed-of', label: 'composed-of', id: 'composed-of'},
+];
+
+export const SelectGroupField = ({...props}) => {
+  const {setFieldValue} = useFormikContext();
+  const [field] = useField(props);
+
+  return (
+    <div className="field-group">
+      <SelectField
+        {...field}
+        {...props}
+        value={field.value}
+        name={field.name}
+        label={"Related Artifact Type"}
+        onChange={val => {
+          setFieldValue(field.name, val);
+        }}
+        options={relatedArtifactTypes}/>
+    </div>
+  );
 };
+
+export const CheckboxGroupField = ({...props}) => {
+  const {setFieldValue} = useFormikContext();
+  const [field] = useField(props);
+
+  return (
+    <FormControlLabel key={props.index}
+                      control={<Checkbox
+                        {...field}
+                        {...props}
+                        value={props.text}
+                        name={field.name}
+                        onChange={event => {
+                          let checkedBoxes = document.querySelectorAll('input[name=' + event.target.name + ']:checked');
+                          let planDefinitionRecommendations = [];
+                          for (let i = 0; i < checkedBoxes.length; i++) {
+                            if (checkedBoxes[i].checked) {
+                              planDefinitionRecommendations.push(checkedBoxes[i].value);
+                            }
+                          }
+                          setFieldValue(field.name, planDefinitionRecommendations);
+                        }}
+                      />}
+                      label={props.text}
+    />
+  );
+};
+
+const ArtifactPlanDefinitonModalForm = memo(({setSubmitDisabled}) => {
+  const {values, isValid} = useFormikContext();
+
+  useEffect(() => setSubmitDisabled(!isValid), [isValid, setSubmitDisabled]);
+
+  return (
+    <Form>
+      <FormLabel component="legend">Define the following fields for the Plan Definition</FormLabel>
+
+      <TextField
+        required={true}
+        name={'planDefinitionTopicText'}
+        label={'Topic Text'}
+        placeholder={'Descriptive topics related to the content of the plan definition'}
+      />
+
+      <SelectGroupField name="relatedArtifactType"/>
+
+      <TextField
+        required={true}
+        name={'relatedArtifactName'}
+        label={'Related Artifact Display'}
+        placeholder={'Brief description of the related artifact'}
+      />
+
+      <TextField
+        required={true}
+        name={'relatedArtifactURL'}
+        label={'Related Artifact URL'}
+        placeholder={'Where the artifact can be accessed'}
+      />
+
+      <FormLabel component="legend">Select the recommendations to be used in the Plan Definition</FormLabel>
+      {values.pddiRecommendations.length > 0 ? (
+        values.pddiRecommendations.map((element, index) => {
+          return (
+            <CheckboxGroupField
+              text={element.text}
+              index={index}
+              name={"planDefinitionRecommendations"}
+            />
+          );
+        })
+      ) : (
+        values.recommendations.map((element, index) => {
+          return (
+            <CheckboxGroupField
+              text={element.text}
+              index={index}
+              name={"planDefinitionRecommendations"}
+            />
+          );
+        })
+      )
+      }
+
+    </Form>
+
+  );
+});
+
+export default function ArtifactPlanDefinitionModal({artifactEditing, showModal, download, closeModal}) {
+  const formRef = useRef();
+  const dispatch = useDispatch();
+  const initialValues = useInitialValues(artifactEditing);
+  const [submitDisabled, setSubmitDisabled] = useState(true);
+
+  const handleSaveModal = useCallback(() => {
+    formRef.current.submitForm();
+  }, [formRef]);
+
+  const validate = useCallback(values => {
+    const errors = {};
+    if (values.planDefinitionTopicText === '') errors.planDefinitionTopicText = 'Required';
+    if (values.relatedArtifactType === '') errors.relatedArtifactType = 'Required';
+    if (values.relatedArtifactName === '') errors.relatedArtifactName = 'Required';
+    if (values.relatedArtifactURL === '') errors.relatedArtifactURL = 'Required';
+
+    return errors;
+  }, []);
+
+  const handleSubmit = useCallback(
+    values => {
+      const newValues = {
+        ...values,
+      };
+
+
+      dispatch(updateAndSaveArtifact(artifactEditing, {planDefinition: newValues}));
+      download();
+    },
+    [download, dispatch, artifactEditing]
+  );
+
+
+  return (
+    <div className="element-modal">
+      <Modal
+        handleCloseModal={closeModal}
+        handleSaveModal={handleSaveModal}
+        handleShowModal={showModal}
+        maxWidth="xl"
+        submitButtonText={'Download'}
+        submitDisabled={submitDisabled}
+        title={'Run Rule Configuration'}
+      >
+        <Formik
+          innerRef={formRef}
+          initialValues={initialValues}
+          onSubmit={handleSubmit}
+          validate={validate}
+          validateOnMount
+        >
+          <ArtifactPlanDefinitonModalForm setSubmitDisabled={setSubmitDisabled}/>
+        </Formik>
+      </Modal>
+    </div>
+  );
+}
+

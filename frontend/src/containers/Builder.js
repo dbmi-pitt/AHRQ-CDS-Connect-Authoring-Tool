@@ -291,7 +291,6 @@ export class Builder extends Component {
   }
 
   handleSaveArtifactAndRun = async (artifactPropsChanged) => {
-    console.log(artifactPropsChanged);
     this.setState({showRunRuleModal: false});
     this.setState({artifactPlanDefinitionTitle: "Run Rule Configuration"});
     this.setState({artifactPlanDefinitionSubmitText: "Run Rule"});
@@ -306,6 +305,7 @@ export class Builder extends Component {
     this.setState({version: version});
     this.setState({disable: disable});
     await this.props.updateAndSaveArtifact(this.props.artifact, {planDefinitionRecommendations: []});
+    await this.props.updateAndSaveArtifact(this.props.artifact, {fhirServer: {}});
     this.setState({artifact: this.props.artifact});
   }
 
@@ -314,7 +314,6 @@ export class Builder extends Component {
   }
 
   handleSaveArtifactAndDownload = async (artifactPropsChanged) => {
-    await this.props.updateAndSaveArtifact(this.props.artifact, artifactPropsChanged);
     this.downloadOptionSelected(this.state.disable, this.state.version);
     this.closeArtifactPlanDefinitionModal(false);
 
@@ -850,10 +849,10 @@ export class Builder extends Component {
         />
 
         <ArtifactPlanDefinitionModal
-          artifact={artifact}
+          artifactEditing={artifact}
           showModal={this.state.showArtifactPlanDefinitionModal}
           closeModal={this.closeArtifactPlanDefinitionModal}
-          saveModal={this.handleSaveArtifactAndDownload}
+          download={this.handleSaveArtifactAndDownload}
           title={this.state.artifactPlanDefinitionTitle}
           submitText={this.state.artifactPlanDefinitionSubmitText}
         />
