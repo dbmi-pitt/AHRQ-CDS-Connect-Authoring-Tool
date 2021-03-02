@@ -13,6 +13,7 @@
     "@material-ui/icons": "^4.9.1",
     "@material-ui/lab": "^4.0.0-alpha.56",
     "@material-ui/pickers": "^3.2.10",
+    "@syncfusion/ej2-base": "^18.4.44",
     "@syncfusion/ej2-diagrams": "^18.4.46",
     "axios": "^0.21.1",
     "bootstrap": "^4.0.0-beta",

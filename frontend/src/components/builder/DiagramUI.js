@@ -1,5 +1,5 @@
 import React from 'react';
-import { SymbolPaletteComponent, DiagramComponent, Node } from '@syncfusion/ej2-react-diagrams';
+import { SymbolPaletteComponent, DiagramComponent, Node } from '@syncfusion/ej2-diagrams';
 import { SampleBase } from './SampleBase';
 import { Modal } from 'components/elements';
 import '../../styles/components/builder/fonticons.css';
@@ -249,7 +249,7 @@ export default class DiagramUI extends SampleBase {
                         obj.height *= ratio;
                         obj.offsetX += (obj.width - oWidth) / 2;
                         obj.offsetY += (obj.height - oHeight) / 2;
-                        obj.style = { fill: '#D5EDED', strokeColor: "#7DCFC9", strokeWidth: 1};
+                        obj.style = { fill: '#D5EDED', strokeColor: '#7DCFC9', strokeWidth: 1 };
                       }
                     }}
                     doubleClick={this.openElementModal}
