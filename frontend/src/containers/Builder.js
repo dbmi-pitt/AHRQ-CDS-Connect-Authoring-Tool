@@ -48,6 +48,7 @@ import {findValueAtPath} from '../utils/find';
 
 import artifactProps from '../prop-types/artifact';
 import PDDIRecommendations from "../components/builder/PDDIRecommendations";
+import DiagramUI from 'components/builder/DiagramUI';
 
 // TODO: This is needed because the tree on this.state is not updated in time. Figure out a better way to handle this
 let localTree;
@@ -604,6 +605,7 @@ export class Builder extends Component {
           <section className="builder__canvas">
             <Tabs selectedIndex={this.state.activeTabIndex} onSelect={tabIndex => this.setActiveTab(tabIndex)}>
               <TabList aria-label="Workspace Tabs">
+                <Tab>Diagram</Tab>
                 <Tab>Base Elements</Tab>
                 <Tab>Inclusions</Tab>
                 <Tab>Exclusions</Tab>
@@ -617,6 +619,13 @@ export class Builder extends Component {
               </TabList>
 
               <div className="tab-panel-container">
+              <TabPanel>
+                <div className="workspace-blurb">Build a decision diagram.</div>
+                <DiagramUI
+                  inclusionElements={this.renderConjunctionGroup('expTreeInclude')}
+                  exclusionElements={this.renderConjunctionGroup('expTreeExclude')}
+                />
+              </TabPanel>
                 <TabPanel>
                   <div className="workspace-blurb">
                     Specify individual elements that can be re-used in the Inclusions, Exclusions, and Subpopulations,
