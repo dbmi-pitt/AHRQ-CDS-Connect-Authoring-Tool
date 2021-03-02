@@ -1740,7 +1740,7 @@
   dependencies:
     "@syncfusion/ej2-base" "~18.4.44"
 
-"@syncfusion/ej2-diagrams@^18.4.46":
+"@syncfusion/ej2-diagrams@18.4.46":
   version "18.4.46"
   resolved "https://registry.yarnpkg.com/@syncfusion/ej2-diagrams/-/ej2-diagrams-18.4.46.tgz#25472fb60787a389456c79a3964468b5cff87ea8"
   integrity sha512-ywL3c43U53ZTpJOVMnI2Yb0FTa9Gk045C+/FTEygsjnVdqd+C9R1lHyr6xEIU+ovvRep33qVz14MSVo24qe0hg==
@@ -1796,6 +1796,22 @@
   dependencies:
     "@syncfusion/ej2-base" "~18.4.44"
     "@syncfusion/ej2-buttons" "~18.4.44"
+
+"@syncfusion/ej2-react-base@~18.4.46":
+  version "18.4.46"
+  resolved "https://registry.yarnpkg.com/@syncfusion/ej2-react-base/-/ej2-react-base-18.4.46.tgz#913da92bc90e190b13891061a1a746ef841d01ad"
+  integrity sha512-1VBWO7YtTro8oBJjpK6/tS4BspibR8nB/97Mml13skqL8VUm7d1+/tCKQFXK32XoRfnSr+93QKeMGYKaPgm7OA==
+  dependencies:
+    "@syncfusion/ej2-base" "~18.4.44"
+
+"@syncfusion/ej2-react-diagrams@^18.4.46":
+  version "18.4.46"
+  resolved "https://registry.yarnpkg.com/@syncfusion/ej2-react-diagrams/-/ej2-react-diagrams-18.4.46.tgz#8a5fbff4bf576edd775deadf91eadd689ac83594"
+  integrity sha512-3BrXBJaU51RQHk17c1qcCusyJVDb4hqK39C1hv24iCwPHweFNuANbqsfQ1P360kwI/JHiZcqOoUL+dGsfbOTFg==
+  dependencies:
+    "@syncfusion/ej2-base" "~18.4.44"
+    "@syncfusion/ej2-diagrams" "18.4.46"
+    "@syncfusion/ej2-react-base" "~18.4.46"
 
 "@syncfusion/ej2-splitbuttons@~18.4.41":
   version "18.4.41"

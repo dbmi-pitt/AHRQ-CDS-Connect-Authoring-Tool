@@ -1,5 +1,5 @@
 import React from 'react';
-import { SymbolPaletteComponent, DiagramComponent, Node } from '@syncfusion/ej2-diagrams';
+import { SymbolPaletteComponent, DiagramComponent, Node } from '@syncfusion/ej2-react-diagrams';
 import { SampleBase } from './SampleBase';
 import { Modal } from 'components/elements';
 import '../../styles/components/builder/fonticons.css';
