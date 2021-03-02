@@ -6,11 +6,23 @@ import '../../styles/components/builder/fonticons.css';
 
 // initialize the flowshapes for the symbol palatte
 let flowshapes = [
-  { id: 'Inclusion', shape: { type: 'Flow', shape: 'Terminator' }, annotations: [{ content: 'Inclusion Element' }] },
-  { id: 'Exclusion', shape: { type: 'Flow', shape: 'Process' }, annotations: [{ content: 'Exclusion Element' }] },
-  { id: 'Decision', shape: { type: 'Flow', shape: 'Decision' }, annotations: [{ content: 'Decision Element' }] },
   {
-    id: 'Recommentation',
+    id: 'Inclusions',
+    shape: { type: 'Flow', shape: 'Terminator' },
+    annotations: [{ content: 'Inclusion Element' }]
+  },
+  {
+    id: 'Exclusions',
+    shape: { type: 'Flow', shape: 'Process' },
+    annotations: [{ content: 'Exclusion Element' }]
+  },
+  {
+    id: 'Subpopulations',
+    shape: { type: 'Flow', shape: 'Decision' },
+    annotations: [{ content: 'Subpopulation Element' }]
+  },
+  {
+    id: 'Recommentations',
     shape: { type: 'Flow', shape: 'PaperTap' },
     annotations: [{ content: 'Recommentation Element' }]
   }
@@ -125,10 +137,16 @@ export default class DiagramUI extends SampleBase {
     let type = args.source.properties.shape.properties.shape;
     switch (type) {
       case 'Terminator':
-        this.setState({ elementModalTitle: 'Define Inclusion Element' });
+        this.setState({ elementModalTitle: 'Define Inclusion Elements' });
         break;
       case 'Process':
-        this.setState({ elementModalTitle: 'Define Exclusion Element' });
+        this.setState({ elementModalTitle: 'Define Exclusion Elements' });
+        break;
+      case 'Decision':
+        this.setState({ elementModalTitle: 'Define Subpopulation Elements' });
+        break;
+      case 'PaperTap':
+        this.setState({ elementModalTitle: 'Define Recommendation Elements' });
         break;
       default:
         this.setState({ elementModalTitle: '' });
@@ -185,10 +203,10 @@ export default class DiagramUI extends SampleBase {
                     symbolHeight={60}
                     symbolWidth={100}
                     getNodeDefaults={symbol => {
-                      if (symbol.id === 'Inclusion' || symbol.id === 'Exclusion') {
+                      if (symbol.id === 'Inclusions' || symbol.id === 'Exclusions') {
                         symbol.width = 80;
                         symbol.height = 40;
-                      } else if (symbol.id === 'Decision' || symbol.id === 'Recommentation') {
+                      } else if (symbol.id === 'Subpopulations' || symbol.id === 'Recommentations') {
                         symbol.width = 50;
                         symbol.height = 40;
                       } else {
@@ -269,6 +287,8 @@ export default class DiagramUI extends SampleBase {
         >
           {this.state.shapeType === 'Terminator' && this.props.inclusionElements}
           {this.state.shapeType === 'Process' && this.props.exclusionElements}
+          {this.state.shapeType === 'Decision' && this.props.subpopulationElements}
+          {this.state.shapeType === 'PaperTap' && this.props.recommendationElements}
         </Modal>
       </div>
     );

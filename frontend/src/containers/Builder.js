@@ -624,6 +624,62 @@ export class Builder extends Component {
                 <DiagramUI
                   inclusionElements={this.renderConjunctionGroup('expTreeInclude')}
                   exclusionElements={this.renderConjunctionGroup('expTreeExclude')}
+                  recommendationElements={
+                    <Recommendations
+                      artifact={artifact}
+                      templates={templates}
+                      updateRecommendations={this.updateRecommendations}
+                      updateSubpopulations={this.updateSubpopulations}
+                      setActiveTab={this.setActiveTab}
+                      uniqueIdCounter={this.state.uniqueIdCounter}
+                      incrementUniqueIdCounter={this.incrementUniqueIdCounter}
+                    />
+                  }
+                  subpopulationElements={
+                    <Subpopulations
+                      name={'subpopulations'}
+                      artifact={artifact}
+                      updateSubpopulations={this.updateSubpopulations}
+                      parameters={namedParameters}
+                      baseElements={artifact.baseElements}
+                      externalCqlList={this.props.externalCqlList}
+                      loadExternalCqlList={this.props.loadExternalCqlList}
+                      addInstance={this.addInstance}
+                      editInstance={this.editInstance}
+                      updateInstanceModifiers={this.updateInstanceModifiers}
+                      deleteInstance={this.deleteInstance}
+                      getAllInstances={this.getAllInstances}
+                      getAllInstancesInAllTrees={this.getAllInstancesInAllTrees}
+                      templates={templates}
+                      checkSubpopulationUsage={this.checkSubpopulationUsage}
+                      updateRecsSubpop={this.updateRecsSubpop}
+                      modifierMap={modifierMap}
+                      modifiersByInputType={modifiersByInputType}
+                      isLoadingModifiers={isLoadingModifiers}
+                      conversionFunctions={conversionFunctions}
+                      instanceNames={this.props.names}
+                      scrollToElement={this.scrollToElement}
+                      loginVSACUser={this.props.loginVSACUser}
+                      setVSACAuthStatus={this.props.setVSACAuthStatus}
+                      vsacStatus={this.props.vsacStatus}
+                      vsacStatusText={this.props.vsacStatusText}
+                      searchVSACByKeyword={this.props.searchVSACByKeyword}
+                      isSearchingVSAC={this.props.isSearchingVSAC}
+                      vsacSearchResults={this.props.vsacSearchResults}
+                      vsacSearchCount={this.props.vsacSearchCount}
+                      getVSDetails={this.props.getVSDetails}
+                      isRetrievingDetails={this.props.isRetrievingDetails}
+                      vsacDetailsCodes={this.props.vsacDetailsCodes}
+                      vsacDetailsCodesError={this.props.vsacDetailsCodesError}
+                      vsacApiKey={this.props.vsacApiKey}
+                      isValidatingCode={this.props.isValidatingCode}
+                      isValidCode={this.props.isValidCode}
+                      codeData={this.props.codeData}
+                      validateCode={this.props.validateCode}
+                      resetCodeValidation={this.props.resetCodeValidation}
+                      vsacIsAuthenticating={this.props.vsacIsAuthenticating}
+                    />
+                  }
                 />
               </TabPanel>
                 <TabPanel>
