@@ -45,6 +45,7 @@ const ArtifactSchema = new Schema({
   parameters: Array,
   errorStatement: Object,
   uniqueIdCounter: Number,
+  diagram: String,
   user: String
 }, {
   timestamps: true // adds created_at, updated_at

@@ -1,12 +1,12 @@
-import React, {Component} from 'react';
+import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import withGracefulUnmount from 'react-graceful-unmount';
-import {connect} from 'react-redux';
-import {bindActionCreators} from 'redux';
-import {Tab, Tabs, TabList, TabPanel} from 'react-tabs';
-import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
-import {faBook} from '@fortawesome/free-solid-svg-icons';
-import {Button, IconButton, Menu, MenuItem} from '@material-ui/core';
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
+import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBook } from '@fortawesome/free-solid-svg-icons';
+import { Button, IconButton, Menu, MenuItem } from '@material-ui/core';
 import {
   Edit as EditIcon,
   GetApp as GetAppIcon,
@@ -17,24 +17,40 @@ import {
 import _ from 'lodash';
 
 import loadTemplates from '../actions/templates';
-import {loadConversionFunctions} from '../actions/modifiers';
+import { loadConversionFunctions } from '../actions/modifiers';
 import {
-  setStatusMessage, downloadArtifact, saveArtifact, loadArtifact, updateArtifact, initializeArtifact,
-  updateAndSaveArtifact, publishArtifact, clearArtifactValidationWarnings
+  setStatusMessage,
+  downloadArtifact,
+  saveArtifact,
+  loadArtifact,
+  updateArtifact,
+  initializeArtifact,
+  updateAndSaveArtifact,
+  publishArtifact,
+  clearArtifactValidationWarnings
 } from '../actions/artifacts';
 import {
-  loginVSACUser, setVSACAuthStatus, searchVSACByKeyword, getVSDetails, validateCode, resetCodeValidation
+  loginVSACUser,
+  setVSACAuthStatus,
+  searchVSACByKeyword,
+  getVSDetails,
+  validateCode,
+  resetCodeValidation
 } from '../actions/vsac';
 import {
-  loadExternalCqlList, loadExternalCqlLibraryDetails, addExternalLibrary, deleteExternalCqlLibrary,
-  clearExternalCqlValidationWarnings, clearAddLibraryErrorsAndMessages
+  loadExternalCqlList,
+  loadExternalCqlLibraryDetails,
+  addExternalLibrary,
+  deleteExternalCqlLibrary,
+  clearExternalCqlValidationWarnings,
+  clearAddLibraryErrorsAndMessages
 } from '../actions/external_cql';
 
 import BaseElements from '../components/builder/BaseElements';
 import ConjunctionGroup from '../components/builder/ConjunctionGroup';
 import ArtifactModal from '../components/artifact/ArtifactModal';
 import ArtifactPlanDefinitionModal from '../components/artifact/ArtifactPlanDefinitionModal';
-import RunRuleModal from "../components/artifact/RunRuleModal";
+import RunRuleModal from '../components/artifact/RunRuleModal';
 import ELMErrorModal from '../components/builder/ELMErrorModal';
 import ErrorStatement from '../components/builder/ErrorStatement';
 import ExternalCQL from '../components/builder/ExternalCQL';
@@ -44,10 +60,10 @@ import RepoUploadModal from '../components/builder/RepoUploadModal';
 import Subpopulations from '../components/builder/Subpopulations';
 
 import isBlankArtifact from '../utils/artifacts/isBlankArtifact';
-import {findValueAtPath} from '../utils/find';
+import { findValueAtPath } from '../utils/find';
 
 import artifactProps from '../prop-types/artifact';
-import PDDIRecommendations from "../components/builder/PDDIRecommendations";
+import PDDIRecommendations from '../components/builder/PDDIRecommendations';
 import DiagramUI from 'components/builder/DiagramUI';
 
 // TODO: This is needed because the tree on this.state is not updated in time. Figure out a better way to handle this
@@ -61,20 +77,20 @@ export class Builder extends Component {
       showArtifactModal: false,
       showRunRuleModal: false,
       showArtifactPlanDefinitionModal: false,
-      artifactPlanDefinitionTitle: "Create Plan Definition",
-      artifactPlanDefinitionSubmitText: "Download",
+      artifactPlanDefinitionTitle: 'Create Plan Definition',
+      artifactPlanDefinitionSubmitText: 'Download',
       showPublishModal: false,
       showELMErrorModal: false,
       showMenu: false,
       activeTabIndex: 0,
       uniqueIdCounter: 0,
       version: '',
-      downloadMenuAnchorElement: null
+      downloadMenuAnchorElement: null,
     };
   }
 
   componentDidMount() {
-    this.props.loadTemplates().then((result) => {
+    this.props.loadTemplates().then(result => {
       // if there is a current artifact, load it, otherwise initialize new artifact
       if (this.props.match.params.id) {
         this.props.loadArtifact(this.props.match.params.id);
@@ -89,22 +105,23 @@ export class Builder extends Component {
   }
 
   componentWillUnmount() {
-    const {artifact, isLoggingOut} = this.props;
+    const { artifact, isLoggingOut } = this.props;
 
     if (!isBlankArtifact(artifact) && !isLoggingOut) {
       this.handleSaveArtifact(artifact);
     }
   }
 
-  UNSAFE_componentWillReceiveProps(newProps) { // eslint-disable-line camelcase
-    this.setState({showELMErrorModal: newProps.downloadedArtifact.elmErrors.length > 0});
+  UNSAFE_componentWillReceiveProps(newProps) {
+    // eslint-disable-line camelcase
+    this.setState({ showELMErrorModal: newProps.downloadedArtifact.elmErrors.length > 0 });
   }
 
   // ----------------------- TABS ------------------------------------------ //
 
-  setActiveTab = (activeTabIndex) => {
-    this.setState({activeTabIndex});
-  }
+  setActiveTab = activeTabIndex => {
+    this.setState({ activeTabIndex });
+  };
 
   scrollToElement = (elementId, referenceType, tabIndex = null) => {
     const baseElementTabIndex = 0;
@@ -117,31 +134,33 @@ export class Builder extends Component {
 
     if (activeTabIndex == null) return;
 
-    this.setState({activeTabIndex}, () => {
+    this.setState({ activeTabIndex }, () => {
       const elementToScrollTo = document.getElementById(elementId);
       if (elementToScrollTo) elementToScrollTo.scrollIntoView();
     });
-  }
+  };
 
   // ----------------------- INSTANCES ------------------------------------- //
 
   getAllInstancesInAllTrees = () => {
-    const {artifact} = this.props;
+    const { artifact } = this.props;
     let allInstancesInAllTrees = this.getAllInstances('expTreeInclude');
     allInstancesInAllTrees = allInstancesInAllTrees.concat(this.getAllInstances('expTreeExclude'));
-    artifact.subpopulations.forEach((s) => {
+    artifact.subpopulations.forEach(s => {
       if (!s.special) {
-        allInstancesInAllTrees =
-          allInstancesInAllTrees.concat(this.getAllInstances('subpopulations', null, s.uniqueId));
+        allInstancesInAllTrees = allInstancesInAllTrees.concat(
+          this.getAllInstances('subpopulations', null, s.uniqueId)
+        );
       }
     });
-    artifact.baseElements.forEach((baseElement) => {
-      allInstancesInAllTrees =
-        allInstancesInAllTrees.concat(this.getAllInstances('baseElements', null, baseElement.uniqueId));
+    artifact.baseElements.forEach(baseElement => {
+      allInstancesInAllTrees = allInstancesInAllTrees.concat(
+        this.getAllInstances('baseElements', null, baseElement.uniqueId)
+      );
     });
 
     return allInstancesInAllTrees;
-  }
+  };
 
   getAllInstances = (treeName, treeInstance = null, uid = null) => {
     // if treeInstance is null, find and assign tree (only used recursively)
@@ -155,16 +174,18 @@ export class Builder extends Component {
       return [treeInstance];
     }
 
-    const result = _.flatten((treeInstance.childInstances || []).map((instance) => {
-      if (instance.childInstances) {
-        return _.flatten([instance, this.getAllInstances(treeName, instance)]);
-      }
-      instance.tab = treeName;
-      return instance;
-    }));
+    const result = _.flatten(
+      (treeInstance.childInstances || []).map(instance => {
+        if (instance.childInstances) {
+          return _.flatten([instance, this.getAllInstances(treeName, instance)]);
+        }
+        instance.tab = treeName;
+        return instance;
+      })
+    );
 
     return result;
-  }
+  };
 
   addInstance = (treeName, instance, parentPath, uid = null, currentIndex, incomingTree, updatedReturnType = null) => {
     const treeData = this.findTree(treeName, uid);
@@ -179,14 +200,14 @@ export class Builder extends Component {
 
     localTree = tree;
     this.setTree(treeName, treeData, tree);
-  }
+  };
 
   addBaseElement = (instance, uid = null, incomingTree) => {
     const treeData = this.findTree('baseElements', uid);
     const tree = incomingTree || treeData.tree;
     tree.push(instance);
     this.setTree('baseElements', treeData, tree);
-  }
+  };
 
   editInstance = (treeName, editedFields, path, editingConjunctionType = false, uid = null) => {
     const treeData = this.findTree(treeName, uid);
@@ -202,10 +223,11 @@ export class Builder extends Component {
         editedFields = [editedFields]; // eslint-disable-line no-param-reassign
       }
       // Update each field attribute that needs updating. Then updated the full tree with changes.
-      editedFields.forEach((editedField) => {
+      editedFields.forEach(editedField => {
         // function to retrieve relevant field
         const fieldIndex = target.fields.findIndex(field =>
-          Object.prototype.hasOwnProperty.call(editedField, field.id));
+          Object.prototype.hasOwnProperty.call(editedField, field.id)
+        );
 
         // If an attribute was specified, update that one. Otherwise update the value attribute.
         if (editedField.attributeToEdit) {
@@ -217,7 +239,7 @@ export class Builder extends Component {
     }
 
     this.setTree(treeName, treeData, tree);
-  }
+  };
 
   deleteInstance = (treeName, path, elementsToAdd, uid = null, updatedReturnType = null) => {
     const treeData = this.findTree(treeName, uid);
@@ -235,11 +257,11 @@ export class Builder extends Component {
 
     // elementsToAdd is an array of elements to be readded when indenting or outdenting
     if (elementsToAdd) {
-      elementsToAdd.forEach((element) => {
+      elementsToAdd.forEach(element => {
         this.addInstance(treeName, element.instance, element.path, uid, element.index, localTree);
       });
     }
-  }
+  };
 
   // subpop_index is an optional parameter, for determining which tree within subpop we are referring to
   updateInstanceModifiers = (treeName, modifiers, path, subpopIndex, updatedReturnType = null) => {
@@ -252,73 +274,70 @@ export class Builder extends Component {
       valuePath.returnType = updatedReturnType;
     }
 
-    this.props.updateArtifact(this.props.artifact, {[treeName]: tree});
-  }
-
+    this.props.updateArtifact(this.props.artifact, { [treeName]: tree });
+  };
 
   showELMErrorModal = () => {
-    this.setState({showELMErrorModal: true});
-  }
+    this.setState({ showELMErrorModal: true });
+  };
 
   closeELMErrorModal = () => {
-    this.setState({showELMErrorModal: false});
+    this.setState({ showELMErrorModal: false });
     this.props.clearArtifactValidationWarnings();
-  }
+  };
 
   // ----------------------- ARTIFACTS ------------------------------------- //
 
   openArtifactModal = () => {
-    this.setState({showArtifactModal: true});
-  }
+    this.setState({ showArtifactModal: true });
+  };
 
   closeArtifactModal = () => {
-    this.setState({showArtifactModal: false});
-  }
+    this.setState({ showArtifactModal: false });
+  };
 
-
-  handleSaveArtifact = (artifactPropsChanged) => {
+  handleSaveArtifact = artifactPropsChanged => {
     this.props.updateAndSaveArtifact(this.props.artifact, artifactPropsChanged);
     this.closeArtifactModal(false);
-  }
+  };
 
   openRunRuleModal = async () => {
-    this.setState({showRunRuleModal: true});
-    await this.props.updateAndSaveArtifact(this.props.artifact, {fhirServer: {}});
-    this.setState({artifact: this.props.artifact});
-  }
+    this.setState({ showRunRuleModal: true });
+    await this.props.updateAndSaveArtifact(this.props.artifact, { fhirServer: {} });
+    this.setState({ artifact: this.props.artifact });
+  };
 
   closeRunRuleModal = () => {
-    this.setState({showRunRuleModal: false});
-  }
+    this.setState({ showRunRuleModal: false });
+  };
 
-  handleSaveArtifactAndRun = async (artifactPropsChanged) => {
-    this.setState({showRunRuleModal: false});
-    this.setState({artifactPlanDefinitionTitle: "Run Rule Configuration"});
-    this.setState({artifactPlanDefinitionSubmitText: "Run Rule"});
-    this.setState({showArtifactPlanDefinitionModal: true});
-    this.setState({artifact: this.props.artifact});
-  }
+  handleSaveArtifactAndRun = async artifactPropsChanged => {
+    this.setState({ showRunRuleModal: false });
+    this.setState({ artifactPlanDefinitionTitle: 'Run Rule Configuration' });
+    this.setState({ artifactPlanDefinitionSubmitText: 'Run Rule' });
+    this.setState({ showArtifactPlanDefinitionModal: true });
+    this.setState({ artifact: this.props.artifact });
+  };
 
   openArtifactPlanDefinitionModal = async (disable, version) => {
-    this.setState({showArtifactPlanDefinitionModal: true});
-    this.setState({artifactPlanDefinitionTitle: "Specify Plan Definition"});
-    this.setState({artifactPlanDefinitionSubmitText: "Download"});
-    this.setState({version: version});
-    this.setState({disable: disable});
-    await this.props.updateAndSaveArtifact(this.props.artifact, {planDefinitionRecommendations: []});
-    await this.props.updateAndSaveArtifact(this.props.artifact, {fhirServer: {}});
-    this.setState({artifact: this.props.artifact});
-  }
+    this.setState({ showArtifactPlanDefinitionModal: true });
+    this.setState({ artifactPlanDefinitionTitle: 'Specify Plan Definition' });
+    this.setState({ artifactPlanDefinitionSubmitText: 'Download' });
+    this.setState({ version: version });
+    this.setState({ disable: disable });
+    await this.props.updateAndSaveArtifact(this.props.artifact, { planDefinitionRecommendations: [] });
+    await this.props.updateAndSaveArtifact(this.props.artifact, { fhirServer: {} });
+    this.setState({ artifact: this.props.artifact });
+  };
 
   closeArtifactPlanDefinitionModal = () => {
-    this.setState({showArtifactPlanDefinitionModal: false});
-  }
+    this.setState({ showArtifactPlanDefinitionModal: false });
+  };
 
-  handleSaveArtifactAndDownload = async (artifactPropsChanged) => {
+  handleSaveArtifactAndDownload = async artifactPropsChanged => {
     this.downloadOptionSelected(this.state.disable, this.state.version);
     this.closeArtifactPlanDefinitionModal(false);
-
-  }
+  };
 
   // ----------------------- TREES ----------------------------------------- //
 
@@ -326,29 +345,29 @@ export class Builder extends Component {
   findTree = (treeName, uid) => {
     const clonedTree = _.cloneDeep(this.props.artifact[treeName]);
     if (uid == null) {
-      return {tree: clonedTree};
+      return { tree: clonedTree };
     }
 
     const index = clonedTree.findIndex(sub => sub.uniqueId === uid);
-    return {array: clonedTree, tree: clonedTree[index], index};
-  }
+    return { array: clonedTree, tree: clonedTree[index], index };
+  };
 
   // Sets new tree based on if state tree or array tree
   setTree = (treeName, treeData, tree) => {
     if ('array' in treeData) {
       const index = treeData.index;
       treeData.array[index] = tree;
-      this.props.updateArtifact(this.props.artifact, {[treeName]: treeData.array});
+      this.props.updateArtifact(this.props.artifact, { [treeName]: treeData.array });
     } else {
-      this.props.updateArtifact(this.props.artifact, {[treeName]: tree});
+      this.props.updateArtifact(this.props.artifact, { [treeName]: tree });
     }
-  }
+  };
 
   // ----------------------------------------------------------------------- //
 
   incrementUniqueIdCounter = () => {
-    this.setState({uniqueIdCounter: this.state.uniqueIdCounter + 1});
-  }
+    this.setState({ uniqueIdCounter: this.state.uniqueIdCounter + 1 });
+  };
 
   updateRecsSubpop = (newName, uniqueId) => {
     const recs = _.cloneDeep(this.props.artifact.recommendations);
@@ -360,30 +379,30 @@ export class Builder extends Component {
         }
       }
     }
-    this.setState({recommendations: recs});
-  }
+    this.setState({ recommendations: recs });
+  };
 
   updateSubpopulations = (subpopulations, target = 'subpopulations') => {
-    this.props.updateArtifact(this.props.artifact, {[target]: subpopulations});
-  }
+    this.props.updateArtifact(this.props.artifact, { [target]: subpopulations });
+  };
 
-  updateRecommendations = (recommendations) => {
-    this.props.updateArtifact(this.props.artifact, {recommendations});
-  }
+  updateRecommendations = recommendations => {
+    this.props.updateArtifact(this.props.artifact, { recommendations });
+  };
 
-  updatePDDIRecommendations = (pddiRecommendations) => {
-    this.props.updateArtifact(this.props.artifact, {pddiRecommendations});
-  }
+  updatePDDIRecommendations = pddiRecommendations => {
+    this.props.updateArtifact(this.props.artifact, { pddiRecommendations });
+  };
 
-  updateParameters = (parameters) => {
-    this.props.updateArtifact(this.props.artifact, {parameters});
-  }
+  updateParameters = parameters => {
+    this.props.updateArtifact(this.props.artifact, { parameters });
+  };
 
-  updateErrorStatement = (errorStatement) => {
-    this.props.updateArtifact(this.props.artifact, {errorStatement});
-  }
+  updateErrorStatement = errorStatement => {
+    this.props.updateArtifact(this.props.artifact, { errorStatement });
+  };
 
-  checkSubpopulationUsage = (uniqueId) => {
+  checkSubpopulationUsage = uniqueId => {
     for (let i = 0; i < this.props.artifact.recommendations.length; i++) {
       const subpops = this.props.artifact.recommendations[i].subpopulations;
       for (let j = 0; j < subpops.length; j++) {
@@ -393,37 +412,46 @@ export class Builder extends Component {
       }
     }
     return false;
-  }
+  };
 
   togglePublishModal = () => {
-    this.setState({showPublishModal: !this.state.showPublishModal});
-  }
+    this.setState({ showPublishModal: !this.state.showPublishModal });
+  };
 
   handleClickDownloadMenu = event => {
-    this.setState({downloadMenuAnchorElement: event.currentTarget});
+    this.setState({ downloadMenuAnchorElement: event.currentTarget });
   };
 
   handleCloseDownloadMenu = () => {
-    this.setState({downloadMenuAnchorElement: null});
+    this.setState({ downloadMenuAnchorElement: null });
   };
 
   downloadOptionSelected = (disabled, version) => {
-    const {artifact} = this.props;
-    if (!disabled) this.props.downloadArtifact(artifact, {name: 'FHIR', version});
+    const { artifact } = this.props;
+    if (!disabled) this.props.downloadArtifact(artifact, { name: 'FHIR', version });
     this.handleCloseDownloadMenu();
-  }
+  };
 
   // ----------------------- RENDER ---------------------------------------- //
 
-  renderConjunctionGroup = (treeName) => {
+  renderConjunctionGroup = treeName => {
     const {
-      artifact, templates,
-      vsacStatus, vsacStatusText,
-      isRetrievingDetails, vsacDetailsCodes, vsacDetailsCodesError,
-      modifierMap, modifiersByInputType, isLoadingModifiers, conversionFunctions,
-      isValidatingCode, isValidCode, codeData
+      artifact,
+      templates,
+      vsacStatus,
+      vsacStatusText,
+      isRetrievingDetails,
+      vsacDetailsCodes,
+      vsacDetailsCodesError,
+      modifierMap,
+      modifiersByInputType,
+      isLoadingModifiers,
+      conversionFunctions,
+      isValidatingCode,
+      isValidCode,
+      codeData
     } = this.props;
-    const namedParameters = _.filter(artifact.parameters, p => (!_.isNull(p.name) && p.name.length));
+    const namedParameters = _.filter(artifact.parameters, p => !_.isNull(p.name) && p.name.length);
 
     if (artifact && artifact[treeName].childInstances) {
       return (
@@ -473,11 +501,11 @@ export class Builder extends Component {
     }
 
     return <div>Loading...</div>;
-  }
+  };
 
   renderHeader() {
-    const {statusMessage, artifact, publishEnabled} = this.props;
-    const {downloadMenuAnchorElement} = this.state;
+    const { statusMessage, artifact, publishEnabled } = this.props;
+    const { downloadMenuAnchorElement } = this.state;
     const artifactName = artifact ? artifact.name : null;
     let disableDSTU2 = false;
     let disableSTU3 = false;
@@ -501,7 +529,7 @@ export class Builder extends Component {
       <header className="builder__header" aria-label="Workspace Header">
         <h2 className="builder__heading">
           <IconButton aria-label="edit" onClick={this.openArtifactModal}>
-            <EditIcon/>
+            <EditIcon />
           </IconButton>
 
           {artifactName}
@@ -513,7 +541,7 @@ export class Builder extends Component {
               aria-controls="download-menu"
               aria-haspopup="true"
               onClick={this.handleClickDownloadMenu}
-              startIcon={<GetAppIcon/>}
+              startIcon={<GetAppIcon />}
               variant="contained"
             >
               Download CQL
@@ -526,53 +554,50 @@ export class Builder extends Component {
               onClose={this.handleCloseDownloadMenu}
               open={Boolean(downloadMenuAnchorElement)}
             >
-              <MenuItem disabled={disableDSTU2}
-                        onClick={() => this.openArtifactPlanDefinitionModal(disableDSTU2, '1.0.2')}>
+              <MenuItem
+                disabled={disableDSTU2}
+                onClick={() => this.openArtifactPlanDefinitionModal(disableDSTU2, '1.0.2')}
+              >
                 FHIR<sup>®</sup> DSTU2
               </MenuItem>
 
-              <MenuItem disabled={disableSTU3}
-                        onClick={() => this.openArtifactPlanDefinitionModal(disableSTU3, '3.0.0')}>
+              <MenuItem
+                disabled={disableSTU3}
+                onClick={() => this.openArtifactPlanDefinitionModal(disableSTU3, '3.0.0')}
+              >
                 FHIR<sup>®</sup> STU3
               </MenuItem>
 
-              <MenuItem disabled={disableR4}
-                        onClick={() => this.openArtifactPlanDefinitionModal(disableR4, '4.0.0')}>
+              <MenuItem disabled={disableR4} onClick={() => this.openArtifactPlanDefinitionModal(disableR4, '4.0.0')}>
                 FHIR<sup>®</sup> R4
               </MenuItem>
             </Menu>
 
-            <Button
-              onClick={() => this.handleSaveArtifact(artifact)}
-              startIcon={<SaveIcon/>}
-              variant="contained"
-            >
+            <Button onClick={() => this.handleSaveArtifact(artifact)} startIcon={<SaveIcon />} variant="contained">
               Save
             </Button>
 
-            <Button
-              onClick={() => this.openRunRuleModal()}
-              startIcon={<RunIcon/>}
-              variant="contained"
-            >
+            <Button onClick={() => this.openRunRuleModal()} startIcon={<RunIcon />} variant="contained">
               Run Rule
             </Button>
 
-            {publishEnabled &&
-            <Button
-              onClick={() => {
-                this.handleSaveArtifact(artifact);
-                this.togglePublishModal();
-              }}
-              startIcon={<PublishIcon/>}
-              variant="contained"
-            >
-              Publish
-            </Button>
-            }
+            {publishEnabled && (
+              <Button
+                onClick={() => {
+                  this.handleSaveArtifact(artifact);
+                  this.togglePublishModal();
+                }}
+                startIcon={<PublishIcon />}
+                variant="contained"
+              >
+                Publish
+              </Button>
+            )}
           </div>
 
-          <div role="status" aria-live="assertive">{statusMessage}</div>
+          <div role="status" aria-live="assertive">
+            {statusMessage}
+          </div>
         </div>
       </header>
     );
@@ -580,11 +605,16 @@ export class Builder extends Component {
 
   render() {
     const {
-      artifact, templates, modifierMap, modifiersByInputType, isLoadingModifiers, conversionFunctions
+      artifact,
+      templates,
+      modifierMap,
+      modifiersByInputType,
+      isLoadingModifiers,
+      conversionFunctions
     } = this.props;
     let namedParameters = [];
     if (artifact) {
-      namedParameters = _.filter(artifact.parameters, p => (!_.isNull(p.name) && p.name.length));
+      namedParameters = _.filter(artifact.parameters, p => !_.isNull(p.name) && p.name.length);
     }
 
     if (artifact == null) {
@@ -614,74 +644,75 @@ export class Builder extends Component {
                 <Tab>Parameters</Tab>
                 <Tab>Handle Errors</Tab>
                 <Tab>
-                  <FontAwesomeIcon icon={faBook}/> External CQL
+                  <FontAwesomeIcon icon={faBook} /> External CQL
                 </Tab>
               </TabList>
 
               <div className="tab-panel-container">
-              <TabPanel>
-                <div className="workspace-blurb">Build a decision diagram.</div>
-                <DiagramUI
-                  inclusionElements={this.renderConjunctionGroup('expTreeInclude')}
-                  exclusionElements={this.renderConjunctionGroup('expTreeExclude')}
-                  recommendationElements={
-                    <Recommendations
-                      artifact={artifact}
-                      templates={templates}
-                      updateRecommendations={this.updateRecommendations}
-                      updateSubpopulations={this.updateSubpopulations}
-                      setActiveTab={this.setActiveTab}
-                      uniqueIdCounter={this.state.uniqueIdCounter}
-                      incrementUniqueIdCounter={this.incrementUniqueIdCounter}
-                    />
-                  }
-                  subpopulationElements={
-                    <Subpopulations
-                      name={'subpopulations'}
-                      artifact={artifact}
-                      updateSubpopulations={this.updateSubpopulations}
-                      parameters={namedParameters}
-                      baseElements={artifact.baseElements}
-                      externalCqlList={this.props.externalCqlList}
-                      loadExternalCqlList={this.props.loadExternalCqlList}
-                      addInstance={this.addInstance}
-                      editInstance={this.editInstance}
-                      updateInstanceModifiers={this.updateInstanceModifiers}
-                      deleteInstance={this.deleteInstance}
-                      getAllInstances={this.getAllInstances}
-                      getAllInstancesInAllTrees={this.getAllInstancesInAllTrees}
-                      templates={templates}
-                      checkSubpopulationUsage={this.checkSubpopulationUsage}
-                      updateRecsSubpop={this.updateRecsSubpop}
-                      modifierMap={modifierMap}
-                      modifiersByInputType={modifiersByInputType}
-                      isLoadingModifiers={isLoadingModifiers}
-                      conversionFunctions={conversionFunctions}
-                      instanceNames={this.props.names}
-                      scrollToElement={this.scrollToElement}
-                      loginVSACUser={this.props.loginVSACUser}
-                      setVSACAuthStatus={this.props.setVSACAuthStatus}
-                      vsacStatus={this.props.vsacStatus}
-                      vsacStatusText={this.props.vsacStatusText}
-                      searchVSACByKeyword={this.props.searchVSACByKeyword}
-                      isSearchingVSAC={this.props.isSearchingVSAC}
-                      vsacSearchResults={this.props.vsacSearchResults}
-                      vsacSearchCount={this.props.vsacSearchCount}
-                      getVSDetails={this.props.getVSDetails}
-                      isRetrievingDetails={this.props.isRetrievingDetails}
-                      vsacDetailsCodes={this.props.vsacDetailsCodes}
-                      vsacDetailsCodesError={this.props.vsacDetailsCodesError}
-                      vsacApiKey={this.props.vsacApiKey}
-                      isValidatingCode={this.props.isValidatingCode}
-                      isValidCode={this.props.isValidCode}
-                      codeData={this.props.codeData}
-                      validateCode={this.props.validateCode}
-                      resetCodeValidation={this.props.resetCodeValidation}
-                      vsacIsAuthenticating={this.props.vsacIsAuthenticating}
-                    />
-                  }
-                />
-              </TabPanel>
+                <TabPanel>
+                  <div className="workspace-blurb">Build a decision diagram.</div>
+                  <DiagramUI
+                    artifact={artifact}
+                    inclusionElements={this.renderConjunctionGroup('expTreeInclude')}
+                    exclusionElements={this.renderConjunctionGroup('expTreeExclude')}
+                    recommendationElements={
+                      <Recommendations
+                        artifact={artifact}
+                        templates={templates}
+                        updateRecommendations={this.updateRecommendations}
+                        updateSubpopulations={this.updateSubpopulations}
+                        setActiveTab={this.setActiveTab}
+                        uniqueIdCounter={this.state.uniqueIdCounter}
+                        incrementUniqueIdCounter={this.incrementUniqueIdCounter}
+                      />
+                    }
+                    subpopulationElements={
+                      <Subpopulations
+                        name={'subpopulations'}
+                        artifact={artifact}
+                        updateSubpopulations={this.updateSubpopulations}
+                        parameters={namedParameters}
+                        baseElements={artifact.baseElements}
+                        externalCqlList={this.props.externalCqlList}
+                        loadExternalCqlList={this.props.loadExternalCqlList}
+                        addInstance={this.addInstance}
+                        editInstance={this.editInstance}
+                        updateInstanceModifiers={this.updateInstanceModifiers}
+                        deleteInstance={this.deleteInstance}
+                        getAllInstances={this.getAllInstances}
+                        getAllInstancesInAllTrees={this.getAllInstancesInAllTrees}
+                        templates={templates}
+                        checkSubpopulationUsage={this.checkSubpopulationUsage}
+                        updateRecsSubpop={this.updateRecsSubpop}
+                        modifierMap={modifierMap}
+                        modifiersByInputType={modifiersByInputType}
+                        isLoadingModifiers={isLoadingModifiers}
+                        conversionFunctions={conversionFunctions}
+                        instanceNames={this.props.names}
+                        scrollToElement={this.scrollToElement}
+                        loginVSACUser={this.props.loginVSACUser}
+                        setVSACAuthStatus={this.props.setVSACAuthStatus}
+                        vsacStatus={this.props.vsacStatus}
+                        vsacStatusText={this.props.vsacStatusText}
+                        searchVSACByKeyword={this.props.searchVSACByKeyword}
+                        isSearchingVSAC={this.props.isSearchingVSAC}
+                        vsacSearchResults={this.props.vsacSearchResults}
+                        vsacSearchCount={this.props.vsacSearchCount}
+                        getVSDetails={this.props.getVSDetails}
+                        isRetrievingDetails={this.props.isRetrievingDetails}
+                        vsacDetailsCodes={this.props.vsacDetailsCodes}
+                        vsacDetailsCodesError={this.props.vsacDetailsCodesError}
+                        vsacApiKey={this.props.vsacApiKey}
+                        isValidatingCode={this.props.isValidatingCode}
+                        isValidCode={this.props.isValidCode}
+                        codeData={this.props.codeData}
+                        validateCode={this.props.validateCode}
+                        resetCodeValidation={this.props.resetCodeValidation}
+                        vsacIsAuthenticating={this.props.vsacIsAuthenticating}
+                      />
+                    }
+                  />
+                </TabPanel>
                 <TabPanel>
                   <div className="workspace-blurb">
                     Specify individual elements that can be re-used in the Inclusions, Exclusions, and Subpopulations,
@@ -689,7 +720,7 @@ export class Builder extends Component {
                     result value that is referenced multiple times throughout the artifact.
                   </div>
                   <BaseElements
-                    treeName='baseElements'
+                    treeName="baseElements"
                     instance={artifact}
                     addBaseElement={this.addBaseElement}
                     getAllInstances={this.getAllInstances}
@@ -745,17 +776,17 @@ export class Builder extends Component {
                   <div className="workspace-blurb">
                     Specify criteria to identify patients that should be excluded from the target population and,
                     therefore, from receiving a recommendation from this artifact. Examples might include pregnancy
-                    status, out of bound lab results, or evidence that the recommended therapy is already being used
-                    by the patient.
+                    status, out of bound lab results, or evidence that the recommended therapy is already being used by
+                    the patient.
                   </div>
                   {this.renderConjunctionGroup('expTreeExclude')}
                 </TabPanel>
 
                 <TabPanel>
                   <div className="workspace-blurb">
-                    Specify criteria that further segments the target population into subpopulations that should
-                    receive more specific recommendations. An example might be splitting the population by risk score
-                    so that higher risk patients receive a stronger recommendation than lower risk patients.
+                    Specify criteria that further segments the target population into subpopulations that should receive
+                    more specific recommendations. An example might be splitting the population by risk score so that
+                    higher risk patients receive a stronger recommendation than lower risk patients.
                   </div>
                   <Subpopulations
                     name={'subpopulations'}
@@ -981,31 +1012,34 @@ Builder.propTypes = {
 
 // these props are used for dispatching actions
 function mapDispatchToProps(dispatch) {
-  return bindActionCreators({
-    addExternalLibrary,
-    clearAddLibraryErrorsAndMessages,
-    clearArtifactValidationWarnings,
-    clearExternalCqlValidationWarnings,
-    deleteExternalCqlLibrary,
-    downloadArtifact,
-    getVSDetails,
-    initializeArtifact,
-    loadArtifact,
-    loadConversionFunctions,
-    loadExternalCqlLibraryDetails,
-    loadExternalCqlList,
-    loadTemplates,
-    loginVSACUser,
-    publishArtifact,
-    resetCodeValidation,
-    saveArtifact,
-    searchVSACByKeyword,
-    setStatusMessage,
-    setVSACAuthStatus,
-    updateAndSaveArtifact,
-    updateArtifact,
-    validateCode
-  }, dispatch);
+  return bindActionCreators(
+    {
+      addExternalLibrary,
+      clearAddLibraryErrorsAndMessages,
+      clearArtifactValidationWarnings,
+      clearExternalCqlValidationWarnings,
+      deleteExternalCqlLibrary,
+      downloadArtifact,
+      getVSDetails,
+      initializeArtifact,
+      loadArtifact,
+      loadConversionFunctions,
+      loadExternalCqlLibraryDetails,
+      loadExternalCqlList,
+      loadTemplates,
+      loginVSACUser,
+      publishArtifact,
+      resetCodeValidation,
+      saveArtifact,
+      searchVSACByKeyword,
+      setStatusMessage,
+      setVSACAuthStatus,
+      updateAndSaveArtifact,
+      updateArtifact,
+      validateCode
+    },
+    dispatch
+  );
 }
 
 // these props come from the application's state when it is started
