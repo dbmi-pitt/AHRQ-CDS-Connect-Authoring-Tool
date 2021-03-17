@@ -47,7 +47,26 @@ export default class DiagramUI extends PureComponent {
     this.setState({ showElementModal: false, shapeType: '' });
   };
 
-  handleOnChange = () => {
+  handleOnChange = args => {
+    if (args.type === 'Removal') {
+      let type = args.element.shape.properties.shape;
+      switch (type) {
+        case 'Terminator':
+          this.props.artifact.expTreeInclude.childInstances = [];
+          break;
+        case 'Process':
+          this.props.artifact.expTreeExclude.childInstances = [];
+          break;
+        case 'Decision':
+          this.props.artifact.subpopulations[2].childInstances = [];
+          break;
+        case 'PaperTap':
+          this.props.artifact.recommendations = [];
+          break;
+        default:
+      }
+    }
+
     this.props.artifact.diagram = diagramInstance.saveDiagram();
   };
 
